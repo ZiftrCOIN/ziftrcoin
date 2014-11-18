@@ -148,7 +148,7 @@ public:
         // vSeeds.push_back(CDNSSeedData("xf2.org", "bitseed.xf2.org"));
 
         base58Prefixes[PUBKEY_ADDRESS] = list_of(80);  // P2PKH addresses start with 'Z'
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(2);   // P2SH  addresses start with '2'
+        base58Prefixes[SCRIPT_ADDRESS] = list_of(3);   // P2SH  addresses start with '2'
         base58Prefixes[SECRET_KEY] =     list_of(208); // Priv keys prefixed with 80 + 128
         base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x88)(0xB2)(0x1E);
         base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x88)(0xAD)(0xE4);
@@ -196,8 +196,8 @@ public:
         pchMessageStart[2] = 0x09;
         pchMessageStart[3] = 0x06;
         vAlertPubKey = ParseHex("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");
-        nDefaultPort = 18333;
-        nRPCPort = 18332;
+        nDefaultPort = 11333;
+        nRPCPort = 11332;
         strDataDir = "testnet3";
 
         // Modify the testnet genesis block so the timestamp is valid for a later start.
