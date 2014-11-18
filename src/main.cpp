@@ -1765,7 +1765,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     //if (block.GetHash() == Params().HashGenesisBlock()) {
     //    view.SetBestBlock(pindex->GetBlockHash());
     //    return true;
-    }
+    //}
 
     bool fScriptChecks = pindex->nHeight >= Checkpoints::GetTotalBlocksEstimate();
 
