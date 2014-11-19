@@ -1874,7 +1874,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
         return true;
 
     // Write undo information to disk
-    if (pindex->GetUndoPos().IsNull() || (pindex->nStatus & BLOCK_VALID_MASK) < BLOCK_VALID_SCRIPTS)
+    if ((pindex->GetUndoPos().IsNull() || (pindex->nStatus & BLOCK_VALID_MASK) < BLOCK_VALID_SCRIPTS) && block.GetHash() != Params().HashGenesisBlock())
     {
         if (pindex->GetUndoPos().IsNull()) {
             CDiskBlockPos pos;
