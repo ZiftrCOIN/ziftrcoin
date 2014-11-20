@@ -141,20 +141,21 @@ public:
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 26);
         nSubsidyHalvingInterval = 210000;
         
-        genesis.vtx.resize(5);
+        //genesis.vtx.resize(5);
         for (int i = 0; i < 5; i++) {
             CTransaction txNew;
             
             // Set the input of the coinbase
             txNew.vin.resize(1);
             txNew.vin[0].scriptSig = CScript() << 0 << CScriptNum(0) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
-            
+            if (i < 4) txNew.vin[0].nSequence = 0; // To put the nLockTime into effect
+
             // Set the output of the coinbase
             txNew.vout.resize(1);
-        
             txNew.vout[0].scriptPubKey = CScript() << OP_DUP << OP_HASH160 << CKeyID(uint160("0xa079889dffd0e5eb2a8cdbd636ca1cf963461080")) << OP_EQUALVERIFY << OP_CHECKSIG;
-            txNew.vout[0].nValue = (i == 4 ? 350 * COIN : 25 * COIN);
-            txNew.vout[0].nLockTime = (i == 4 ?  : 20 * (i + 1)); // TODO
+            txNew.vout[0].nValue = (i < 4 ? 25 * COIN : 350 * COIN);
+
+            txNew.nLockTime = (i < 4 ? 25 * (i + 1) : 0); // TODO
 
             genesis.vtx.push_back(txNew);
         }
@@ -164,14 +165,14 @@ public:
         genesis.nVersion = 1;
         genesis.nTime    = 1416422035;
         genesis.nBits    = bnProofOfWorkLimit.GetCompact();
-        genesis.nNonce   = 67777823;
+        genesis.nNonce   = 25193606;
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine == 1)
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
 
-        assert(hashGenesisBlock == uint256("0x0000002f493710f934268078bd0894af51decbfe08023ad265c6fbc547ffb0c4"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
-        assert(genesis.hashMerkleRoot == uint256("0xb858e7e165b2320a34c26f735ce642515edc159da7dfc5ff5de38aefa02cff14"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")); c00ca94d5b5dcab611f0ea87703933d6cf48ae8ac28853a493cea7d2b6730527
+        assert(hashGenesisBlock == uint256("0x00000030446e47e8223ac9ee50bd0504f130f5752a5231bcfd3ee2d3c2a07430"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
+        assert(genesis.hashMerkleRoot == uint256("0x55de73ff9b42df306a58a652bd3f785f63f691482a3e13c9398a216686c28c89"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")); c00ca94d5b5dcab611f0ea87703933d6cf48ae8ac28853a493cea7d2b6730527
 
         // vSeeds.push_back(CDNSSeedData("bitcoin.sipa.be", "seed.bitcoin.sipa.be"));
         // vSeeds.push_back(CDNSSeedData("bluematt.me", "dnsseed.bluematt.me"));
@@ -235,13 +236,13 @@ public:
 
         // Modify the testnet genesis block so the timestamp is valid for a later start.
         genesis.nTime = 1416422036;
-        genesis.nNonce = 115626082;
+        genesis.nNonce = 46827370;
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine == 2)
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
 
-        assert(hashGenesisBlock == uint256("0x0000000209023a85ec4c6c856b459ef7d866b3e488c3e58fd56cf53eadd48b13"));
+        assert(hashGenesisBlock == uint256("0x000000005a8d10e89dbb4c6564ad7a9da1cadf642808eab257c544814ab57020"));
         // Merkle root is the same as parent
 
         vFixedSeeds.clear();
@@ -278,13 +279,13 @@ public:
 
         genesis.nTime = 1416422037;
         genesis.nBits = 0x207fffff;
-        genesis.nNonce = 0;
+        genesis.nNonce = 1;
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine == 3)
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         
-        assert(hashGenesisBlock == uint256("0x59830831021be3fc557488b6537cfdca58478d6b253e6ceb16332c8e42a11bb2"));
+        assert(hashGenesisBlock == uint256("0x161d26d2f4ef1439536e135b202a7a917a3ff03ed1267d2f693cc6652093b635"));
         // Merkle root is the same as parent
 
         vSeeds.clear();  // Regtest mode doesn't have any DNS seeds.
