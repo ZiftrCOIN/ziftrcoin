@@ -99,19 +99,23 @@ unsigned int pnSeed[] =
 
 static const char* pszTimestamp = "Discus Fish: 24, Unknown: 22, GHash.IO: 22";
 
+// 0: Don't mine any
+// 1: Mine the main net genesis block
+// 2: Mine the test net genesis block
+// 3: Mine the reg test genesis block
+static int whichGenesisMine = 0;
+
 static void MineGenesisBlock(CBlock genesis, CBigNum bnProofOfWorkLimit, const std::string& pref) {
-    genesis.nNonce = 0;
+    genesis.nNonce = ~0;
     unsigned int nExtraNonce = ~0;
     uint256 hashGenesisBlock = ~uint256(0);
 
     do 
     {
-        if (genesis.nNonce++ == 0)
-        {
+        if (++genesis.nNonce == 0) {
             printf("%s nExtraNonce: %u\n", pref.c_str(), ++nExtraNonce);
             genesis.vtx[0].vin[0].scriptSig.clear();
             genesis.vtx[0].vin[0].scriptSig = CScript() << 0 << CScriptNum(nExtraNonce) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
-            continue;
         }
         hashGenesisBlock = genesis.GetHash();
     } while (hashGenesisBlock > bnProofOfWorkLimit.getuint256());
@@ -134,33 +138,40 @@ public:
         nRPCPort = 10332;
         vAlertPubKey = ParseHex("0380d4125f5357aac2b98c201ee76c3e26a5ef084a5fcd26e65c9cfff7ad1a026c");
 
-        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 32);
+        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 26);
         nSubsidyHalvingInterval = 210000;
         
-        CTransaction txNew;
+        genesis.vtx.resize(5);
+        for (int i = 0; i < 5; i++) {
+            CTransaction txNew;
+            
+            // Set the input of the coinbase
+            txNew.vin.resize(1);
+            txNew.vin[0].scriptSig = CScript() << 0 << CScriptNum(0) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+            
+            // Set the output of the coinbase
+            txNew.vout.resize(1);
         
-        // Set the input of the coinbase
-        txNew.vin.resize(1);
-        txNew.vin[0].scriptSig = CScript() << 0 << CScriptNum(0) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+            txNew.vout[0].scriptPubKey = CScript() << OP_DUP << OP_HASH160 << CKeyID(uint160("0xa079889dffd0e5eb2a8cdbd636ca1cf963461080")) << OP_EQUALVERIFY << OP_CHECKSIG;
+            txNew.vout[0].nValue = (i == 4 ? 350 * COIN : 25 * COIN);
+            txNew.vout[0].nLockTime = (i == 4 ?  : 20 * (i + 1)); // TODO
+
+            genesis.vtx.push_back(txNew);
+        }
         
-        // Set the output of the coinbase
-        txNew.vout.resize(1);
-        txNew.vout[0].nValue = 50 * COIN;
-        txNew.vout[0].scriptPubKey = CScript() << OP_DUP << OP_HASH160 << CKeyID(uint160("0xa079889dffd0e5eb2a8cdbd636ca1cf963461080")) << OP_EQUALVERIFY << OP_CHECKSIG;
-        
-        genesis.vtx.push_back(txNew);
         genesis.hashPrevBlock = 0;
         genesis.hashMerkleRoot = genesis.BuildMerkleTree();
         genesis.nVersion = 1;
         genesis.nTime    = 1416422035;
-        genesis.nBits    = 0x1d00ffff;
-        genesis.nNonce   = 0;
+        genesis.nBits    = bnProofOfWorkLimit.GetCompact();
+        genesis.nNonce   = 67777823;
         hashGenesisBlock = genesis.GetHash();
 
-        MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
+        if (whichGenesisMine == 1)
+            MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
 
-        // assert(hashGenesisBlock == uint256("0x000000001d9997964ef00ba81978492067121926ba1e837e9a7d2be3c6df8c75"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
-        // assert(genesis.hashMerkleRoot == uint256("0xc00ca94d5b5dcab611f0ea87703933d6cf48ae8ac28853a493cea7d2b6730527"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")); c00ca94d5b5dcab611f0ea87703933d6cf48ae8ac28853a493cea7d2b6730527
+        assert(hashGenesisBlock == uint256("0x0000002f493710f934268078bd0894af51decbfe08023ad265c6fbc547ffb0c4"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
+        assert(genesis.hashMerkleRoot == uint256("0xb858e7e165b2320a34c26f735ce642515edc159da7dfc5ff5de38aefa02cff14"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")); c00ca94d5b5dcab611f0ea87703933d6cf48ae8ac28853a493cea7d2b6730527
 
         // vSeeds.push_back(CDNSSeedData("bitcoin.sipa.be", "seed.bitcoin.sipa.be"));
         // vSeeds.push_back(CDNSSeedData("bluematt.me", "dnsseed.bluematt.me"));
@@ -224,12 +235,13 @@ public:
 
         // Modify the testnet genesis block so the timestamp is valid for a later start.
         genesis.nTime = 1416422036;
-        genesis.nNonce = 0;
+        genesis.nNonce = 115626082;
         hashGenesisBlock = genesis.GetHash();
 
-        MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
+        if (whichGenesisMine == 2)
+            MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
 
-        //assert(hashGenesisBlock == uint256("0x000000009841ee7de99df328cbfd520703f2063108d5d2e52ae29c97761534c2"));
+        assert(hashGenesisBlock == uint256("0x0000000209023a85ec4c6c856b459ef7d866b3e488c3e58fd56cf53eadd48b13"));
         // Merkle root is the same as parent
 
         vFixedSeeds.clear();
@@ -269,10 +281,10 @@ public:
         genesis.nNonce = 0;
         hashGenesisBlock = genesis.GetHash();
 
-        // To calculate the genesis block, instant
-        MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
+        if (whichGenesisMine == 3)
+            MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         
-        assert(hashGenesisBlock == uint256("0x000000000000ee7de99df328cbfd520703f2063108d5d2e52ae29c97761534c2"));
+        assert(hashGenesisBlock == uint256("0x59830831021be3fc557488b6537cfdca58478d6b253e6ceb16332c8e42a11bb2"));
         // Merkle root is the same as parent
 
         vSeeds.clear();  // Regtest mode doesn't have any DNS seeds.
