@@ -9,6 +9,7 @@
 #include "core.h"
 #include "protocol.h"
 #include "util.h"
+#include "script.h"
 
 #include <boost/assign/list_of.hpp>
 
@@ -141,38 +142,37 @@ public:
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 26);
         nSubsidyHalvingInterval = 210000;
         
-        //genesis.vtx.resize(5);
+        CTransaction txNew;
+
+        // Set the input of the coinbase
+        txNew.vin.resize(1);
+        txNew.vin[0].scriptSig = CScript() << 0 << CScriptNum(0) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+
+        // Set the output of the coinbase
+        txNew.vout.resize(5);
         for (int i = 0; i < 5; i++) {
-            CTransaction txNew;
-            
-            // Set the input of the coinbase
-            txNew.vin.resize(1);
-            txNew.vin[0].scriptSig = CScript() << 0 << CScriptNum(0) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
-            if (i < 4) txNew.vin[0].nSequence = 0; // To put the nLockTime into effect
-
-            // Set the output of the coinbase
-            txNew.vout.resize(1);
-            txNew.vout[0].scriptPubKey = CScript() << OP_DUP << OP_HASH160 << CKeyID(uint160("0xa079889dffd0e5eb2a8cdbd636ca1cf963461080")) << OP_EQUALVERIFY << OP_CHECKSIG;
-            txNew.vout[0].nValue = (i < 4 ? 25 * COIN : 350 * COIN);
-
-            txNew.nLockTime = (i < 4 ? 25 * (i + 1) : 0); // TODO
-
-            genesis.vtx.push_back(txNew);
+            txNew.vout[i].scriptPubKey.clear();
+            if (i > 0) 
+                txNew.vout[i].scriptPubKey << CScriptNum(25 * i) << OP_CHECKLOCKTIMEVERIFY;
+            txNew.vout[i].scriptPubKey << OP_DUP << OP_HASH160 << CKeyID(uint160("0xa079889dffd0e5eb2a8cdbd636ca1cf963461080")) << OP_EQUALVERIFY << OP_CHECKSIG;
+            txNew.vout[i].nValue = (i > 0 ? 25 * COIN : 350 * COIN);
         }
+
+        genesis.vtx.push_back(txNew);
         
         genesis.hashPrevBlock = 0;
         genesis.hashMerkleRoot = genesis.BuildMerkleTree();
         genesis.nVersion = 1;
         genesis.nTime    = 1416422035;
         genesis.nBits    = bnProofOfWorkLimit.GetCompact();
-        genesis.nNonce   = 25193606;
+        genesis.nNonce   = 40307198;
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine == 1)
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
 
-        assert(hashGenesisBlock == uint256("0x00000030446e47e8223ac9ee50bd0504f130f5752a5231bcfd3ee2d3c2a07430"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
-        assert(genesis.hashMerkleRoot == uint256("0x55de73ff9b42df306a58a652bd3f785f63f691482a3e13c9398a216686c28c89"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")); c00ca94d5b5dcab611f0ea87703933d6cf48ae8ac28853a493cea7d2b6730527
+        assert(hashGenesisBlock == uint256("0x00000009c764fe2608b86744ab57683c70fc08fe3a92fe9583cdd2c452375aa7"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
+        assert(genesis.hashMerkleRoot == uint256("0x9bc7596826f54955d3256982a0a68ea9c9d68b51a1d4fddd8de1768419c664c9"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")); c00ca94d5b5dcab611f0ea87703933d6cf48ae8ac28853a493cea7d2b6730527
 
         // vSeeds.push_back(CDNSSeedData("bitcoin.sipa.be", "seed.bitcoin.sipa.be"));
         // vSeeds.push_back(CDNSSeedData("bluematt.me", "dnsseed.bluematt.me"));
@@ -236,13 +236,13 @@ public:
 
         // Modify the testnet genesis block so the timestamp is valid for a later start.
         genesis.nTime = 1416422036;
-        genesis.nNonce = 46827370;
+        genesis.nNonce = 6566568;
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine == 2)
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
 
-        assert(hashGenesisBlock == uint256("0x000000005a8d10e89dbb4c6564ad7a9da1cadf642808eab257c544814ab57020"));
+        assert(hashGenesisBlock == uint256("0x0000000de09168c9fa4cbb17deeec6e60c0f93ffdfe4a15bbb4e79d2d91eeab8"));
         // Merkle root is the same as parent
 
         vFixedSeeds.clear();
@@ -285,7 +285,7 @@ public:
         if (whichGenesisMine == 3)
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         
-        assert(hashGenesisBlock == uint256("0x161d26d2f4ef1439536e135b202a7a917a3ff03ed1267d2f693cc6652093b635"));
+        assert(hashGenesisBlock == uint256("0x050ff8bafafdffae7bb09c6fb3589fc4335bb35a67bbc03a9df8dcd5a9ddeef1"));
         // Merkle root is the same as parent
 
         vSeeds.clear();  // Regtest mode doesn't have any DNS seeds.

@@ -22,7 +22,7 @@ class CKeyStore;
 class CTransaction;
 
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
-static const unsigned int MAX_OP_RETURN_RELAY = 40;      // bytes
+static const unsigned int MAX_OP_RETURN_RELAY = 80;      // bytes
 
 class scriptnum_error : public std::runtime_error
 {
@@ -45,7 +45,7 @@ public:
         m_value = n;
     }
 
-    explicit CScriptNum(const std::vector<unsigned char>& vch)
+    explicit CScriptNum(const std::vector<unsigned char>& vch, const size_t nMaxNumSize = nDefaultMaxNumSize)
     {
         if (vch.size() > nMaxNumSize)
             throw scriptnum_error("CScriptNum(const std::vector<unsigned char>&) : overflow");
@@ -150,7 +150,7 @@ public:
         return result;
     }
 
-    static const size_t nMaxNumSize = 4;
+    static const size_t nDefaultMaxNumSize = 4;
 
 private:
     static int64_t set_vch(const std::vector<unsigned char>& vch)
@@ -185,22 +185,28 @@ enum
 /** Script verification flags */
 enum
 {
-    SCRIPT_VERIFY_NONE      = 0,
-    SCRIPT_VERIFY_P2SH      = (1U << 0), // evaluate P2SH (BIP16) subscripts
-    SCRIPT_VERIFY_STRICTENC = (1U << 1), // enforce strict conformance to DER and SEC2 for signatures and pubkeys
-    SCRIPT_VERIFY_EVEN_S    = (1U << 2), // enforce even S values in signatures (depends on STRICTENC)
-    SCRIPT_VERIFY_NOCACHE   = (1U << 3), // do not store results in signature cache (but do query it)
+    SCRIPT_VERIFY_NONE          =  0,
+    SCRIPT_VERIFY_P2SH          = (1U << 0),            // evaluate P2SH (BIP16) subscripts
+    SCRIPT_VERIFY_STRICTENC     = (1U << 1),            // enforce strict conformance to DER and SEC2 for signatures and pubkeys
+    SCRIPT_VERIFY_EVEN_S        = (1U << 2),            // enforce even S values in signatures (depends on STRICTENC)
+    SCRIPT_VERIFY_NOCACHE       = (1U << 3),            // do not store results in signature cache (but do query it)
 };
 
+const int DELAYED_DELTA = 100;
 enum txnouttype
 {
-    TX_NONSTANDARD,
+    TX_NONSTANDARD              = 0,
     // 'standard' transaction types:
-    TX_PUBKEY,
-    TX_PUBKEYHASH,
-    TX_SCRIPTHASH,
-    TX_MULTISIG,
-    TX_NULL_DATA,
+    TX_PUBKEY                   = 1,
+    TX_PUBKEYHASH               = 2,
+    TX_SCRIPTHASH               = 3,
+    TX_MULTISIG                 = 4,
+    TX_NULL_DATA                = 5,
+    
+    TX_DELAYEDPUBKEY            = DELAYED_DELTA + TX_PUBKEY,
+    TX_DELAYEDPUBKEYHASH        = DELAYED_DELTA + TX_PUBKEYHASH,
+    TX_DELAYEDSCRIPTHASH        = DELAYED_DELTA + TX_SCRIPTHASH,
+    TX_DELAYEDMULTISIG          = DELAYED_DELTA + TX_MULTISIG,
 };
 
 class CNoDestination {
@@ -354,13 +360,16 @@ enum opcodetype
     OP_NOP9 = 0xb8,
     OP_NOP10 = 0xb9,
 
-
+    // locktime
+    OP_CHECKLOCKTIME = 0xc0,
+    OP_CHECKLOCKTIMEVERIFY = 0xc1,
 
     // template matching params
+    OP_SCRIPTNUMBER = 0xf8,
     OP_SMALLDATA = 0xf9,
     OP_SMALLINTEGER = 0xfa,
     OP_PUBKEYS = 0xfb,
-    OP_PUBKEYHASH = 0xfd,
+    OP_HASH160HASH = 0xfd,
     OP_PUBKEY = 0xfe,
 
     OP_INVALIDOPCODE = 0xff,

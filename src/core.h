@@ -232,6 +232,16 @@ public:
     bool IsCoinBase() const
     {
         return (vin.size() == 1 && vin[0].prevout.IsNull());
+
+        // S.M. TODO make it so that coinbase transactions can have more than one input
+        // if (vin.size() == 0)
+        //     return false; 
+        // for (int i = 0; i < vin.size(); i++) 
+        // {
+        //     if (!vin[i].prevout.IsNull())
+        //         return false;
+        // }
+        // return true;
     }
 
     friend bool operator==(const CTransaction& a, const CTransaction& b)
@@ -345,7 +355,7 @@ class CBlockHeader
 {
 public:
     // header
-    static const int CURRENT_VERSION=2;
+    static const int CURRENT_VERSION=1;
     int nVersion;
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
