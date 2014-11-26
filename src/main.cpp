@@ -668,16 +668,16 @@ bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs)
     return true;
 }
 
-unsigned int GetLegacySigOpCount(const CTransaction& tx)
+unsigned int GetSigOpCount(const CTransaction& tx)
 {
     unsigned int nSigOps = 0;
     BOOST_FOREACH(const CTxIn& txin, tx.vin)
     {
-        nSigOps += txin.scriptSig.GetSigOpCount(false);
+        nSigOps += txin.scriptSig.GetSigOpCount();
     }
     BOOST_FOREACH(const CTxOut& txout, tx.vout)
     {
-        nSigOps += txout.scriptPubKey.GetSigOpCount(false);
+        nSigOps += txout.scriptPubKey.GetSigOpCount();
     }
     return nSigOps;
 }
@@ -690,7 +690,7 @@ unsigned int GetP2SHSigOpCount(const CTransaction& tx, CCoinsViewCache& inputs)
     unsigned int nSigOps = 0;
     for (unsigned int i = 0; i < tx.vin.size(); i++)
     {
-        const CTxOut &prevout = inputs.GetOutputFor(tx.vin[i]);
+        const CTxOut& prevout = inputs.GetOutputFor(tx.vin[i]);
         if (prevout.scriptPubKey.IsPayToScriptHash())
             nSigOps += prevout.scriptPubKey.GetSigOpCount(tx.vin[i].scriptSig);
     }
@@ -1853,7 +1853,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
         const CTransaction &tx = block.vtx[i];
 
         nInputs += tx.vin.size();
-        nSigOps += GetLegacySigOpCount(tx);
+        nSigOps += GetSigOpCount(tx);
         if (nSigOps > MAX_BLOCK_SIGOPS)
             return state.DoS(100, error("ConnectBlock() : too many sigops"),
                              REJECT_INVALID, "bad-blk-sigops");
@@ -2403,7 +2403,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     unsigned int nSigOps = 0;
     BOOST_FOREACH(const CTransaction& tx, block.vtx)
     {
-        nSigOps += GetLegacySigOpCount(tx);
+        nSigOps += GetSigOpCount(tx);
     }
     if (nSigOps > MAX_BLOCK_SIGOPS)
         return state.DoS(100, error("CheckBlock() : out-of-bounds SigOpCount"),

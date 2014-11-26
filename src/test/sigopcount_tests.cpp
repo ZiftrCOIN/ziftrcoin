@@ -27,15 +27,13 @@ BOOST_AUTO_TEST_CASE(GetSigOpCount)
 {
     // Test CScript::GetSigOpCount()
     CScript s1;
-    BOOST_CHECK_EQUAL(s1.GetSigOpCount(false), 0U);
-    BOOST_CHECK_EQUAL(s1.GetSigOpCount(true), 0U);
+    BOOST_CHECK_EQUAL(s1.GetSigOpCount(), 0U);
 
     uint160 dummy;
     s1 << OP_1 << dummy << dummy << OP_2 << OP_CHECKMULTISIG;
-    BOOST_CHECK_EQUAL(s1.GetSigOpCount(true), 2U);
+    BOOST_CHECK_EQUAL(s1.GetSigOpCount(), 2U);
     s1 << OP_IF << OP_CHECKSIG << OP_ENDIF;
-    BOOST_CHECK_EQUAL(s1.GetSigOpCount(true), 3U);
-    BOOST_CHECK_EQUAL(s1.GetSigOpCount(false), 21U);
+    BOOST_CHECK_EQUAL(s1.GetSigOpCount(), 3U);
 
     CScript p2sh;
     p2sh.SetDestination(s1.GetID());
@@ -52,12 +50,10 @@ BOOST_AUTO_TEST_CASE(GetSigOpCount)
     }
     CScript s2;
     s2.SetMultisig(1, keys);
-    BOOST_CHECK_EQUAL(s2.GetSigOpCount(true), 3U);
-    BOOST_CHECK_EQUAL(s2.GetSigOpCount(false), 20U);
+    BOOST_CHECK_EQUAL(s2.GetSigOpCount(), 3U);
 
     p2sh.SetDestination(s2.GetID());
-    BOOST_CHECK_EQUAL(p2sh.GetSigOpCount(true), 0U);
-    BOOST_CHECK_EQUAL(p2sh.GetSigOpCount(false), 0U);
+    BOOST_CHECK_EQUAL(p2sh.GetSigOpCount(), 0U);
     CScript scriptSig2;
     scriptSig2 << OP_1 << dummy << dummy << Serialize(s2);
     BOOST_CHECK_EQUAL(p2sh.GetSigOpCount(scriptSig2), 3U);

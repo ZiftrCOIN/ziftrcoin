@@ -281,11 +281,11 @@ int64_t GetMinFee(const CTransaction& tx, unsigned int nBytes, bool fAllowFree, 
 */
 bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs);
 
-/** Count ECDSA signature operations the old-fashioned (pre-0.6) way
+/** Count ECDSA signature operations
     @return number of sigops this transaction's outputs will produce when spent
     @see CTransaction::FetchInputs
 */
-unsigned int GetLegacySigOpCount(const CTransaction& tx);
+unsigned int GetSigOpCount(const CTransaction& tx);
 
 /** Count ECDSA signature operations in pay-to-script-hash inputs.
 

@@ -1943,7 +1943,7 @@ CScript CombineSignatures(CScript scriptPubKey, const CTransaction& txTo, unsign
     return CombineSignatures(scriptPubKey, txTo, nIn, txType, vSolutions, stack1, stack2);
 }
 
-unsigned int CScript::GetSigOpCount(bool fAccurate) const
+unsigned int CScript::GetSigOpCount() const
 {
     unsigned int n = 0;
     const_iterator pc = begin();
@@ -1957,7 +1957,7 @@ unsigned int CScript::GetSigOpCount(bool fAccurate) const
             n++;
         else if (opcode == OP_CHECKMULTISIG || opcode == OP_CHECKMULTISIGVERIFY)
         {
-            if (fAccurate && lastOpcode >= OP_1 && lastOpcode <= OP_16)
+            if (lastOpcode >= OP_1 && lastOpcode <= OP_16)
                 n += DecodeOP_N(lastOpcode);
             else
                 n += 20;
@@ -1970,7 +1970,7 @@ unsigned int CScript::GetSigOpCount(bool fAccurate) const
 unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
 {
     if (!IsPayToScriptHash())
-        return GetSigOpCount(true);
+        return GetSigOpCount();
 
     // This is a pay-to-script-hash scriptPubKey;
     // get the last item that the scriptSig
@@ -1986,18 +1986,25 @@ unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
             return 0;
     }
 
-    /// ... and return its opcount:
+    // This should still work even with delayed TXs because push data is on the end
+    // ... and return its opcount:
     CScript subscript(data.begin(), data.end());
-    return subscript.GetSigOpCount(true);
+    return subscript.GetSigOpCount();
 }
 
 bool CScript::IsPayToScriptHash() const
 {
     // Extra-fast test for pay-to-script-hash CScripts:
-    return (this->size() == 23 &&
-            this->at(0) == OP_HASH160 &&
-            this->at(1) == 0x14 &&
-            this->at(22) == OP_EQUAL);
+    if (this->size() == 23 && this->at(0) == OP_HASH160 && this->at(1) == 0x14 && this->at(22) == OP_EQUAL)
+        return true;
+
+    // Slower test for delayed P2SH
+    txnouttype typeRet;
+    vector<vector<unsigned char> > vSolutionsRet;
+    if (Solver(*this, typeRet, vSolutionsRet))
+        return typeRet == TX_DELAYEDSCRIPTHASH;
+
+    return false;
 }
 
 bool CScript::IsPushOnly() const

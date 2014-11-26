@@ -249,7 +249,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
                 continue;
 
             // Legacy limits on sigOps:
-            unsigned int nTxSigOps = GetLegacySigOpCount(tx);
+            unsigned int nTxSigOps = GetSigOpCount(tx);
             if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)
                 continue;
 
@@ -330,7 +330,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
         pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock);
         pblock->nNonce         = 0;
         pblock->vtx[0].vin[0].scriptSig = CScript() << OP_0 << OP_0;
-        pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);
+        pblocktemplate->vTxSigOps[0] = GetSigOpCount(pblock->vtx[0]);
 
         CBlockIndex indexDummy(*pblock);
         indexDummy.pprev = pindexPrev;

@@ -655,7 +655,7 @@ public:
     // CHECKMULTISIGs serialized in scriptSigs are
     // counted more accurately, assuming they are of the form
     //  ... OP_N CHECKMULTISIG ...
-    unsigned int GetSigOpCount(bool fAccurate) const;
+    unsigned int GetSigOpCount() const;
 
     // Accurately count sigOps, including sigOps in
     // pay-to-script-hash transactions:
