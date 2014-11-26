@@ -24,8 +24,7 @@ public:
     enum Unit
     {
         BTC,
-        mBTC,
-        uBTC
+        mBTC
     };
 
     //! @name Static API

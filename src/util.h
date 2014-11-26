@@ -35,8 +35,14 @@
 class CNetAddr;
 class uint256;
 
-static const int64_t COIN = 100000000;
-static const int64_t CENT = 1000000;
+static const int64_t COIN = 100000;
+static const int64_t CENT = 1000;
+
+/** No amount larger than this (in satoshi) is valid */
+static const double  MAX_MONEY_COINS    = 10000000000.0;
+static const int64_t MAX_MONEY_SATOSHIS = 10000000000 * COIN;
+inline bool MoneyRangeCoins(double nValue) { return (nValue >= 0.0 && nValue <= MAX_MONEY_COINS); }
+inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY_SATOSHIS); }
 
 #define BEGIN(a)            ((char*)&(a))
 #define END(a)              ((char*)&((&(a))[1]))

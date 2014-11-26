@@ -100,13 +100,13 @@ unsigned int pnSeed[] =
 
 static const char* pszTimestamp = "Discus Fish: 24, Unknown: 22, GHash.IO: 22";
 
-// 0: Don't mine any
-// 1: Mine the main net genesis block
-// 2: Mine the test net genesis block
-// 3: Mine the reg test genesis block
+// == 0: Don't mine any
+// <= 1: Mine the main net genesis block
+// <= 2: Mine the test net genesis block
+// <= 3: Mine the reg test genesis block
 static int whichGenesisMine = 0;
 
-static void MineGenesisBlock(CBlock genesis, CBigNum bnProofOfWorkLimit, const std::string& pref) {
+static void MineGenesisBlock(CBlock genesis, CBigNum bnProofOfWorkLimit, const string& pref) {
     genesis.nNonce = ~0;
     unsigned int nExtraNonce = ~0;
     uint256 hashGenesisBlock = ~uint256(0);
@@ -139,8 +139,11 @@ public:
         nRPCPort = 10332;
         vAlertPubKey = ParseHex("0380d4125f5357aac2b98c201ee76c3e26a5ef084a5fcd26e65c9cfff7ad1a026c");
 
-        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 26);
-        nSubsidyHalvingInterval = 210000;
+        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 25);
+        // Max period lasts for:           2.5 years, or 2.5*365*24*60 = 1,314,000 blocks
+        // Decreasing periodd lasts for:   7.5 years, or 7.5*365*24*60 = 3,942,000 blocks
+        nLastMaxSubsidyBlock = 20; // 1314000;
+        nLastDecreasingSubsidyBlock = nLastMaxSubsidyBlock + 60; // + 3942000;
         
         CTransaction txNew;
 
@@ -155,7 +158,7 @@ public:
             if (i > 0) 
                 txNew.vout[i].scriptPubKey << CScriptNum(25 * i) << OP_CHECKLOCKTIMEVERIFY;
             txNew.vout[i].scriptPubKey << OP_DUP << OP_HASH160 << CKeyID(uint160("0xa079889dffd0e5eb2a8cdbd636ca1cf963461080")) << OP_EQUALVERIFY << OP_CHECKSIG;
-            txNew.vout[i].nValue = (i > 0 ? 25 * COIN : 350 * COIN);
+            txNew.vout[i].nValue = (i > 0 ? 25000000 * COIN : 350000000 * COIN);
         }
 
         genesis.vtx.push_back(txNew);
@@ -165,14 +168,15 @@ public:
         genesis.nVersion = 1;
         genesis.nTime    = 1416422035;
         genesis.nBits    = bnProofOfWorkLimit.GetCompact();
-        genesis.nNonce   = 40307198;
+        genesis.nNonce   = 68622575;
         hashGenesisBlock = genesis.GetHash();
 
-        if (whichGenesisMine == 1)
+        if (whichGenesisMine != 0 && whichGenesisMine <= 1) {
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
-
-        assert(hashGenesisBlock == uint256("0x00000009c764fe2608b86744ab57683c70fc08fe3a92fe9583cdd2c452375aa7"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
-        assert(genesis.hashMerkleRoot == uint256("0x9bc7596826f54955d3256982a0a68ea9c9d68b51a1d4fddd8de1768419c664c9"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")); c00ca94d5b5dcab611f0ea87703933d6cf48ae8ac28853a493cea7d2b6730527
+        } else {
+            assert(hashGenesisBlock == uint256("0x000000637d51ae8dfebee2177a7f0b3d92f145b9863b1da24e746113d2ae7536"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
+            assert(genesis.hashMerkleRoot == uint256("0xe78cf10089ccbd2a585e320ee4c368ba99d92d4a9bb00a414d2087f35ec3fb20"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")); 
+        }
 
         // vSeeds.push_back(CDNSSeedData("bitcoin.sipa.be", "seed.bitcoin.sipa.be"));
         // vSeeds.push_back(CDNSSeedData("bluematt.me", "dnsseed.bluematt.me"));
@@ -236,13 +240,14 @@ public:
 
         // Modify the testnet genesis block so the timestamp is valid for a later start.
         genesis.nTime = 1416422036;
-        genesis.nNonce = 6566568;
+        genesis.nNonce = 58482354;
         hashGenesisBlock = genesis.GetHash();
 
-        if (whichGenesisMine == 2)
+        if (whichGenesisMine != 0 && whichGenesisMine <= 2) {
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
-
-        assert(hashGenesisBlock == uint256("0x0000000de09168c9fa4cbb17deeec6e60c0f93ffdfe4a15bbb4e79d2d91eeab8"));
+        } else {
+            assert(hashGenesisBlock == uint256("0x0000004d427385b02d854549ade016f66763997450ec4cdfcf5915e760987ece"));
+        }
         // Merkle root is the same as parent
 
         vFixedSeeds.clear();
@@ -274,18 +279,20 @@ public:
         nDefaultPort = 12333;
         strDataDir = "regtest";
 
-        nSubsidyHalvingInterval = 150;
+        nLastMaxSubsidyBlock = 20;
+        nLastDecreasingSubsidyBlock = nLastMaxSubsidyBlock + 60;
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 1);
 
         genesis.nTime = 1416422037;
         genesis.nBits = 0x207fffff;
-        genesis.nNonce = 1;
+        genesis.nNonce = 5;
         hashGenesisBlock = genesis.GetHash();
 
-        if (whichGenesisMine == 3)
+        if (whichGenesisMine != 0 && whichGenesisMine <= 3) {
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
+        }
         
-        assert(hashGenesisBlock == uint256("0x050ff8bafafdffae7bb09c6fb3589fc4335bb35a67bbc03a9df8dcd5a9ddeef1"));
+        assert(hashGenesisBlock == uint256("0x06c56e6db69ff9c14ba3030300d27ffcdb3634f736de89974e6d6adc41abbcd3"));
         // Merkle root is the same as parent
 
         vSeeds.clear();  // Regtest mode doesn't have any DNS seeds.

@@ -57,7 +57,8 @@ public:
     const vector<unsigned char>& AlertKey() const { return vAlertPubKey; }
     int GetDefaultPort() const { return nDefaultPort; }
     const CBigNum& ProofOfWorkLimit() const { return bnProofOfWorkLimit; }
-    int SubsidyHalvingInterval() const { return nSubsidyHalvingInterval; }
+    int LastMaxSubsidyBlock() const { return nLastMaxSubsidyBlock; }
+    int LastDecreasingSubsidyBlock() const { return nLastDecreasingSubsidyBlock; }
     virtual const CBlock& GenesisBlock() const = 0;
     virtual bool RequireRPCPassword() const { return true; }
     const string& DataDir() const { return strDataDir; }
@@ -76,7 +77,8 @@ protected:
     int nDefaultPort;
     int nRPCPort;
     CBigNum bnProofOfWorkLimit;
-    int nSubsidyHalvingInterval;
+    int nLastMaxSubsidyBlock;
+    int nLastDecreasingSubsidyBlock;
     string strDataDir;
     vector<CDNSSeedData> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];

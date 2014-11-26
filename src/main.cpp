@@ -50,9 +50,9 @@ bool fTxIndex = false;
 unsigned int nCoinCacheSize = 5000;
 
 /** Fees smaller than this (in satoshi) are considered zero fee (for transaction creation) */
-int64_t CTransaction::nMinTxFee = 10000;  // Override with -mintxfee
+int64_t CTransaction::nMinTxFee = 1000;  // Override with -mintxfee
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying and mining) */
-int64_t CTransaction::nMinRelayTxFee = 1000;
+int64_t CTransaction::nMinRelayTxFee = 100;
 
 struct COrphanBlock {
     uint256 hashBlock;
@@ -772,7 +772,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
         if (txout.nValue < 0)
             return state.DoS(100, error("CheckTransaction() : txout.nValue negative"),
                              REJECT_INVALID, "bad-txns-vout-negative");
-        if (txout.nValue > MAX_MONEY)
+        if (txout.nValue > MAX_MONEY_SATOSHIS)
             return state.DoS(100, error("CheckTransaction() : txout.nValue too high"),
                              REJECT_INVALID, "bad-txns-vout-toolarge");
         nValueOut += txout.nValue;
@@ -838,7 +838,7 @@ int64_t GetMinFee(const CTransaction& tx, unsigned int nBytes, bool fAllowFree, 
     }
 
     if (!MoneyRange(nMinFee))
-        nMinFee = MAX_MONEY;
+        nMinFee = MAX_MONEY_SATOSHIS;
     return nMinFee;
 }
 
@@ -872,16 +872,16 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
 
     // Check for conflicts with in-memory transactions
     {
-    LOCK(pool.cs); // protect pool.mapNextTx
-    for (unsigned int i = 0; i < tx.vin.size(); i++)
-    {
-        COutPoint outpoint = tx.vin[i].prevout;
-        if (pool.mapNextTx.count(outpoint))
+        LOCK(pool.cs); // protect pool.mapNextTx
+        for (unsigned int i = 0; i < tx.vin.size(); i++)
         {
-            // Disable replacement feature for now
-            return false;
+            COutPoint outpoint = tx.vin[i].prevout;
+            if (pool.mapNextTx.count(outpoint))
+            {
+                // Disable replacement feature for now
+                return false;
+            }
         }
-    }
     }
 
     {
@@ -1209,17 +1209,52 @@ void static PruneOrphanBlocks()
     mapOrphanBlocks.erase(hash);
 }
 
+
+
+/*
+Block reward schedule:
+
+|-------------------
+|                    \
+|                      -
+|                        \
+|                          -
+|                            \
+|                              -
+|                                \
+|                                  -
+|                                    \
+|                                      -
+|                                        \
+|                                          ----------------->
+_____________________________________________________________________ Time
+
+
+Expected block generation rate is 1 block per minute.
+
+Broken up into three sections:
+
+     Maximum               Decreasing          Minimum
+<------------------><---------------------><--------------
+
+Max period lasts for:           2.5 years, or 2.5*365*24*60 = 1,314,000 blocks
+Decreasing periodd lasts for:   7.5 years, or 7.5*365*24*60 = 3,942,000 blocks
+
+*/
+
+static const int64_t nMaxSubsidy = 279300 * CENT;
+static const int64_t nMinSubsidy =  19026 * CENT;
+
 int64_t GetBlockValue(int nHeight, int64_t nFees)
 {
-    int64_t nSubsidy = 50 * COIN;
-    int halvings = nHeight / Params().SubsidyHalvingInterval();
+    if (nHeight > Params().LastDecreasingSubsidyBlock())
+        return nMinSubsidy + nFees;
 
-    // Force block reward to zero when right shift is undefined.
-    if (halvings >= 64)
-        return nFees;
-
-    // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
-    nSubsidy >>= halvings;
+    int64_t nSubsidy = nMaxSubsidy;
+    
+    int nBlocksPastEndMaxPeriod = (nHeight > Params().LastMaxSubsidyBlock() ? nHeight-Params().LastMaxSubsidyBlock() : 0);
+    int64_t nDecreasePerBlockPastEndMaxPeriod = (nMaxSubsidy - nMinSubsidy)/(Params().LastDecreasingSubsidyBlock() - Params().LastMaxSubsidyBlock());
+    nSubsidy -= nBlocksPastEndMaxPeriod * nDecreasePerBlockPastEndMaxPeriod;
 
     return nSubsidy + nFees;
 }
