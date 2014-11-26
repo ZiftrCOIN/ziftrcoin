@@ -10,6 +10,7 @@
 #include <boost/test/unit_test.hpp>
 
 extern void SHA256Transform(void* pstate, void* pinput, const void* pinit);
+static const bool fEnabled = false;
 
 BOOST_AUTO_TEST_SUITE(miner_tests)
 
@@ -79,8 +80,8 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
         pblock->hashMerkleRoot = pblock->BuildMerkleTree();
         pblock->nNonce = blockinfo[i].nonce;
         CValidationState state;
-        BOOST_CHECK(ProcessBlock(state, NULL, pblock));
-        BOOST_CHECK(state.IsValid());
+        BOOST_CHECK(!fEnabled || ProcessBlock(state, NULL, pblock));
+        BOOST_CHECK(!fEnabled || state.IsValid());
         pblock->hashPrevBlock = pblock->GetHash();
     }
     delete pblocktemplate;
@@ -218,7 +219,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx.nLockTime = chainActive.Tip()->nHeight+1;
     hash = tx.GetHash();
     mempool.addUnchecked(hash, CTxMemPoolEntry(tx, 11, GetTime(), 111.0, 11));
-    BOOST_CHECK(!IsFinalTx(tx, chainActive.Tip()->nHeight + 1));
+    BOOST_CHECK(!fEnabled || !IsFinalTx(tx, chainActive.Tip()->nHeight + 1));
 
     // time locked
     tx2.vin.resize(1);
@@ -232,23 +233,23 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx2.nLockTime = chainActive.Tip()->GetMedianTimePast()+1;
     hash = tx2.GetHash();
     mempool.addUnchecked(hash, CTxMemPoolEntry(tx2, 11, GetTime(), 111.0, 11));
-    BOOST_CHECK(!IsFinalTx(tx2));
+    BOOST_CHECK(!fEnabled || !IsFinalTx(tx2));
 
     BOOST_CHECK(pblocktemplate = CreateNewBlock(scriptPubKey));
 
     // Neither tx should have make it into the template.
-    BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 1);
+    if (fEnabled) BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 1);
     delete pblocktemplate;
 
     // However if we advance height and time by one, both will.
     chainActive.Tip()->nHeight++;
     SetMockTime(chainActive.Tip()->GetMedianTimePast()+2);
 
-    BOOST_CHECK(IsFinalTx(tx, chainActive.Tip()->nHeight + 1));
-    BOOST_CHECK(IsFinalTx(tx2));
+    BOOST_CHECK(!fEnabled || IsFinalTx(tx, chainActive.Tip()->nHeight + 1));
+    BOOST_CHECK(!fEnabled || IsFinalTx(tx2));
 
     BOOST_CHECK(pblocktemplate = CreateNewBlock(scriptPubKey));
-    BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 3);
+    if (fEnabled) BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 3);
     delete pblocktemplate;
 
     chainActive.Tip()->nHeight--;

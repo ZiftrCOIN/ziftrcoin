@@ -37,6 +37,7 @@ class uint256;
 
 static const int64_t COIN = 100000;
 static const int64_t CENT = 1000;
+static const int64_t SATOSHI = 1; // just for finding places where raw satoshis are used
 
 /** No amount larger than this (in satoshi) is valid */
 static const double  MAX_MONEY_COINS    = 10000000000.0;

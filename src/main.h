@@ -66,6 +66,10 @@ static const int DEFAULT_SCRIPTCHECK_THREADS = 0;
 static const int MAX_BLOCKS_IN_TRANSIT_PER_PEER = 128;
 /** Timeout in seconds before considering a block download peer unresponsive. */
 static const unsigned int BLOCK_DOWNLOAD_TIMEOUT = 60;
+/** The maximum subsidy that can be rewarded in a block, not including fees. */
+static const int64_t MAX_SUBSIDY = 279299848 * SATOSHI;
+/** The minimum subsidy that can be rewarded in a block, not including fees. */
+static const int64_t MIN_SUBSIDY =  19025875 * SATOSHI;
 
 #ifdef USE_UPNP
 static const int fHaveUPnP = true;

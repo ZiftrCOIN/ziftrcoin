@@ -137,13 +137,13 @@ public:
         pchMessageStart[3] = 0x2b;
         nDefaultPort = 10333;
         nRPCPort = 10332;
-        vAlertPubKey = ParseHex("0380d4125f5357aac2b98c201ee76c3e26a5ef084a5fcd26e65c9cfff7ad1a026c");
+        vAlertPubKey = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");//"0380d4125f5357aac2b98c201ee76c3e26a5ef084a5fcd26e65c9cfff7ad1a026c");
 
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 25);
         // Max period lasts for:           2.5 years, or 2.5*365*24*60 = 1,314,000 blocks
         // Decreasing periodd lasts for:   7.5 years, or 7.5*365*24*60 = 3,942,000 blocks
-        nLastMaxSubsidyBlock = 20; // 1314000;
-        nLastDecreasingSubsidyBlock = nLastMaxSubsidyBlock + 60; // + 3942000;
+        nLastMaxSubsidyBlock = 1314000;
+        nLastDecreasingSubsidyBlock = nLastMaxSubsidyBlock + + 3942000;
         
         CTransaction txNew;
 
@@ -236,7 +236,7 @@ public:
         nDefaultPort = 11333;
         nRPCPort = 11332;
         strDataDir = "testnet";
-        vAlertPubKey = ParseHex("02911661822e0b2cd814ed3ff4d23c97cfe7c89ad1eb6ce2ad3181195cfa9e0886");
+        vAlertPubKey = ParseHex("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");//"02911661822e0b2cd814ed3ff4d23c97cfe7c89ad1eb6ce2ad3181195cfa9e0886");
 
         // Modify the testnet genesis block so the timestamp is valid for a later start.
         genesis.nTime = 1416422036;
@@ -279,8 +279,8 @@ public:
         nDefaultPort = 12333;
         strDataDir = "regtest";
 
-        nLastMaxSubsidyBlock = 20;
-        nLastDecreasingSubsidyBlock = nLastMaxSubsidyBlock + 60;
+        // nLastMaxSubsidyBlock = 20;
+        // nLastDecreasingSubsidyBlock = nLastMaxSubsidyBlock + 60;
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 1);
 
         genesis.nTime = 1416422037;

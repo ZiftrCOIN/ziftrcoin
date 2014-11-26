@@ -1242,18 +1242,15 @@ Decreasing periodd lasts for:   7.5 years, or 7.5*365*24*60 = 3,942,000 blocks
 
 */
 
-static const int64_t nMaxSubsidy = 279300 * CENT;
-static const int64_t nMinSubsidy =  19026 * CENT;
-
 int64_t GetBlockValue(int nHeight, int64_t nFees)
 {
     if (nHeight > Params().LastDecreasingSubsidyBlock())
-        return nMinSubsidy + nFees;
+        return MIN_SUBSIDY + nFees;
 
-    int64_t nSubsidy = nMaxSubsidy;
+    int64_t nSubsidy = MAX_SUBSIDY;
     
     int nBlocksPastEndMaxPeriod = (nHeight > Params().LastMaxSubsidyBlock() ? nHeight-Params().LastMaxSubsidyBlock() : 0);
-    int64_t nDecreasePerBlockPastEndMaxPeriod = (nMaxSubsidy - nMinSubsidy)/(Params().LastDecreasingSubsidyBlock() - Params().LastMaxSubsidyBlock());
+    int64_t nDecreasePerBlockPastEndMaxPeriod = (MAX_SUBSIDY - MIN_SUBSIDY)/(Params().LastDecreasingSubsidyBlock() - Params().LastMaxSubsidyBlock());
     nSubsidy -= nBlocksPastEndMaxPeriod * nDecreasePerBlockPastEndMaxPeriod;
 
     return nSubsidy + nFees;

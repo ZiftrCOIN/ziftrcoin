@@ -97,10 +97,10 @@ BOOST_AUTO_TEST_CASE(rpc_rawsign)
       "\"vout\":1,\"scriptPubKey\":\"a914b10c9df5f7edf436c697f02f1efdba4cf399615187\","
       "\"redeemScript\":\"512103debedc17b3df2badbcdd86d5feb4562b86fe182e5998abd8bcd4f122c6155b1b21027e940bb73ab8732bfdf7f9216ecefca5b94d6df834e77e108f68e66f126044c052ae\"}]";
     r = CallRPC(string("createrawtransaction ")+prevout+" "+
-      "{\"3HqAe9LtNBjnsfM4CyYaWTnvCaUYT7v4oZ\":11}");
+      "{\"2MtuYcMpgNw25ne16qi5cR1uuraBicLFiWJ\":11}");
     string notsigned = r.get_str();
-    string privkey1 = "\"KzsXybp9jX64P5ekX1KUxRQ79Jht9uzW7LorgwE65i5rWACL6LQe\"";
-    string privkey2 = "\"Kyhdf5LuKTRx4ge69ybABsiUAWjVRK4XGxAKk2FQLp2HjGMy87Z4\"";
+    string privkey1 = "\"cS8n8tosxnnRZ64Bu9RyarzNY3w7scCWLr1T6BPExM4dV1oaVTiD\"";
+    string privkey2 = "\"cRWjfP5FwBKExGnTL4fxnAYezSkiwWXFvZnd3GrX8c3k4TpeudRY\"";
     r = CallRPC(string("signrawtransaction ")+notsigned+" "+prevout+" "+"[]");
     BOOST_CHECK(find_value(r.get_obj(), "complete").get_bool() == false);
     r = CallRPC(string("signrawtransaction ")+notsigned+" "+prevout+" "+"["+privkey1+","+privkey2+"]");
@@ -109,14 +109,14 @@ BOOST_AUTO_TEST_CASE(rpc_rawsign)
 
 BOOST_AUTO_TEST_CASE(rpc_format_monetary_values)
 {
-    BOOST_CHECK(write_string(ValueFromAmount(0LL), false) == "0.00000000");
-    BOOST_CHECK(write_string(ValueFromAmount(1LL), false) == "0.00000001");
-    BOOST_CHECK(write_string(ValueFromAmount(17622195LL), false) == "0.17622195");
-    BOOST_CHECK(write_string(ValueFromAmount(50000000LL), false) == "0.50000000");
-    BOOST_CHECK(write_string(ValueFromAmount(89898989LL), false) == "0.89898989");
-    BOOST_CHECK(write_string(ValueFromAmount(100000000LL), false) == "1.00000000");
-    BOOST_CHECK(write_string(ValueFromAmount(2099999999999990LL), false) == "20999999.99999990");
-    BOOST_CHECK(write_string(ValueFromAmount(2099999999999999LL), false) == "20999999.99999999");
+    BOOST_CHECK(write_string(ValueFromAmount(0LL), false) == "0.00000");
+    BOOST_CHECK(write_string(ValueFromAmount(1LL), false) == "0.00001");
+    BOOST_CHECK(write_string(ValueFromAmount(22195LL), false) == "0.22195");
+    BOOST_CHECK(write_string(ValueFromAmount(50000LL), false) == "0.50000");
+    BOOST_CHECK(write_string(ValueFromAmount(98989LL), false) == "0.98989");
+    BOOST_CHECK(write_string(ValueFromAmount(100000LL), false) == "1.00000");
+    BOOST_CHECK(write_string(ValueFromAmount(999999999999990LL), false) == "9999999999.99990");
+    BOOST_CHECK(write_string(ValueFromAmount(999999999999999LL), false) == "9999999999.99999");
 }
 
 static Value ValueFromString(const std::string &str)
@@ -128,14 +128,14 @@ static Value ValueFromString(const std::string &str)
 
 BOOST_AUTO_TEST_CASE(rpc_parse_monetary_values)
 {
-    BOOST_CHECK(AmountFromValue(ValueFromString("0.00000001")) == 1LL);
-    BOOST_CHECK(AmountFromValue(ValueFromString("0.17622195")) == 17622195LL);
-    BOOST_CHECK(AmountFromValue(ValueFromString("0.5")) == 50000000LL);
-    BOOST_CHECK(AmountFromValue(ValueFromString("0.50000000")) == 50000000LL);
-    BOOST_CHECK(AmountFromValue(ValueFromString("0.89898989")) == 89898989LL);
-    BOOST_CHECK(AmountFromValue(ValueFromString("1.00000000")) == 100000000LL);
-    BOOST_CHECK(AmountFromValue(ValueFromString("20999999.9999999")) == 2099999999999990LL);
-    BOOST_CHECK(AmountFromValue(ValueFromString("20999999.99999999")) == 2099999999999999LL);
+    BOOST_CHECK(AmountFromValue(ValueFromString("0.00001")) == 1LL);
+    BOOST_CHECK(AmountFromValue(ValueFromString("0.22195")) == 22195LL);
+    BOOST_CHECK(AmountFromValue(ValueFromString("0.5")) == 50000LL);
+    BOOST_CHECK(AmountFromValue(ValueFromString("0.50000")) == 50000LL);
+    BOOST_CHECK(AmountFromValue(ValueFromString("0.98989")) == 98989LL);
+    BOOST_CHECK(AmountFromValue(ValueFromString("1.00000")) == 100000LL);
+    BOOST_CHECK(AmountFromValue(ValueFromString("9999999999.9999")) == 999999999999990LL);
+    BOOST_CHECK(AmountFromValue(ValueFromString("9999999999.99999")) == 999999999999999LL);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
