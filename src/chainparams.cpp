@@ -143,7 +143,7 @@ public:
         // Max period lasts for:           2.5 years, or 2.5*365*24*60 = 1,314,000 blocks
         // Decreasing periodd lasts for:   7.5 years, or 7.5*365*24*60 = 3,942,000 blocks
         nLastMaxSubsidyBlock = 1314000;
-        nLastDecreasingSubsidyBlock = nLastMaxSubsidyBlock + + 3942000;
+        nLastDecreasingSubsidyBlock = nLastMaxSubsidyBlock + 3942000;
         
         CTransaction txNew;
 
@@ -186,7 +186,7 @@ public:
         // vSeeds.push_back(CDNSSeedData("xf2.org", "bitseed.xf2.org"));
 
         base58Prefixes[PUBKEY_ADDRESS] = list_of(80);  // P2PKH addresses start with 'Z'
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(3);   // P2SH  addresses start with '2'
+        base58Prefixes[SCRIPT_ADDRESS] = list_of(5);   // P2SH  addresses start with '3'
         base58Prefixes[SECRET_KEY] =     list_of(208); // Priv keys prefixed with 80 + 128
         base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x88)(0xB2)(0x1E);
         base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x88)(0xAD)(0xE4);

@@ -12,22 +12,32 @@ BOOST_AUTO_TEST_SUITE(main_tests)
 
 BOOST_AUTO_TEST_CASE(subsidy_limit_test)
 {
-	uint64_t nSum = 0;
+    // Takes a little longer, but is more accurate
+    
+	uint64_t nSum = 45000000000000; // Genesis block reward is this much
     for (int nHeight = 1; nHeight <= Params().LastDecreasingSubsidyBlock(); ++nHeight) {
         uint64_t nSubsidy = GetBlockValue(nHeight, 0);
         BOOST_CHECK(nSubsidy <= MAX_SUBSIDY);
         nSum += nSubsidy;
         BOOST_CHECK(MoneyRange(nSum));
-    }
-    printf("S : %llu\n", nSum); // 955201937214000
 
-    // uint64_t nSum = 0;
+        // if (nHeight % (365*24*60)) == 0) 
+        //     printf("I : %i, %llu\n", nHeight/nOneYear, nSum);
+    }
+    //printf("S : %llu\n", nSum);
+    BOOST_CHECK(nSum == 1000200853746000ULL);
+    
+
+    // nSum = 45000000000000 - MAX_SUBSIDY;
     // for (int nHeight = 0; nHeight < Params().LastMaxSubsidyBlock(); nHeight += 1000) {
     //     uint64_t nSubsidy = GetBlockValue(nHeight, 0);
     //     BOOST_CHECK(nSubsidy == MAX_SUBSIDY);
     //     nSum += nSubsidy * 1000;
     //     BOOST_CHECK(MoneyRange(nSum));
+
+    //     if (nHeight % nPrintDelta == 0) printf("I : %i, %llu\n", nHeight/nOneYear, nSum);
     // }
+    // printf("S : %llu\n", nSum); // 1000200853746000
     // // Have included up to subsidies Params().LastMaxSubsidyBlock()-1 at this point
 
     // // The decreasing period can be calculated as an arithmetic series
@@ -41,7 +51,7 @@ BOOST_AUTO_TEST_CASE(subsidy_limit_test)
     // nSum += S;
     // BOOST_CHECK(MoneyRange(nSum));
     // printf("S: %llu\n", S);
-    // BOOST_CHECK(nSum == 1000000000000000ULL);
+    
 }
 
 BOOST_AUTO_TEST_SUITE_END()

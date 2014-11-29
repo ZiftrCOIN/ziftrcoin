@@ -37,11 +37,13 @@ class uint256;
 
 static const int64_t COIN = 100000;
 static const int64_t CENT = 1000;
-static const int64_t SATOSHI = 1; // just for finding places where raw satoshis are used
+static const int64_t SATOSHI = 1; // just for easily searching for places where raw satoshis are used
 
 /** No amount larger than this (in satoshi) is valid */
-static const double  MAX_MONEY_COINS    = 10000000000.0;
-static const int64_t MAX_MONEY_SATOSHIS = 10000000000 * COIN;
+// Actual max is 10002008537.46000, can't get to exactly 10 billion coins because of 
+// rounding erros. Choosing to go a little above this max because of the min block reward
+static const double  MAX_MONEY_COINS    = 12000000000.0;
+static const int64_t MAX_MONEY_SATOSHIS = 12000000000 * COIN; 
 inline bool MoneyRangeCoins(double nValue) { return (nValue >= 0.0 && nValue <= MAX_MONEY_COINS); }
 inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY_SATOSHIS); }
 
