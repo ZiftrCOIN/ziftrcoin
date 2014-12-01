@@ -13,8 +13,7 @@
 using namespace std;
 using namespace json_spirit;
 
-Array
-createArgs(int nRequired, const char* address1=NULL, const char* address2=NULL)
+Array createArgs(int nRequired, const char* address1=NULL, const char* address2=NULL)
 {
     Array result;
     result.push_back(nRequired);
@@ -90,21 +89,25 @@ BOOST_AUTO_TEST_CASE(rpc_rawparams)
 
 BOOST_AUTO_TEST_CASE(rpc_rawsign)
 {
+    CChainParams::Network network = Params().NetworkID();
+    SelectParams(CChainParams::TESTNET);
+
     Value r;
     // input is a 1-of-2 multisig (so is output):
     string prevout =
-      "[{\"txid\":\"b4cc287e58f87cdae59417329f710f3ecd75a4ee1d2872b7248f50977c8493f3\","
-      "\"vout\":1,\"scriptPubKey\":\"a914b10c9df5f7edf436c697f02f1efdba4cf399615187\","
-      "\"redeemScript\":\"512103debedc17b3df2badbcdd86d5feb4562b86fe182e5998abd8bcd4f122c6155b1b21027e940bb73ab8732bfdf7f9216ecefca5b94d6df834e77e108f68e66f126044c052ae\"}]";
+      "[{\"txid\":\"0101010101010101010101010101010101010101010101010101010101010101\","
+      "\"vout\":1,\"scriptPubKey\":\"a914f8c2065bcb60bf273313cfab35cc696d16ad347087\","
+      "\"redeemScript\":\"512102a138abe0b0b0ffa932b9062837d5afd3cdd882256fb2ea1673ffca952e908a57210359d165637382227373829a6b0aca486e50d36ab65dfa005b51f0b7f21467fd1c52ae\"}]";
     r = CallRPC(string("createrawtransaction ")+prevout+" "+
-      "{\"2MtuYcMpgNw25ne16qi5cR1uuraBicLFiWJ\":11}");
+      "{\"2NFvXzwUPLrTDPwdSDHVP6sozJRhZijRawD\":11}");
     string notsigned = r.get_str();
-    string privkey1 = "\"cS8n8tosxnnRZ64Bu9RyarzNY3w7scCWLr1T6BPExM4dV1oaVTiD\"";
-    string privkey2 = "\"cRWjfP5FwBKExGnTL4fxnAYezSkiwWXFvZnd3GrX8c3k4TpeudRY\"";
+    string privkey1 = "\"cU1b9xaE1j3gsyT84M81N5ziK3n8EfVZ6CxB72pj9wRYftSe9nnA\"";
     r = CallRPC(string("signrawtransaction ")+notsigned+" "+prevout+" "+"[]");
     BOOST_CHECK(find_value(r.get_obj(), "complete").get_bool() == false);
-    r = CallRPC(string("signrawtransaction ")+notsigned+" "+prevout+" "+"["+privkey1+","+privkey2+"]");
+    r = CallRPC(string("signrawtransaction ")+notsigned+" "+prevout+" "+"["+privkey1+"]");
     BOOST_CHECK(find_value(r.get_obj(), "complete").get_bool() == true);
+
+    SelectParams(network);
 }
 
 BOOST_AUTO_TEST_CASE(rpc_format_monetary_values)

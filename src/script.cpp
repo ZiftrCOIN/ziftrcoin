@@ -1784,7 +1784,7 @@ bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransa
     if (!Solver(keystore, fromPubKey, hash, nHashType, txin.scriptSig, whichType))
         return false;
 
-    if (whichType == TX_SCRIPTHASH)
+    if (whichType == TX_SCRIPTHASH || whichType == TX_DELAYEDSCRIPTHASH)
     {
         // Solver returns the subscript that need to be evaluated;
         // the final scriptSig is the signatures from that
@@ -1795,8 +1795,8 @@ bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransa
         uint256 hash2 = SignatureHash(subscript, txTo, nIn, nHashType);
 
         txnouttype subType;
-        bool fSolved =
-            Solver(keystore, subscript, hash2, nHashType, txin.scriptSig, subType) && subType != TX_SCRIPTHASH;
+        bool fSolved = Solver(keystore, subscript, hash2, nHashType, txin.scriptSig, subType) 
+                && subType != TX_SCRIPTHASH && subType != TX_DELAYEDSCRIPTHASH;
         // Append serialized subscript whether or not it is completely signed:
         txin.scriptSig << static_cast<valtype>(subscript);
         if (!fSolved) return false;

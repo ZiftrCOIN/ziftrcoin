@@ -642,7 +642,7 @@ bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs)
         if (!EvalScript(stack, tx.vin[i].scriptSig, tx, i, false, 0))
             return false;
 
-        if (whichType == TX_SCRIPTHASH)
+        if (whichType == TX_SCRIPTHASH || whichType == TX_DELAYEDSCRIPTHASH)
         {
             if (stack.empty())
                 return false;
@@ -651,7 +651,7 @@ bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs)
             txnouttype whichType2;
             if (!Solver(subscript, whichType2, vSolutions2))
                 return false;
-            if (whichType2 == TX_SCRIPTHASH)
+            if (whichType2 == TX_SCRIPTHASH || whichType2 == TX_DELAYEDSCRIPTHASH)
                 return false;
 
             int tmpExpected;
