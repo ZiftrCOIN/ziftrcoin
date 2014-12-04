@@ -16,41 +16,69 @@
 // BitcoinMiner
 //
 
-int static FormatHashBlocks(void* pbuffer, unsigned int len)
-{
-    unsigned char* pdata = (unsigned char*)pbuffer;
-    unsigned int blocks = 1 + ((len + 8) / 64);
-    unsigned char* pend = pdata + 64 * blocks;
-    memset(pdata + len, 0, 64 * blocks - len);
-    pdata[len] = 0x80;
-    unsigned int bits = len * 8;
-    pend[-1] = (bits >> 0) & 0xff;
-    pend[-2] = (bits >> 8) & 0xff;
-    pend[-3] = (bits >> 16) & 0xff;
-    pend[-4] = (bits >> 24) & 0xff;
-    return blocks;
-}
 
-static const unsigned int pSHA256InitState[8] =
-{0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
+//
+// SHA256 hashing requires messages which are an integer number of bytes (as we use) 
+// to be padded with a 1 bit (0x80 byte), and then all zeroe bytes until reaching a 
+// size l (in bytes) such that
+//     l + 1 + k = 56 mod 64
+// where k is the number of zero bytes.
+// This is because the hashing takes place in steps, using 64 bytes in each step, and the last 8
+// bytes are reserved for the size of the message. Since the size of the message given is just
+// an unsigned int, we
+//
+// This method requires that there be a buffer of at least 64 bytes
+// free after the pbuffer. 
+//
+// int static FormatHashBlocks(void* pbuffer, unsigned int len)
+// {
+//     unsigned char* pdata = (unsigned char*)pbuffer;
+//     unsigned int blocks = 1 + ((len + 8) / 64);
+//     unsigned char* pend = pdata + 64 * blocks;
+//     memset(pdata + len, 0, 64 * blocks - len);
+//     pdata[len] = 0x80;
+//     unsigned int bits = len * 8;
+//     pend[-1] = (bits >>  0) & 0xff;
+//     pend[-2] = (bits >>  8) & 0xff;
+//     pend[-3] = (bits >> 16) & 0xff;
+//     pend[-4] = (bits >> 24) & 0xff;
+//     return blocks;
+// }
 
-void SHA256Transform(void* pstate, void* pinput, const void* pinit)
-{
-    SHA256_CTX ctx;
-    unsigned char data[64];
+//
+// SHA256 is done in steps, transforming a 64 byte state. This is the inital state. It is derived from the fractional parts
+// of the square roots of the first 8 primtes. 
+// See http://crypto.stackexchange.com/questions/1862/how-can-i-calculate-the-sha-256-midstate
+// static const unsigned int pSHA256InitState[8] =
+// {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 
-    SHA256_Init(&ctx);
 
-    for (int i = 0; i < 16; i++)
-        ((uint32_t*)data)[i] = ByteReverse(((uint32_t*)pinput)[i]);
+// 
+// Does one step of the SHA256 processing, using 64 bytes of the pinput
+// and producing the next state variable in pstate.
+// 
+// pstate - the result of the transform
+// pinput - the input data, the first 64 unsigned chars of which will be processed
+// pinit  - the result of the last SHA256 transform on the previous 64 unsigned chars of data,
+//          or the pSHA256InitState if this is the first 64 bytes of the message being processed.
+// 
+// void SHA256Transform(void* pstate, void* pinput, const void* pinit)
+// {
+//     SHA256_CTX ctx;
+//     unsigned char data[64];
 
-    for (int i = 0; i < 8; i++)
-        ctx.h[i] = ((uint32_t*)pinit)[i];
+//     SHA256_Init(&ctx);
 
-    SHA256_Update(&ctx, data, sizeof(data));
-    for (int i = 0; i < 8; i++)
-        ((uint32_t*)pstate)[i] = ctx.h[i];
-}
+//     for (int i = 0; i < 16; i++)
+//         ((uint32_t*)data)[i] = ByteReverse(((uint32_t*)pinput)[i]);
+
+//     for (int i = 0; i < 8; i++)
+//         ctx.h[i] = ((uint32_t*)pinit)[i];
+
+//     SHA256_Update(&ctx, data, sizeof(data));
+//     for (int i = 0; i < 8; i++)
+//         ((uint32_t*)pstate)[i] = ctx.h[i];
+// }
 
 // Some explaining would be appreciated
 class COrphan
@@ -328,7 +356,8 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
         pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
         UpdateTime(*pblock, pindexPrev);
         pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock);
-        pblock->nNonce         = 0;
+        //pblock->nNonce         = 0;
+        pblock->vchHeaderSig.clear();
         pblock->vtx[0].vin[0].scriptSig = CScript() << OP_0 << OP_0;
         pblocktemplate->vTxSigOps[0] = GetSigOpCount(pblock->vtx[0]);
 
@@ -344,76 +373,77 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
     return pblocktemplate.release();
 }
 
-void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& nExtraNonce)
+// TODO allow up to like 100 null coinbases inputs.
+// Make the first one be the heght, the second have the coinbase flags, etc
+void UpdateCoinbaseScriptSig(CBlock* pblock, CBlockIndex* pindexPrev)
 {
-    // Update nExtraNonce
-    static uint256 hashPrevBlock;
-    if (hashPrevBlock != pblock->hashPrevBlock)
-    {
-        nExtraNonce = 0;
-        hashPrevBlock = pblock->hashPrevBlock;
-    }
-    ++nExtraNonce;
-    unsigned int nHeight = pindexPrev->nHeight+1; // Height first in coinbase required for block.version=2
-    pblock->vtx[0].vin[0].scriptSig = (CScript() << nHeight << CScriptNum(nExtraNonce)) + COINBASE_FLAGS;
+    unsigned int nHeight = pindexPrev->nHeight + 1; // Height first in coinbase required
+    pblock->vtx[0].vin[0].scriptSig = (CScript() << CScriptNum(nHeight)) + COINBASE_FLAGS;
     assert(pblock->vtx[0].vin[0].scriptSig.size() <= 100);
 
     pblock->hashMerkleRoot = pblock->BuildMerkleTree();
 }
 
 
-void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash1)
-{
-    //
-    // Pre-build hash buffers
-    //
-    struct
-    {
-        struct unnamed2
-        {
-            int nVersion;
-            uint256 hashPrevBlock;
-            uint256 hashMerkleRoot;
-            unsigned int nTime;
-            unsigned int nBits;
-            unsigned int nNonce;
-        }
-        block;
-        unsigned char pchPadding0[64];
-        uint256 hash1;
-        unsigned char pchPadding1[64];
-    }
-    tmp;
-    memset(&tmp, 0, sizeof(tmp));
+//
+// Calculate the midstate buffer 
+// Format the the pdata and phash1 char*s to have the proper buffers for SHA256 hashing,
+// as outlined in the comment above FormatHashBlocks.
+//
+// void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash1)
+// {
+//     //
+//     // Pre-build hash buffers
+//     //
+//     struct
+//     {
+//         struct unnamed2
+//         {
+//             int nVersion;
+//             uint256 hashPrevBlock;
+//             uint256 hashMerkleRoot;
+//             unsigned int nTime;
+//             unsigned int nBits;
+//             unsigned char vchHeaderSig[72]; // Min 70 bytes, Max 72 bytes, Avg 71 bytes
+//         } block;
+//         unsigned char pchPadding0[64];
+//         uint256 hash1;
+//         unsigned char pchPadding1[64];
+//     } tmp;
+//     memset(&tmp, 0, sizeof(tmp)); // zero out everything
 
-    tmp.block.nVersion       = pblock->nVersion;
-    tmp.block.hashPrevBlock  = pblock->hashPrevBlock;
-    tmp.block.hashMerkleRoot = pblock->hashMerkleRoot;
-    tmp.block.nTime          = pblock->nTime;
-    tmp.block.nBits          = pblock->nBits;
-    tmp.block.nNonce         = pblock->nNonce;
+//     tmp.block.nVersion       = pblock->nVersion;
+//     tmp.block.hashPrevBlock  = pblock->hashPrevBlock;
+//     tmp.block.hashMerkleRoot = pblock->hashMerkleRoot;
+//     tmp.block.nTime          = pblock->nTime;
+//     tmp.block.nBits          = pblock->nBits;
+    
+//     int nSizeHeaderSig = pblock->vchHeaderSig.size();
+//     assert(70 <= nSizeHeaderSig && nSizeHeaderSig <= 72);
+    
 
-    FormatHashBlocks(&tmp.block, sizeof(tmp.block));
-    FormatHashBlocks(&tmp.hash1, sizeof(tmp.hash1));
+//     FormatHashBlocks(&tmp.block, sizeof(tmp.block));
+//     FormatHashBlocks(&tmp.hash1, sizeof(tmp.hash1));
 
-    // Byte swap all the input buffer
-    for (unsigned int i = 0; i < sizeof(tmp)/4; i++)
-        ((unsigned int*)&tmp)[i] = ByteReverse(((unsigned int*)&tmp)[i]);
+//     // Byte swap all the input buffer
+//     // Relies on the nubmer of bytes being a multiple of 4 
+//     for (unsigned int i = 0; i < sizeof(tmp)/4; i++)
+//         ((unsigned int*)&tmp)[i] = ByteReverse(((unsigned int*)&tmp)[i]);
 
-    // Precalc the first half of the first hash, which stays constant
-    SHA256Transform(pmidstate, &tmp.block, pSHA256InitState);
-
-    memcpy(pdata, &tmp.block, 128);
-    memcpy(phash1, &tmp.hash1, 64);
-}
+//     // Precalc the first third of the first hash, which stays constant
+//     // because it doesn't include the headerSig
+//     SHA256Transform(pmidstate, &tmp.block, pSHA256InitState);
+//     memcpy(pdata, &tmp.block, 128);
+//     memcpy(phash1, &tmp.hash1, 64);
+// }
 
 #ifdef ENABLE_WALLET
 //////////////////////////////////////////////////////////////////////////////
 //
 // Internal miner
 //
-double dHashesPerSec = 0.0;
-int64_t nHPSTimerStart = 0;
+double dSashesPerSec = 0.0;
+int64_t nSPSTimerStart = 0;
 
 //
 // ScanHash scans nonces looking for a hash with at least some zero bits.
@@ -422,47 +452,59 @@ int64_t nHPSTimerStart = 0;
 // between calls, but periodically or if nNonce is 0xffff0000 or above,
 // the block is rebuilt and nNonce starts over at zero.
 //
-unsigned int static ScanHash_CryptoPP(char* pmidstate, char* pdata, char* phash1, char* phash, unsigned int& nHashesDone)
+// unsigned int static ScanHash_CryptoPP(char* pmidstate, char* pdata, char* phash1, char* phash, unsigned int& nHashesDone)
+// {
+//     unsigned int& nNonce = *(unsigned int*)(pdata + 12);
+//     for (;;)
+//     {
+//         // Crypto++ SHA256
+//         // Hash pdata using pmidstate as the starting state into
+//         // pre-formatted buffer phash1, then hash phash1 into phash
+//         nNonce++;
+//         SHA256Transform(phash1, pdata, pmidstate);
+//         SHA256Transform(phash, phash1, pSHA256InitState);
+
+//         // Return the nonce if the hash has at least some zero bits,
+//         // caller will check if it has enough to reach the target
+//         if (((unsigned short*)phash)[14] == 0)
+//             return nNonce;
+
+//         // If nothing found after trying for a while, return -1
+//         if ((nNonce & 0xffff) == 0)
+//         {
+//             nHashesDone = 0xffff+1;
+//             return (unsigned int) -1;
+//         }
+//         if ((nNonce & 0xfff) == 0)
+//             boost::this_thread::interruption_point();
+//     }
+// }
+
+
+// Returns the number of failed attempts. 
+// If ret == nTries, then all failed.
+// Else, there were ret+1 sashes (signature-hashes) done and the last one succeeded
+unsigned int static DoSignatureHashes(const uint256& hashTarget, const uint256& hashToSign, const CKey& signer, CBlock* pblock, unsigned int nTries)
 {
-    unsigned int& nNonce = *(unsigned int*)(pdata + 12);
-    for (;;)
-    {
-        // Crypto++ SHA256
-        // Hash pdata using pmidstate as the starting state into
-        // pre-formatted buffer phash1, then hash phash1 into phash
-        nNonce++;
-        SHA256Transform(phash1, pdata, pmidstate);
-        SHA256Transform(phash, phash1, pSHA256InitState);
-
-        // Return the nonce if the hash has at least some zero bits,
-        // caller will check if it has enough to reach the target
-        if (((unsigned short*)phash)[14] == 0)
-            return nNonce;
-
-        // If nothing found after trying for a while, return -1
-        if ((nNonce & 0xffff) == 0)
-        {
-            nHashesDone = 0xffff+1;
-            return (unsigned int) -1;
+    for (unsigned int i = 0; i < nTries; i++) {
+        signer.Sign(hashToSign, pblock->vchHeaderSig);
+        if (pblock->GetHash(true) <= hashTarget) {
+            return i;
         }
-        if ((nNonce & 0xfff) == 0)
-            boost::this_thread::interruption_point();
     }
+    return nTries;
 }
-//GetID
-CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reservekey)
-{
-    CPubKey pubkey;
-    if (!reservekey.GetReservedKey(pubkey))
-        return NULL;
 
-    CScript scriptPubKey = CScript() << OP_DUP << OP_HASH160 << pubkey.GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
+//GetID
+CBlockTemplate* CreateNewBlockWithKey(CPubKey& pubKey)
+{
+    CScript scriptPubKey = CScript() << OP_CHECKHEADERSIGVERIFY << OP_DUP << OP_HASH160 << pubKey.GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
     return CreateNewBlock(scriptPubKey);
 }
 
-bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
+bool CheckWork(CBlock* pblock, CWallet& wallet, CPubKey& pubKey)
 {
-    uint256 hash = pblock->GetHash();
+    uint256 hash = pblock->GetHash(true);
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
     if (hash > hashTarget)
@@ -498,6 +540,12 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     return true;
 }
 
+// 
+// TODO 
+// Maybe add an RPC argument to SetGenerate to allow the use of a given private key for mining?
+// Or should it be in the config file when the daemon is started?
+// Probably just going to get it working with a default wallet key first.
+// 
 void static BitcoinMiner(CWallet *pwallet)
 {
     LogPrintf("BitcoinMiner started\n");
@@ -505,72 +553,61 @@ void static BitcoinMiner(CWallet *pwallet)
     RenameThread("bitcoin-miner");
 
     // Each thread has its own key and counter
-    CReserveKey reservekey(pwallet);
-    unsigned int nExtraNonce = 0;
+    CReserveKey reserveKey(pwallet);
+    
+    CPubKey& pubKey;
+    if (!reservekey.GetReservedKey(pubkey))
+        throw std::runtime_error("BitcoinMiner() : Could not get new public key");
 
-    try { while (true) {
-        // if (Params().NetworkID() != CChainParams::REGTEST) {
-        //     // Busy-wait for the network to come online so we don't waste time mining
-        //     // on an obsolete chain. In regtest mode we expect to fly solo.
-        //     while (vNodes.empty()) 
-        //         MilliSleep(1000);
-        // }
+    CKey& vchSignKey;
+    if (!pwalletMain->GetKey(pubKey.GetID(), vchSignKey))
+        throw std::runtime_error("BitcoinMiner() : Could not get new private key");
 
-        //
-        // Create new block
-        //
-        unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
-        CBlockIndex* pindexPrev = chainActive.Tip();
+    try { 
+        while (true) {
+            // if (Params().NetworkID() != CChainParams::REGTEST) {
+            //     // Busy-wait for the network to come online so we don't waste time mining
+            //     // on an obsolete chain. In regtest mode we expect to fly solo.
+            //     while (vNodes.empty()) 
+            //         MilliSleep(1000);
+            // }
 
-        auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reservekey));
-        if (!pblocktemplate.get())
-            return;
-        CBlock *pblock = &pblocktemplate->block;
-        IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
+            // Create new block
+            unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
+            CBlockIndex* pindexPrev = chainActive.Tip();
 
-        LogPrintf("Running BitcoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
-               ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
+            // Automatically delete old block template after each round
+            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reservekey));
+            if (!pblocktemplate.get())
+                return;
+            CBlock *pblock = &pblocktemplate->block;
+            UpdateCoinbaseScriptSig(pblock, pindexPrev);
 
-        //
-        // Pre-build hash buffers
-        //
-        char pmidstatebuf[32+16]; char* pmidstate = alignup<16>(pmidstatebuf);
-        char pdatabuf[128+16];    char* pdata     = alignup<16>(pdatabuf);
-        char phash1buf[64+16];    char* phash1    = alignup<16>(phash1buf);
+            LogPrintf("Running BitcoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
+                   ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
-        FormatHashBuffers(pblock, pmidstate, pdata, phash1);
+            // Only need to calculate this once
+            uint256 hashToSignBuf[2];
+            uint256& hashToSign = *alignup<16>(hashToSignBuf);
+            hashToSign = pblock->GetHash(false);
 
-        unsigned int& nBlockTime = *(unsigned int*)(pdata + 64 + 4);
-        unsigned int& nBlockBits = *(unsigned int*)(pdata + 64 + 8);
-        unsigned int& nBlockNonce = *(unsigned int*)(pdata + 64 + 12);
+            // Search for a signature that makes the header hash low enough
+            uint256 hashTargetBuf[2];
+            uint256& hashTarget = *alignup<16>(hashTargetBuf);
+            hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
-
-        //
-        // Search
-        //
-        int64_t nStart = GetTime();
-        uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
-        uint256 hashbuf[2];
-        uint256& hash = *alignup<16>(hashbuf);
-        while (true)
-        {
-            unsigned int nHashesDone = 0;
-            unsigned int nNonceFound;
-
-            // Crypto++ SHA256
-            nNonceFound = ScanHash_CryptoPP(pmidstate, pdata + 64, phash1,
-                                            (char*)&hash, nHashesDone);
-
-            // Check if something found
-            if (nNonceFound != (unsigned int) -1)
+            int64_t nStart = GetTime();
+            while (true)
             {
-                for (unsigned int i = 0; i < sizeof(hash)/4; i++)
-                    ((unsigned int*)&hash)[i] = ByteReverse(((unsigned int*)&hash)[i]);
+                unsigned int nSashesDone = 0;
+                unsigned int nTries = 250;
+                unsigned int nNumFailedAttempts = DoSignatureHashes(hashTarget, hashToSign, vchSignKey, pblock, nTries);
 
-                if (hash <= hashTarget)
+                if (nNumFailedAttempts < nTries)
                 {
                     // Found a solution
-                    pblock->nNonce = ByteReverse(nNonceFound);
+                    // for (unsigned int i = 0; i < sizeof(hash)/4; i++)
+                    //     ((unsigned int*)&hash)[i] = ByteReverse(((unsigned int*)&hash)[i]);
                     assert(hash == pblock->GetHash());
 
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
@@ -584,59 +621,59 @@ void static BitcoinMiner(CWallet *pwallet)
 
                     break;
                 }
-            }
 
-            // Meter hashes/sec
-            static int64_t nHashCounter;
-            if (nHPSTimerStart == 0)
-            {
-                nHPSTimerStart = GetTimeMillis();
-                nHashCounter = 0;
-            }
-            else
-                nHashCounter += nHashesDone;
-            if (GetTimeMillis() - nHPSTimerStart > 4000)
-            {
-                static CCriticalSection cs;
+                // Meter hashes/sec
+                static int64_t nHashCounter;
+                if (nSPSTimerStart == 0)
                 {
-                    LOCK(cs);
-                    if (GetTimeMillis() - nHPSTimerStart > 4000)
+                    nSPSTimerStart = GetTimeMillis();
+                    nHashCounter = 0;
+                }
+                else
+                    nHashCounter += nHashesDone;
+                if (GetTimeMillis() - nSPSTimerStart > 4000)
+                {
+                    static CCriticalSection cs;
                     {
-                        dHashesPerSec = 1000.0 * nHashCounter / (GetTimeMillis() - nHPSTimerStart);
-                        nHPSTimerStart = GetTimeMillis();
-                        nHashCounter = 0;
-                        static int64_t nLogTime;
-                        if (GetTime() - nLogTime > 30 * 60)
+                        LOCK(cs);
+                        if (GetTimeMillis() - nSPSTimerStart > 4000)
                         {
-                            nLogTime = GetTime();
-                            LogPrintf("hashmeter %6.0f khash/s\n", dHashesPerSec/1000.0);
+                            dSashesPerSec = 1000.0 * nHashCounter / (GetTimeMillis() - nSPSTimerStart);
+                            nSPSTimerStart = GetTimeMillis();
+                            nHashCounter = 0;
+                            static int64_t nLogTime;
+                            if (GetTime() - nLogTime > 30 * 60)
+                            {
+                                nLogTime = GetTime();
+                                LogPrintf("hashmeter %6.0f khash/s\n", dSashesPerSec/1000.0);
+                            }
                         }
                     }
                 }
-            }
 
-            // Check for stop or if block needs to be rebuilt
-            boost::this_thread::interruption_point();
-            if (vNodes.empty() && Params().NetworkID() != CChainParams::REGTEST)
-                break;
-            if (nBlockNonce >= 0xffff0000)
-                break;
-            if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60)
-                break;
-            if (pindexPrev != chainActive.Tip())
-                break;
+                // Check for stop or if block needs to be rebuilt
+                boost::this_thread::interruption_point();
+                if (vNodes.empty() && Params().NetworkID() != CChainParams::REGTEST)
+                    break;
+                if (nBlockNonce >= 0xffff0000)
+                    break;
+                if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60)
+                    break;
+                if (pindexPrev != chainActive.Tip())
+                    break;
 
-            // Update nTime every few seconds
-            UpdateTime(*pblock, pindexPrev);
-            nBlockTime = ByteReverse(pblock->nTime);
-            if (TestNet())
-            {
-                // Changing pblock->nTime can change work required on testnet:
-                nBlockBits = ByteReverse(pblock->nBits);
-                hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+                // Update nTime every few seconds
+                UpdateTime(*pblock, pindexPrev);
+                nBlockTime = ByteReverse(pblock->nTime);
+                if (TestNet())
+                {
+                    // Changing pblock->nTime can change work required on testnet:
+                    nBlockBits = ByteReverse(pblock->nBits);
+                    hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+                }
             }
-        }
-    } }
+        } 
+    }
     catch (boost::thread_interrupted)
     {
         LogPrintf("BitcoinMiner terminated\n");

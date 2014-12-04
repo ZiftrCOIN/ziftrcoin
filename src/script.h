@@ -364,6 +364,10 @@ enum opcodetype
     OP_CHECKLOCKTIME = 0xc0,
     OP_CHECKLOCKTIMEVERIFY = 0xc1,
 
+    // headersig verifiers
+    OP_CHECKHEADERSIG = 0xd0,
+    OP_CHECKHEADERSIGVERIFY = 0xd0,
+
     // template matching params
     OP_SCRIPTNUMBER = 0xf8,
     OP_SMALLDATA = 0xf9,

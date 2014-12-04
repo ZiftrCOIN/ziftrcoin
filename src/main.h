@@ -728,7 +728,8 @@ public:
     uint256 hashMerkleRoot;
     unsigned int nTime;
     unsigned int nBits;
-    unsigned int nNonce;
+    //unsigned int nNonce;
+    std::vector<unsigned char> vchHeaderSig;
 
     // (memory only) Sequencial id assigned to distinguish order in which blocks are received.
     uint32_t nSequenceId;
@@ -751,7 +752,7 @@ public:
         hashMerkleRoot = 0;
         nTime          = 0;
         nBits          = 0;
-        nNonce         = 0;
+        vchHeaderSig.clear();
     }
 
     CBlockIndex(CBlockHeader& block)
@@ -772,7 +773,8 @@ public:
         hashMerkleRoot = block.hashMerkleRoot;
         nTime          = block.nTime;
         nBits          = block.nBits;
-        nNonce         = block.nNonce;
+        vchHeaderSig   = block.vchHeaderSig;
+        //nNonce         = block.nNonce;
     }
 
     CDiskBlockPos GetBlockPos() const {
@@ -802,7 +804,8 @@ public:
         block.hashMerkleRoot = hashMerkleRoot;
         block.nTime          = nTime;
         block.nBits          = nBits;
-        block.nNonce         = nNonce;
+        block.vchHeaderSig   = vchHeaderSig;
+        //block.nNonce         = nNonce;
         return block;
     }
 
@@ -905,7 +908,7 @@ public:
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
         READWRITE(nBits);
-        READWRITE(nNonce);
+        READWRITE(vchHeaderSig);
     )
 
     uint256 GetBlockHash() const
@@ -916,7 +919,7 @@ public:
         block.hashMerkleRoot  = hashMerkleRoot;
         block.nTime           = nTime;
         block.nBits           = nBits;
-        block.nNonce          = nNonce;
+        block.vchHeaderSig    = vchHeaderSig;
         return block.GetHash();
     }
 

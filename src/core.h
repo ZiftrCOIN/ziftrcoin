@@ -358,7 +358,7 @@ public:
     uint256 hashMerkleRoot;
     unsigned int nTime;
     unsigned int nBits;
-    unsigned int nNonce;
+    std::vector<unsigned char> vchHeaderSig;
 
     CBlockHeader()
     {
@@ -373,7 +373,7 @@ public:
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
         READWRITE(nBits);
-        READWRITE(nNonce);
+        READWRITE(vchHeaderSig);
     )
 
     void SetNull()
@@ -383,7 +383,7 @@ public:
         hashMerkleRoot = 0;
         nTime = 0;
         nBits = 0;
-        nNonce = 0;
+        vchHeaderSig.clear();
     }
 
     bool IsNull() const
@@ -391,7 +391,14 @@ public:
         return (nBits == 0);
     }
 
-    uint256 GetHash() const;
+    /**
+     * The header vchHeaderSig is the result of signing everything
+     * in the block header except for the signature, as the signature 
+     * can't sign itself. This gets the hash of the block header, using
+     * the boolean given to differentiate whether the requester wants the
+     * hash of the header to include the signature data or not. 
+     */
+    uint256 GetHash(bool fIncludeSignature) const;
 
     int64_t GetBlockTime() const
     {
@@ -441,7 +448,7 @@ public:
         block.hashMerkleRoot = hashMerkleRoot;
         block.nTime          = nTime;
         block.nBits          = nBits;
-        block.nNonce         = nNonce;
+        block.vchHeaderSig   = vchHeaderSig;
         return block;
     }
 

@@ -1049,6 +1049,17 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                 }
                 break;
 
+                //
+                // LockTime
+                //
+                case OP_CHECKHEADERSIG:
+                case OP_CHECKHEADERSIGVERIFY:
+                {
+                    // TODO 
+                    // put right above OP_CHECKSIG?
+                    return false;
+                }
+
                 default:
                     return false;
             }

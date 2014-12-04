@@ -900,7 +900,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         // do all inputs exist?
         // Note that this does not check for the presence of actual outputs (see the next check for that),
         // only helps filling in pfMissingInputs (to determine missing vs spent).
-        BOOST_FOREACH(const CTxIn txin, tx.vin) {
+        BOOST_FOREACH(const CTxIn& txin, tx.vin) {
             if (!view.HaveCoins(txin.prevout.hash)) {
                 if (pfMissingInputs)
                     *pfMissingInputs = true;
@@ -2371,7 +2371,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     if (block.vtx.empty() || !block.vtx[0].IsCoinBase())
         return state.DoS(100, error("CheckBlock() : first tx is not coinbase"),
                          REJECT_INVALID, "bad-cb-missing");
-    if (block.GetHash() != Params().HashGenesisBlock())
+    if (block.GetHash())
         for (unsigned int i = 1; i < block.vtx.size(); i++)
             if (block.vtx[i].IsCoinBase())
                 return state.DoS(100, error("CheckBlock() : more than one coinbase"),
@@ -2486,7 +2486,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
 
         // Make sure that the coinbase starts with serialized block height
         // TODO maybe export this to 
-        CScript expect = CScript() << nHeight;
+        CScript expect = CScript() << CScriptNum(nHeight);
         if (block.vtx[0].vin[0].scriptSig.size() < expect.size() ||
             !std::equal(expect.begin(), expect.end(), block.vtx[0].vin[0].scriptSig.begin()))
         {
