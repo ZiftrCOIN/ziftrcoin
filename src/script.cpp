@@ -2005,7 +2005,7 @@ unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
 
 bool CScript::IsPayToScriptHash() const
 {
-    // Extra-fast test for pay-to-script-hash CScripts:
+    // Extra-fast test for simple pay-to-script-hash CScripts:
     if (this->size() == 23 && this->at(0) == OP_HASH160 && this->at(1) == 0x14 && this->at(22) == OP_EQUAL)
         return true;
 
@@ -2016,6 +2016,19 @@ bool CScript::IsPayToScriptHash() const
         return typeRet == TX_DELAYEDSCRIPTHASH;
 
     return false;
+}
+
+bool CScript::IsCoinbaseOutputType() const
+{
+    // Extra-fast test for simple pay-to-script-hash CScripts:
+    // CScript scriptPubKey = CScript() << OP_CHECKHEADERSIGVERIFY << OP_DUP << OP_HASH160 << pubKey.GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
+    return (this->size() == 26 && 
+            this->at(0)  == OP_CHECKHEADERSIGVERIFY && 
+            this->at(1)  == OP_DUP && 
+            this->at(2)  == OP_HASH160 && 
+            this->at(3)  == 0x14 &&
+            this->at(24) == OP_EQUALVERIFY &&
+            this->at(25) == OP_CHECKSIG);
 }
 
 bool CScript::IsPushOnly() const

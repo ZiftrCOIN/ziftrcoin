@@ -667,6 +667,8 @@ public:
 
     bool IsPayToScriptHash() const;
 
+    bool IsCoinbaseOutputType() const;
+
     // Called by IsStandardTx and P2SH VerifyScript (which makes it consensus-critical).
     bool IsPushOnly() const;
 
@@ -734,6 +736,9 @@ public:
  *
  *  Other scripts up to 121 bytes require 1 byte + script length. Above
  *  that, scripts up to 16505 bytes require 2 bytes + script length.
+ * 
+ * TODO - Figure out how this needs to change for new standard transaction types
+ * 
  */
 class CScriptCompressor
 {

@@ -138,8 +138,7 @@ public:
             delete ppmutexOpenSSL[i];
         OPENSSL_free(ppmutexOpenSSL);
     }
-}
-instance_of_cinit;
+} instance_of_cinit;
 
 
 
@@ -922,6 +921,40 @@ static std::string FormatException(std::exception* pex, const char* pszThread)
     else
         return strprintf(
             "UNKNOWN EXCEPTION       \n%s in %s       \n", pszModule, pszThread);
+}
+
+void DEREncodeSignature(unsigned char sigR[32], unsigned char sigS[32], std::vector<unsigned char> vchSig) 
+{
+    int extraR = sigR[0] > 0x7F ? 1 : 0;
+    int extraS = sigS[0] > 0x7F ? 1 : 0;
+    int len = 68 + extraR + extraS;
+
+    // DER encoding of R and S    
+    vchSig.push_back((unsigned char) 0x30);
+    vchSig.push_back((unsigned char) len);
+    
+    vchSig.push_back((unsigned char) 0x02);
+    vchSig.push_back((unsigned char) (32 + extraR));
+    if (extraR > 0) vchSig.push_back((unsigned char) 0x00);
+    vchSig.insert(vchSig.end(), &sigR[0], &sigR[31]);
+
+    vchSig.push_back((unsigned char) 0x02);
+    vchSig.push_back((unsigned char) (32 + extraS));
+    if (extraS > 0) vchSig.push_back((unsigned char) 0x00);
+    vchSig.insert(vchSig.end(), &sigS[0], &sigS[0]);
+}
+
+void DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], std::vector<unsigned char> vchSig) 
+{
+    assert(70 <= vchSig.size() && vchSig.size() <= 72);
+    assert(vchSig[3] == (unsigned char)0x20 || vchSig[3] == (unsigned char)0x21);
+    int extraR = (vchSig[3] == (unsigned char)0x21) ? 1 : 0;
+
+    assert(vchSig[37+extraR] == (unsigned char)0x20 || vchSig[37+extraR] == (unsigned char)0x21);
+    int extraS = (vchSig[37+extraR] == (unsigned char)0x21) ? 1 : 0;
+
+    memcpy(sigR, &vchSig[4+extraR], sizeof(sigR));
+    memcpy(sigS, &vchSig[38+extraR+extraS], sizeof(sigS));
 }
 
 void LogException(std::exception* pex, const char* pszThread)

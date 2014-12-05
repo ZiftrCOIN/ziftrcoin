@@ -26,6 +26,7 @@ using namespace std;
 // Allocated in InitRPCMining, free'd in ShutdownRPCMining
 static CReserveKey* pMiningKey = NULL;
 
+// TODO Allow a way to set an arg to specify the only key that should be used for mining?
 void InitRPCMining()
 {
     if (!pwalletMain)
@@ -40,7 +41,8 @@ void ShutdownRPCMining()
     if (!pMiningKey)
         return;
 
-    delete pMiningKey; pMiningKey = NULL;
+    delete pMiningKey; 
+    pMiningKey = NULL;
 }
 #else
 void InitRPCMining()
@@ -275,6 +277,11 @@ Value getmininginfo(const Array& params, bool fHelp)
 
 
 #ifdef ENABLE_WALLET
+// TODO add rpc call for issyncing - will give a best guess at whether the client is up to date, maybe on a 1-10 scale
+// TODO this should really be in two RPC calls, getwork and submitwork
+// TODO make sure all endianness works
+// TODO add a pubkey param to make sure coinbase is actually spendable?
+
 Value getwork(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
@@ -286,9 +293,7 @@ Value getwork(const Array& params, bool fHelp)
             "1. \"data\"       (string, optional) The hex encoded data to solve\n"
             "\nResult (when 'data' is not specified):\n"
             "{\n"
-            "  \"midstate\" : \"xxxx\",   (string) The precomputed hash state after hashing the first half of the data (DEPRECATED)\n" // deprecated
             "  \"data\" : \"xxxxx\",      (string) The block data\n"
-            "  \"hash1\" : \"xxxxx\",     (string) The formatted hash buffer for second hash (DEPRECATED)\n" // deprecated
             "  \"target\" : \"xxxx\"      (string) The little endian hash target\n"
             "}\n"
             "\nResult (when 'data' is specified):\n"
@@ -304,8 +309,7 @@ Value getwork(const Array& params, bool fHelp)
     if (IsInitialBlockDownload())
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Bitcoin is downloading blocks...");
 
-    typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;
-    static mapNewBlock_t mapNewBlock;    // FIXME: thread safety
+    static map<uint256, CBlock*> > mapNewBlock;    // FIXME: thread safety
     static vector<CBlockTemplate*> vNewBlockTemplate;
 
     if (params.size() == 0)
@@ -316,7 +320,7 @@ Value getwork(const Array& params, bool fHelp)
         static int64_t nStart;
         static CBlockTemplate* pblocktemplate;
         if (pindexPrev != chainActive.Tip() ||
-            (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60))
+            (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 15))
         {
             if (pindexPrev != chainActive.Tip())
             {
@@ -348,27 +352,18 @@ Value getwork(const Array& params, bool fHelp)
 
         // Update nTime
         UpdateTime(*pblock, pindexPrev);
-        pblock->nNonce = 0;
+        pblock->ClearHeaderSig();
 
-        // Update nExtraNonce
-        static unsigned int nExtraNonce = 0;
-        IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
+        // Update coinbase script sig
+        UpdateCoinbaseScriptSig(pblock, pindexPrev);
 
-        // Save
-        mapNewBlock[pblock->hashMerkleRoot] = make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);
-
-        // Pre-build hash buffers
-        char pmidstate[32];
-        char pdata[128];
-        char phash1[64];
-        FormatHashBuffers(pblock, pmidstate, pdata, phash1);
+        // Save for submitting later
+        mapNewBlock[pblock->hashMerkleRoot] = pblock;
 
         uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
         Object result;
-        result.push_back(Pair("midstate", HexStr(BEGIN(pmidstate), END(pmidstate)))); // deprecated
         result.push_back(Pair("data",     HexStr(BEGIN(pdata), END(pdata))));
-        result.push_back(Pair("hash1",    HexStr(BEGIN(phash1), END(phash1)))); // deprecated
         result.push_back(Pair("target",   HexStr(BEGIN(hashTarget), END(hashTarget))));
         return result;
     }
@@ -387,11 +382,15 @@ Value getwork(const Array& params, bool fHelp)
         // Get saved block
         if (!mapNewBlock.count(pdata->hashMerkleRoot))
             return false;
-        CBlock* pblock = mapNewBlock[pdata->hashMerkleRoot].first;
+        
+        CBlock* pblock = mapNewBlock[pdata->hashMerkleRoot];
 
+        // Only need to copy over the things that might have
+        // been changed while mining, everything else is saved
+        // Don't think we need to copy the coinbase scripsig anymore, since no extraNonce
+        // UpdateCoinbaseScriptSig(pblock, pindexPrev);
+        pblock->CopyHeaderSigFrom(pdata);
         pblock->nTime = pdata->nTime;
-        pblock->nNonce = pdata->nNonce;
-        pblock->vtx[0].vin[0].scriptSig = mapNewBlock[pdata->hashMerkleRoot].second;
         pblock->hashMerkleRoot = pblock->BuildMerkleTree();
 
         assert(pwalletMain != NULL);
@@ -449,7 +448,6 @@ Value getblocktemplate(const Array& params, bool fHelp)
             "     \"value\"                         (string) A way the block template may be changed, e.g. 'time', 'transactions', 'prevblock'\n"
             "     ,...\n"
             "  ],\n"
-            "  \"noncerange\" : \"00000000ffffffff\",   (string) A range of valid nonces\n"
             "  \"sigoplimit\" : n,                 (numeric) limit of sigops in blocks\n"
             "  \"sizelimit\" : n,                  (numeric) limit of block size\n"
             "  \"curtime\" : ttt,                  (numeric) current timestamp in seconds since epoch (Jan 1 1970 GMT)\n"
@@ -520,7 +518,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
 
     // Update nTime
     UpdateTime(*pblock, pindexPrev);
-    pblock->nNonce = 0;
+    pblock->ClearHeaderSig();
 
     Array transactions;
     map<uint256, int64_t> setTxIndex;
@@ -578,7 +576,6 @@ Value getblocktemplate(const Array& params, bool fHelp)
     result.push_back(Pair("target", hashTarget.GetHex()));
     result.push_back(Pair("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1));
     result.push_back(Pair("mutable", aMutable));
-    result.push_back(Pair("noncerange", "00000000ffffffff"));
     result.push_back(Pair("sigoplimit", (int64_t)MAX_BLOCK_SIGOPS));
     result.push_back(Pair("sizelimit", (int64_t)MAX_BLOCK_SIZE));
     result.push_back(Pair("curtime", (int64_t)pblock->nTime));

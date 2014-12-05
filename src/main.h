@@ -724,12 +724,13 @@ public:
     unsigned int nStatus;
 
     // block header
+    
+    unsigned char vchHeaderSigR[32];
+    unsigned char vchHeaderSigS[32];
     int nVersion;
     uint256 hashMerkleRoot;
     unsigned int nTime;
     unsigned int nBits;
-    //unsigned int nNonce;
-    std::vector<unsigned char> vchHeaderSig;
 
     // (memory only) Sequencial id assigned to distinguish order in which blocks are received.
     uint32_t nSequenceId;
@@ -748,11 +749,12 @@ public:
         nStatus = 0;
         nSequenceId = 0;
 
+        memset(vchHeaderSigR, 0, 32);
+        memset(vchHeaderSigS, 0, 32);
         nVersion       = 0;
         hashMerkleRoot = 0;
         nTime          = 0;
         nBits          = 0;
-        vchHeaderSig.clear();
     }
 
     CBlockIndex(CBlockHeader& block)
@@ -769,12 +771,12 @@ public:
         nStatus = 0;
         nSequenceId = 0;
 
+        memcpy(vchHeaderSigR, block.vchHeaderSigR, sizeof(vchHeaderSigR));
+        memcpy(vchHeaderSigS, block.vchHeaderSigS, sizeof(vchHeaderSigS));
         nVersion       = block.nVersion;
         hashMerkleRoot = block.hashMerkleRoot;
         nTime          = block.nTime;
         nBits          = block.nBits;
-        vchHeaderSig   = block.vchHeaderSig;
-        //nNonce         = block.nNonce;
     }
 
     CDiskBlockPos GetBlockPos() const {
@@ -798,14 +800,13 @@ public:
     CBlockHeader GetBlockHeader() const
     {
         CBlockHeader block;
+        block.CopyHeaderSigFrom(this);
         block.nVersion       = nVersion;
         if (pprev)
             block.hashPrevBlock = pprev->GetBlockHash();
         block.hashMerkleRoot = hashMerkleRoot;
         block.nTime          = nTime;
         block.nBits          = nBits;
-        block.vchHeaderSig   = vchHeaderSig;
-        //block.nNonce         = nNonce;
         return block;
     }
 
@@ -903,24 +904,19 @@ public:
             READWRITE(VARINT(nUndoPos));
 
         // block header
+        READWRITE(FLATDATA(vchHeaderSigR));
+        READWRITE(FLATDATA(vchHeaderSigS));
         READWRITE(this->nVersion);
         READWRITE(hashPrev);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
         READWRITE(nBits);
-        READWRITE(vchHeaderSig);
     )
 
-    uint256 GetBlockHash() const
+    uint256 GetBlockHash(bool fIncludeSignature=true) const
     {
-        CBlockHeader block;
-        block.nVersion        = nVersion;
-        block.hashPrevBlock   = hashPrev;
-        block.hashMerkleRoot  = hashMerkleRoot;
-        block.nTime           = nTime;
-        block.nBits           = nBits;
-        block.vchHeaderSig    = vchHeaderSig;
-        return block.GetHash();
+        // TODO why did this just build a whole block header before? 
+        return this.GetHash(fIncludeSignature);
     }
 
 

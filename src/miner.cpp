@@ -7,6 +7,7 @@
 
 #include "core.h"
 #include "main.h"
+#include "key.h"
 #include "net.h"
 #ifdef ENABLE_WALLET
 #include "wallet.h"
@@ -317,7 +318,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
             pblocktemplate->vTxFees.push_back(nTxFees);
             pblocktemplate->vTxSigOps.push_back(nTxSigOps);
             nBlockSize += nTxSize;
-            ++nBlockTx;
+            nBlockTx++;
             nBlockSigOps += nTxSigOps;
             nFees += nTxFees;
 
@@ -356,9 +357,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
         pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
         UpdateTime(*pblock, pindexPrev);
         pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock);
-        //pblock->nNonce         = 0;
-        pblock->vchHeaderSig.clear();
-        pblock->vtx[0].vin[0].scriptSig = CScript() << OP_0 << OP_0;
+        UpdateCoinbaseScriptSig(pblock, pindexPrev);
         pblocktemplate->vTxSigOps[0] = GetSigOpCount(pblock->vtx[0]);
 
         CBlockIndex indexDummy(*pblock);
@@ -484,31 +483,45 @@ int64_t nSPSTimerStart = 0;
 // Returns the number of failed attempts. 
 // If ret == nTries, then all failed.
 // Else, there were ret+1 sashes (signature-hashes) done and the last one succeeded
+// TODO there are efficiency improvements that can be made here
 unsigned int static DoSignatureHashes(const uint256& hashTarget, const uint256& hashToSign, const CKey& signer, CBlock* pblock, unsigned int nTries)
 {
-    for (unsigned int i = 0; i < nTries; i++) {
-        signer.Sign(hashToSign, pblock->vchHeaderSig);
-        if (pblock->GetHash(true) <= hashTarget) {
+    std::vector<unsigned char> vchSig;
+    for (unsigned int i = 0; i < nTries; i++) 
+    {
+        signer.Sign(hashToSign, vchSig);
+        DERDecodeSignature(pblock->vchHeaderSigR, pblock->vchHeaderSigS, vchSig);
+        uint256 hashBlockHeader = pblock->GetHash();
+
+        if (hashBlockHeader <= hashTarget)
             return i;
-        }
     }
     return nTries;
 }
 
-//GetID
-CBlockTemplate* CreateNewBlockWithKey(CPubKey& pubKey)
+CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reserveKey)
 {
+    CPubKey pubKey;
+    if (!reserveKey.GetReservedKey(pubKey))
+        throw std::runtime_error("CreateNewBlockWithKey() : Could not get public key");
+
     CScript scriptPubKey = CScript() << OP_CHECKHEADERSIGVERIFY << OP_DUP << OP_HASH160 << pubKey.GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
     return CreateNewBlock(scriptPubKey);
 }
 
-bool CheckWork(CBlock* pblock, CWallet& wallet, CPubKey& pubKey)
+// If work is checked successfully, 
+// keep the reserve key...
+bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
 {
-    uint256 hash = pblock->GetHash(true);
+    uint256 hash = pblock->GetHash();
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
     if (hash > hashTarget)
         return false;
+
+    CPubKey pubKey;
+    if (!reserveKey.GetReservedKey(pubKey))
+        throw std::runtime_error("BitcoinMiner() : Could not get new public key");
 
     //// debug print
     LogPrintf("BitcoinMiner:\n");
@@ -522,8 +535,13 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CPubKey& pubKey)
         if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
             return error("BitcoinMiner : generated block is stale");
 
+        // Need to double check that the coinbase is spendable
+        std::vector<unsigned char> vchSig;
+        if (!pblock->GetHeaderSig(vchSig) || !pubKey.Verify(hash, vchSig))
+            return error("CheckWork() : could not verify the signature of the block header");
+
         // Remove key from key pool
-        reservekey.KeepKey();
+        reserveKey.KeepKey();
 
         // Track how many getdata requests this block gets
         {
@@ -553,14 +571,15 @@ void static BitcoinMiner(CWallet *pwallet)
     RenameThread("bitcoin-miner");
 
     // Each thread has its own key and counter
+    // Use a reserve key because 
     CReserveKey reserveKey(pwallet);
     
-    CPubKey& pubKey;
-    if (!reservekey.GetReservedKey(pubkey))
+    CPubKey pubKey;
+    if (!reserveKey.GetReservedKey(pubKey))
         throw std::runtime_error("BitcoinMiner() : Could not get new public key");
 
-    CKey& vchSignKey;
-    if (!pwalletMain->GetKey(pubKey.GetID(), vchSignKey))
+    CKey vchSignKey;
+    if (!pwallet->GetKey(pubKey.GetID(), vchSignKey))
         throw std::runtime_error("BitcoinMiner() : Could not get new private key");
 
     try { 
@@ -577,7 +596,7 @@ void static BitcoinMiner(CWallet *pwallet)
             CBlockIndex* pindexPrev = chainActive.Tip();
 
             // Automatically delete old block template after each round
-            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reservekey));
+            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reserveKey));
             if (!pblocktemplate.get())
                 return;
             CBlock *pblock = &pblocktemplate->block;
@@ -591,7 +610,7 @@ void static BitcoinMiner(CWallet *pwallet)
             uint256& hashToSign = *alignup<16>(hashToSignBuf);
             hashToSign = pblock->GetHash(false);
 
-            // Search for a signature that makes the header hash low enough
+            // The hash that makes the header hash low enough
             uint256 hashTargetBuf[2];
             uint256& hashTarget = *alignup<16>(hashTargetBuf);
             hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
@@ -599,19 +618,23 @@ void static BitcoinMiner(CWallet *pwallet)
             int64_t nStart = GetTime();
             while (true)
             {
-                unsigned int nSashesDone = 0;
-                unsigned int nTries = 250;
+                // Meter hashes/sec
+                static int64_t nSashCounter;
+                static int64_t nLastLogTime;
+
+                if (nSPSTimerStart == 0) {
+                    nSPSTimerStart = GetTimeMillis();
+                    nSashCounter = 0;
+                }
+
+                unsigned int nTries = 100;
                 unsigned int nNumFailedAttempts = DoSignatureHashes(hashTarget, hashToSign, vchSignKey, pblock, nTries);
+                nSashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
 
-                if (nNumFailedAttempts < nTries)
-                {
-                    // Found a solution
-                    // for (unsigned int i = 0; i < sizeof(hash)/4; i++)
-                    //     ((unsigned int*)&hash)[i] = ByteReverse(((unsigned int*)&hash)[i]);
-                    assert(hash == pblock->GetHash());
-
+                if (nNumFailedAttempts < nTries) {
+                    // Not all tries were fails, so we found a solution
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    CheckWork(pblock, *pwallet, reservekey);
+                    CheckWork(pblock, *pwallet, reserveKey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
                     // In regression test mode, stop mining after a block is found. This
@@ -622,30 +645,17 @@ void static BitcoinMiner(CWallet *pwallet)
                     break;
                 }
 
-                // Meter hashes/sec
-                static int64_t nHashCounter;
-                if (nSPSTimerStart == 0)
-                {
-                    nSPSTimerStart = GetTimeMillis();
-                    nHashCounter = 0;
-                }
-                else
-                    nHashCounter += nHashesDone;
-                if (GetTimeMillis() - nSPSTimerStart > 4000)
-                {
-                    static CCriticalSection cs;
+                if (GetTimeMillis() - nSPSTimerStart > 4000) {
+                    static CCriticalSection cs; 
                     {
                         LOCK(cs);
-                        if (GetTimeMillis() - nSPSTimerStart > 4000)
-                        {
-                            dSashesPerSec = 1000.0 * nHashCounter / (GetTimeMillis() - nSPSTimerStart);
+                        if (GetTimeMillis() - nSPSTimerStart > 4000) {
+                            dSashesPerSec = 1000.0 * nSashCounter / (GetTimeMillis() - nSPSTimerStart);
                             nSPSTimerStart = GetTimeMillis();
-                            nHashCounter = 0;
-                            static int64_t nLogTime;
-                            if (GetTime() - nLogTime > 30 * 60)
-                            {
-                                nLogTime = GetTime();
-                                LogPrintf("hashmeter %6.0f khash/s\n", dSashesPerSec/1000.0);
+                            nSashCounter = 0;
+                            if (GetTime() - nLastLogTime > 30 * 60) {
+                                nLastLogTime = GetTime();
+                                LogPrintf("hashmeter %6.0f sash/s\n", dSashesPerSec);
                             }
                         }
                     }
@@ -653,22 +663,17 @@ void static BitcoinMiner(CWallet *pwallet)
 
                 // Check for stop or if block needs to be rebuilt
                 boost::this_thread::interruption_point();
-                if (vNodes.empty() && Params().NetworkID() != CChainParams::REGTEST)
-                    break;
-                if (nBlockNonce >= 0xffff0000)
-                    break;
-                if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60)
+                // if (vNodes.empty() && !RegTest())
+                //     break;
+                if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 15)
                     break;
                 if (pindexPrev != chainActive.Tip())
                     break;
 
                 // Update nTime every few seconds
                 UpdateTime(*pblock, pindexPrev);
-                nBlockTime = ByteReverse(pblock->nTime);
-                if (TestNet())
-                {
+                if (TestNet()) {
                     // Changing pblock->nTime can change work required on testnet:
-                    nBlockBits = ByteReverse(pblock->nBits);
                     hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
                 }
             }
@@ -686,21 +691,18 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet, int nThreads)
     static boost::thread_group* minerThreads = NULL;
 
     if (nThreads < 0) {
-        if (Params().NetworkID() == CChainParams::REGTEST)
-            nThreads = 1;
-        else
-            nThreads = boost::thread::hardware_concurrency();
+        nThreads = RegTest() ? 1 : boost::thread::hardware_concurrency();
     }
 
-    if (minerThreads != NULL)
-    {
+    if (minerThreads != NULL) {
         minerThreads->interrupt_all();
         delete minerThreads;
         minerThreads = NULL;
     }
 
-    if (nThreads == 0 || !fGenerate)
+    if (nThreads == 0 || !fGenerate) {
         return;
+    }
 
     minerThreads = new boost::thread_group();
     for (int i = 0; i < nThreads; i++)

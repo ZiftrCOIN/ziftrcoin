@@ -161,6 +161,10 @@ static inline bool error(const char* format)
 }
 
 
+
+
+void DEREncodeSignature(unsigned char sigR[32], unsigned char sigS[32], std::vector<unsigned char> vchSig);
+void DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], std::vector<unsigned char> vchSig);
 void LogException(std::exception* pex, const char* pszThread);
 void PrintExceptionContinue(std::exception* pex, const char* pszThread);
 std::string FormatMoney(int64_t n, bool fPlus=false);
@@ -211,6 +215,7 @@ std::string FormatFullVersion();
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);
 void AddTimeData(const CNetAddr& ip, int64_t nTime);
 void runCommand(std::string strCommand);
+
 
 
 

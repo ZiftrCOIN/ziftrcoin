@@ -215,9 +215,18 @@ uint64_t CTxOutCompressor::DecompressAmount(uint64_t x)
 uint256 CBlockHeader::GetHash(bool fIncludeSignature) const
 {
     if (fIncludeSignature)
-        return Hash(BEGIN(nVersion), END(nBits));
+        return Hash(vchHeaderSigR, END(nBits));
     else 
-        return Hash(BEGIN(nVersion), END(nBits), vchHeaderSig.begin(), vchHeaderSig.end());
+        return Hash(BEGIN(nVersion), END(nBits));
+}
+
+bool CBlockHeader::GetHeaderSig(std::vector<unsigned char>& vchSig) 
+{
+    static const unsigned char zeroes[32];
+    if (memcmp(vchHeaderSigR, zeroes, sizeof(zeroes)) == 0 || memcmp(vchHeaderSigS, zeroes, sizeof(zeroes)) == 0)
+        return error("GetHeaderSig() : Header signature is empty");
+
+    DEREncodeSignature(vchHeaderSigR, vchHeaderSigS, vchSig);
 }
 
 uint256 CBlock::BuildMerkleTree() const
@@ -272,14 +281,16 @@ uint256 CBlock::CheckMerkleBranch(uint256 hash, const std::vector<uint256>& vMer
 
 void CBlock::print() const
 {
-    LogPrintf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, vchHeaderSig=%s, vtx=%u)\n",
+    std::vector<unsigned char> vchSig;
+    this->GetHeaderSig(vchSig);
+    LogPrintf("CBlock(hash=%s, ver=%d, vchHeaderSig=%s, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, vtx=%u)\n",
         GetHash().ToString(),
         nVersion,
+        HexStr(vchSig.begin(), vchSig.end()),
         hashPrevBlock.ToString(),
         hashMerkleRoot.ToString(),
         nTime, 
         nBits, 
-        HexStr(vchHeaderSig.begin(), vchHeaderSig.end()),
         vtx.size());
     for (unsigned int i = 0; i < vtx.size(); i++)
     {

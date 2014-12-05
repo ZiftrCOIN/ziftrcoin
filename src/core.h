@@ -226,19 +226,24 @@ public:
     // Compute priority, given priority of inputs and (optionally) tx size
     double ComputePriority(double dPriorityInputs, unsigned int nTxSize=0) const;
 
+    /**
+     * In ziftrCOIN, a coinbase transaction must have all of the TxOuts
+     * be in a very specific format:
+     * 
+     *     OP_CHECKHEADERSIGVERIFY  OP_DUP  OP_HASH160  {KeyID}  OP_EQUALVERIFY  OP_CHECKSIG
+     * 
+     * In addition, the first input must be null. Further inputs may optionally be null
+     * TODO if they are not null, we should process them as actual spends of TxOuts
+     */
     bool IsCoinBase() const
     {
-        return (vin.size() == 1 && vin[0].prevout.IsNull());
+        BOOST_FOREACH(const CTxOut& out, vout) {
+            if (!out.scriptPubKey.IsCoinbaseOutputType())
+                return false;
+        }
 
-        // S.M. TODO make it so that coinbase transactions can have more than one input
-        // if (vin.size() == 0)
-        //     return false; 
-        // for (int i = 0; i < vin.size(); i++) 
-        // {
-        //     if (!vin[i].prevout.IsNull())
-        //         return false;
-        // }
-        // return true;
+        // Must have at least one null input because the height needs to be put into it
+        return (vin.size() > 0 && vin[0].prevout.IsNull());
     }
 
     friend bool operator==(const CTransaction& a, const CTransaction& b)
@@ -353,12 +358,15 @@ class CBlockHeader
 public:
     // header
     static const int CURRENT_VERSION=1;
+    
+    // Put these first so we don't have any chance of a midstate shortcut (or move to end?)
+    unsigned char vchHeaderSigR[32];
+    unsigned char vchHeaderSigS[32];
     int nVersion;
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
-    unsigned int nTime;
+    unsigned int nTime; // TODO maybe make this a uint64_t ? 
     unsigned int nBits;
-    std::vector<unsigned char> vchHeaderSig;
 
     CBlockHeader()
     {
@@ -367,23 +375,24 @@ public:
 
     IMPLEMENT_SERIALIZE
     (
+        READWRITE(FLATDATA(vchHeaderSigR));
+        READWRITE(FLATDATA(vchHeaderSigS));
         READWRITE(this->nVersion);
         nVersion = this->nVersion;
         READWRITE(hashPrevBlock);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
         READWRITE(nBits);
-        READWRITE(vchHeaderSig);
     )
 
     void SetNull()
     {
+        ClearHeaderSig();
         nVersion = CBlockHeader::CURRENT_VERSION;
         hashPrevBlock = 0;
         hashMerkleRoot = 0;
         nTime = 0;
         nBits = 0;
-        vchHeaderSig.clear();
     }
 
     bool IsNull() const
@@ -398,7 +407,31 @@ public:
      * the boolean given to differentiate whether the requester wants the
      * hash of the header to include the signature data or not. 
      */
-    uint256 GetHash(bool fIncludeSignature) const;
+    uint256 GetHash(bool fIncludeSignature=true) const;
+
+    /**
+     * Gets the DER encoded header sig. 
+     * This does not include the starting byte size of the signature so that 
+     * it can be used like this:
+     * 
+     * std::vector<unsigned char> vch;
+     * if (!pblock->GetHeaderSig(vch))
+     *     return false; // or error
+     * CScript() << vch; // automatically adds the size of the vector first before pushing data
+     */
+    bool GetHeaderSig(std::vector<unsigned char>& vchSig) const;
+
+    void ClearHeaderSig()
+    {
+        memset(vchHeaderSigR, 0, 32);
+        memset(vchHeaderSigS, 0, 32);
+    }
+
+    void CopyHeaderSigFrom(const CBlockHeader* fromBlock) 
+    {
+        memcpy(this->vchHeaderSigR, fromBlock->vchHeaderSigR, sizeof(this->vchHeaderSigR));
+        memcpy(this->vchHeaderSigS, fromBlock->vchHeaderSigS, sizeof(this->vchHeaderSigS));
+    }
 
     int64_t GetBlockTime() const
     {
@@ -443,12 +476,12 @@ public:
     CBlockHeader GetBlockHeader() const
     {
         CBlockHeader block;
+        block.CopyHeaderSigFrom(this);
         block.nVersion       = nVersion;
         block.hashPrevBlock  = hashPrevBlock;
         block.hashMerkleRoot = hashMerkleRoot;
         block.nTime          = nTime;
         block.nBits          = nBits;
-        block.vchHeaderSig   = vchHeaderSig;
         return block;
     }
 

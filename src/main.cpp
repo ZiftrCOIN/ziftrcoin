@@ -1819,6 +1819,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     //                        (pindex->nHeight==91880 && pindex->GetBlockHash() == uint256("0x00000000000743f190a18c5577a3c2d2a1f610ae9601ac046a38084ccb7cd721")));
     // if (fEnforceBIP30) {
     // }
+    // TODO make sure that no two transactions with the same TxId can exist
     for (unsigned int i = 0; i < block.vtx.size(); i++) {
         uint256 hash = block.GetTxHash(i);
         if (view.HaveCoins(hash) && !view.GetCoins(hash).IsPruned())
@@ -1829,8 +1830,8 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     // BIP16 didn't become active until Apr 1 2012
     // int64_t nBIP16SwitchTime = 1333238400;
     // bool fStrictPayToScriptHash = (pindex->nTime >= nBIP16SwitchTime);
-
-    // S.M.: Probably could get rid of the SCRIPT_VERIFY_P2SH flag entirely, since 
+ 
+    // TODO Probably could get rid of the SCRIPT_VERIFY_P2SH flag entirely, since 
     // we will have P2SH from block 0, but will leave it in for now
     unsigned int flags = SCRIPT_VERIFY_NOCACHE | SCRIPT_VERIFY_P2SH;
 
@@ -2345,7 +2346,7 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
     return true;
 }
 
-
+// TODO check that the delayed value in delayed transactions is later than the current block height
 bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bool fCheckMerkleRoot)
 {
     // These are checks that are independent of context
@@ -2371,11 +2372,11 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     if (block.vtx.empty() || !block.vtx[0].IsCoinBase())
         return state.DoS(100, error("CheckBlock() : first tx is not coinbase"),
                          REJECT_INVALID, "bad-cb-missing");
-    if (block.GetHash())
-        for (unsigned int i = 1; i < block.vtx.size(); i++)
-            if (block.vtx[i].IsCoinBase())
-                return state.DoS(100, error("CheckBlock() : more than one coinbase"),
-                                 REJECT_INVALID, "bad-cb-multiple");
+
+    for (unsigned int i = 1; i < block.vtx.size(); i++)
+        if (block.vtx[i].IsCoinBase())
+            return state.DoS(100, error("CheckBlock() : more than one coinbase"),
+                             REJECT_INVALID, "bad-cb-multiple");
 
     // Check transactions
     BOOST_FOREACH(const CTransaction& tx, block.vtx)
@@ -2525,6 +2526,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
     return true;
 }
 
+// Might need this some day
 // bool CBlockIndex::IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned int nRequired, unsigned int nToCheck)
 // {
 //     unsigned int nFound = 0;
