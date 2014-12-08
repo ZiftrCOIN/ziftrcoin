@@ -25,12 +25,12 @@ void UpdateCoinbaseScriptSig(CBlock* pblock, CBlockIndex* pindexPrev);
 /** Check mined block */
 bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey);
 
-/** Base sha256 mining transform */
-//void SHA256Transform(void* pstate, void* pinput, const void* pinit);
+/** Base sha256 mining transform. Checked in miner_tests.cpp.  */
+void SHA256Transform(void* pstate, void* pinput, const void* pinit);
 /** Do mining precalculation */
 //void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash1);
 
-extern double dHashesPerSec;
-extern int64_t nHPSTimerStart;
+extern double dSashesPerSec;
+extern int64_t nSPSTimerStart;
 
 #endif // BITCOIN_MINER_H

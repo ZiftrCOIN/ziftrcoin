@@ -204,19 +204,19 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
                 ssValue >> diskindex;
 
                 // Construct block index object
-                CBlockIndex* pindexNew = InsertBlockIndex(diskindex.GetBlockHash());
-                pindexNew->pprev          = InsertBlockIndex(diskindex.hashPrev);
-                pindexNew->nHeight        = diskindex.nHeight;
-                pindexNew->nFile          = diskindex.nFile;
-                pindexNew->nDataPos       = diskindex.nDataPos;
-                pindexNew->nUndoPos       = diskindex.nUndoPos;
-                pindexNew->nVersion       = diskindex.nVersion;
-                pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
-                pindexNew->nTime          = diskindex.nTime;
-                pindexNew->nBits          = diskindex.nBits;
-                pindexNew->nNonce         = diskindex.nNonce;
-                pindexNew->nStatus        = diskindex.nStatus;
-                pindexNew->nTx            = diskindex.nTx;
+                CBlockIndex* pindexNew     = InsertBlockIndex(diskindex.GetBlockHash());
+                pindexNew->pprev           = InsertBlockIndex(diskindex.hashPrev);
+                pindexNew->nHeight         = diskindex.nHeight;
+                pindexNew->nFile           = diskindex.nFile;
+                pindexNew->nDataPos        = diskindex.nDataPos;
+                pindexNew->nUndoPos        = diskindex.nUndoPos;
+                pindexNew->CopyHeaderSigFrom(diskindex.vchHeaderSigR, diskindex.vchHeaderSigS);
+                pindexNew->nVersion        = diskindex.nVersion;
+                pindexNew->hashMerkleRoot  = diskindex.hashMerkleRoot;
+                pindexNew->nTime           = diskindex.nTime;
+                pindexNew->nBits           = diskindex.nBits;
+                pindexNew->nStatus         = diskindex.nStatus;
+                pindexNew->nTx             = diskindex.nTx;
 
                 if (!pindexNew->CheckIndex())
                     return error("LoadBlockIndex() : CheckIndex failed: %s", pindexNew->ToString());

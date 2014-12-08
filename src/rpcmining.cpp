@@ -227,9 +227,9 @@ Value gethashespersec(const Array& params, bool fHelp)
             + HelpExampleRpc("gethashespersec", "")
         );
 
-    if (GetTimeMillis() - nHPSTimerStart > 8000)
+    if (GetTimeMillis() - nSPSTimerStart > 8000)
         return (int64_t)0;
-    return (int64_t)dHashesPerSec;
+    return (int64_t)dSashesPerSec;
 }
 #endif
 
@@ -309,7 +309,7 @@ Value getwork(const Array& params, bool fHelp)
     if (IsInitialBlockDownload())
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Bitcoin is downloading blocks...");
 
-    static map<uint256, CBlock*> > mapNewBlock;    // FIXME: thread safety
+    static map<uint256, CBlock*> mapNewBlock;    // FIXME: thread safety
     static vector<CBlockTemplate*> vNewBlockTemplate;
 
     if (params.size() == 0)
@@ -363,7 +363,8 @@ Value getwork(const Array& params, bool fHelp)
         uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
         Object result;
-        result.push_back(Pair("data",     HexStr(BEGIN(pdata), END(pdata))));
+        CBlockHeader header = pblock->GetBlockHeader();
+        result.push_back(Pair("data", HexStr(BEGIN(header.vchHeaderSigR), END(header.nBits))));
         result.push_back(Pair("target",   HexStr(BEGIN(hashTarget), END(hashTarget))));
         return result;
     }
@@ -389,7 +390,7 @@ Value getwork(const Array& params, bool fHelp)
         // been changed while mining, everything else is saved
         // Don't think we need to copy the coinbase scripsig anymore, since no extraNonce
         // UpdateCoinbaseScriptSig(pblock, pindexPrev);
-        pblock->CopyHeaderSigFrom(pdata);
+        pblock->CopyHeaderSigFrom(pdata->vchHeaderSigR, pdata->vchHeaderSigS);
         pblock->nTime = pdata->nTime;
         pblock->hashMerkleRoot = pblock->BuildMerkleTree();
 

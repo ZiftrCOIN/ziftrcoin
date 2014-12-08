@@ -771,12 +771,17 @@ public:
         nStatus = 0;
         nSequenceId = 0;
 
-        memcpy(vchHeaderSigR, block.vchHeaderSigR, sizeof(vchHeaderSigR));
-        memcpy(vchHeaderSigS, block.vchHeaderSigS, sizeof(vchHeaderSigS));
-        nVersion       = block.nVersion;
-        hashMerkleRoot = block.hashMerkleRoot;
-        nTime          = block.nTime;
-        nBits          = block.nBits;
+        CopyHeaderSigFrom(block.vchHeaderSigR, block.vchHeaderSigS);
+        nVersion        = block.nVersion;
+        hashMerkleRoot  = block.hashMerkleRoot;
+        nTime           = block.nTime;
+        nBits           = block.nBits;
+    }
+
+    void CopyHeaderSigFrom(const unsigned char sigR[32], const unsigned char sigS[32]) 
+    {
+        memcpy(vchHeaderSigR, sigR, sizeof(vchHeaderSigR));
+        memcpy(vchHeaderSigS, sigS, sizeof(vchHeaderSigS));
     }
 
     CDiskBlockPos GetBlockPos() const {
@@ -800,7 +805,7 @@ public:
     CBlockHeader GetBlockHeader() const
     {
         CBlockHeader block;
-        block.CopyHeaderSigFrom(this);
+        block.CopyHeaderSigFrom(vchHeaderSigR, vchHeaderSigS);
         block.nVersion       = nVersion;
         if (pprev)
             block.hashPrevBlock = pprev->GetBlockHash();
@@ -834,7 +839,7 @@ public:
         return CheckProofOfWork(GetBlockHash(), nBits);
     }
 
-    enum { nMedianTimeSpan=11 };
+    enum { nMedianTimeSpan=11 }; // TODO new rule that requires time to be more strict since no need for nTime hacks with sign to mine
 
     int64_t GetMedianTimePast() const
     {
@@ -915,8 +920,9 @@ public:
 
     uint256 GetBlockHash(bool fIncludeSignature=true) const
     {
-        // TODO why did this just build a whole block header before? 
-        return this.GetHash(fIncludeSignature);
+        CBlockHeader header = this->GetBlockHeader();
+        header.hashPrevBlock = hashPrev;
+        return header.GetHash(fIncludeSignature);
     }
 
 

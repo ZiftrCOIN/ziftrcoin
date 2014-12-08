@@ -215,18 +215,20 @@ uint64_t CTxOutCompressor::DecompressAmount(uint64_t x)
 uint256 CBlockHeader::GetHash(bool fIncludeSignature) const
 {
     if (fIncludeSignature)
-        return Hash(vchHeaderSigR, END(nBits));
+        return Hash(vchHeaderSigR, (const unsigned char *) UEND(nBits));
     else 
         return Hash(BEGIN(nVersion), END(nBits));
 }
 
-bool CBlockHeader::GetHeaderSig(std::vector<unsigned char>& vchSig) 
+bool CBlockHeader::GetHeaderSig(std::vector<unsigned char>& vchSig) const
 {
-    static const unsigned char zeroes[32];
+    unsigned char zeroes[32];
+    memset(zeroes, 0, sizeof(zeroes[0])*ARRAYLEN(zeroes));
     if (memcmp(vchHeaderSigR, zeroes, sizeof(zeroes)) == 0 || memcmp(vchHeaderSigS, zeroes, sizeof(zeroes)) == 0)
         return error("GetHeaderSig() : Header signature is empty");
 
     DEREncodeSignature(vchHeaderSigR, vchHeaderSigS, vchSig);
+    return true;
 }
 
 uint256 CBlock::BuildMerkleTree() const

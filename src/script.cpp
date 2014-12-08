@@ -217,6 +217,10 @@ const char* GetOpName(opcodetype opcode)
     case OP_CHECKLOCKTIME          : return "OP_CHECKLOCKTIME";
     case OP_CHECKLOCKTIMEVERIFY    : return "OP_CHECKLOCKTIMEVERIFY";
 
+    // headersig verifiers
+    case OP_CHECKHEADERSIG         : return "OP_CHECKHEADERSIG";
+    case OP_CHECKHEADERSIGVERIFY   : return "OP_CHECKHEADERSIGVERIFY";
+
     // template matching params
     case OP_SCRIPTNUMBER           : return "OP_SCRIPTNUMBER";
     case OP_SMALLDATA              : return "OP_SMALLDATA";
@@ -250,22 +254,18 @@ bool IsCanonicalPubKey(const valtype &vchPubKey, unsigned int flags) {
     return true;
 }
 
+// See https://bitcointalk.org/index.php?topic=8392.msg127623#msg127623
+// See http://bitcoin.stackexchange.com/questions/12554/why-the-signature-is-always-65-13232-bytes-long
+// A canonical signature exists of: <30> <total len> <02> <len R> <R> <02> <len S> <S> <hashtype>
+// Where R and S are not negative (their first byte has its highest bit not set), and not
+// excessively padded (do not start with a 0 byte, unless an otherwise negative number follows,
+// in which case a single 0 byte is necessary and even required).
 bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags) {
-    if (!(flags & SCRIPT_VERIFY_STRICTENC))
-        return true;
-
-    // See https://bitcointalk.org/index.php?topic=8392.msg127623#msg127623
-    // A canonical signature exists of: <30> <total len> <02> <len R> <R> <02> <len S> <S> <hashtype>
-    // Where R and S are not negative (their first byte has its highest bit not set), and not
-    // excessively padded (do not start with a 0 byte, unless an otherwise negative number follows,
-    // in which case a single 0 byte is necessary and even required).
     if (vchSig.size() < 9)
         return error("Non-canonical signature: too short");
     if (vchSig.size() > 73)
         return error("Non-canonical signature: too long");
-    unsigned char nHashType = vchSig[vchSig.size() - 1] & (~(SIGHASH_ANYONECANPAY));
-    if (nHashType < SIGHASH_ALL || nHashType > SIGHASH_SINGLE)
-        return error("Non-canonical signature: unknown hashtype byte");
+
     if (vchSig[0] != 0x30)
         return error("Non-canonical signature: wrong type");
     if (vchSig[1] != vchSig.size()-3)
@@ -296,11 +296,97 @@ bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags) {
         return error("Non-canonical signature: S value negative");
     if (nLenS > 1 && (S[0] == 0x00) && !(S[1] & 0x80))
         return error("Non-canonical signature: S value excessively padded");
+    if (S[nLenS-1] & 1)
+        return error("Non-canonical signature: S value odd");
 
-    if (flags & SCRIPT_VERIFY_EVEN_S) {
-        if (S[nLenS-1] & 1)
-            return error("Non-canonical signature: S value odd");
+    unsigned char nHashType = vchSig[vchSig.size() - 1] & (~(SIGHASH_ANYONECANPAY));
+    if (nHashType < SIGHASH_ALL || nHashType > SIGHASH_SINGLE)
+        return error("Non-canonical signature: unknown hashtype byte");
+
+    return true;
+}
+
+// Uses strict DER encoding
+bool DEREncodeSignature(const unsigned char sigR[32], const unsigned char sigS[32], std::vector<unsigned char>& vchSig)
+{
+    vchSig.clear();
+
+    // First non-zero element of sigR
+    int i = 0;
+    for (; i < 32; i++)
+        if (sigR[i] != (unsigned char)0x00)
+            break;
+
+    // First non-zero element of sigS
+    int j = 0;
+    for (; j < 32; j++)
+        if (sigS[j] != (unsigned char)0x00)
+            break;
+
+    if (i == 32 || j == 32)
+        return error("DEREncodeSignature() : all elements of r/s part of signature were 0x00");
+
+    int extraR = sigR[i] > 0x7F ? 1 : 0;
+    int extraS = sigS[j] > 0x7F ? 1 : 0;
+    int lenR = 32-i + extraR;
+    int lenS = 32-i + extraS;
+    int len = 4 + lenR + lenS;
+
+    // DER encoding of R and S    
+    vchSig.push_back((unsigned char) 0x30);
+    vchSig.push_back((unsigned char) len);
+    
+    vchSig.push_back((unsigned char) 0x02);
+    vchSig.push_back((unsigned char) lenR);
+    if (extraR) vchSig.push_back((unsigned char) 0x00);
+    vchSig.insert(vchSig.end(), &sigR[i], &sigR[32]);
+
+    vchSig.push_back((unsigned char) 0x02);
+    vchSig.push_back((unsigned char) lenS);
+    if (extraS) vchSig.push_back((unsigned char) 0x00);
+    vchSig.insert(vchSig.end(), &sigS[j], &sigS[32]);
+
+    // Temporarily push sighashtype on to check that signature is canonical
+    vchSig.push_back((unsigned char) SIGHASH_ALL);
+
+    if (!IsCanonicalSignature(vchSig)) {
+        vchSig.clear();
+        return error("DEREncodeSignature() : Signature was encoded but not canonical");
     }
+
+    // Remove the sighash type which was temporarily pushed
+    vchSig.pop_back();
+
+    return true;
+}
+
+// Will work whether or not the SIGHASH_TYPE is appended
+bool DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], const std::vector<unsigned char>& vchSig)
+{
+    std::vector<unsigned char> vchSigCopy = vchSig;
+    if (!IsCanonicalSignature(vchSigCopy)) {
+        vchSigCopy.push_back((unsigned char) SIGHASH_ALL);
+        if (!IsCanonicalSignature(vchSigCopy)) {
+            return error("DERDecodeSignature() : vchSig provided is not canonical");
+        }
+    }
+    
+    memset(sigR, 0, 32);
+    memset(sigS, 0, 32);
+
+    const unsigned int nLenR = vchSig[3];
+    if (nLenR == 33) {
+        memcpy(&sigR[0], &vchSig[4+1], nLenR-1);
+    } else {
+        memcpy(&sigR[32-nLenR], &vchSig[4], nLenR);
+    }
+
+    const unsigned int nLenS = vchSig[5+nLenR];
+    if (nLenS == 33) {
+        memcpy(&sigS[0], &vchSig[5+nLenS+1], nLenS-1);
+    } else {
+        memcpy(&sigS[32-nLenS], &vchSig[6+nLenS], nLenS);
+    }    
 
     return true;
 }
@@ -845,6 +931,17 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                 }
                 break;
 
+                //
+                // LockTime
+                //
+                case OP_CHECKHEADERSIG:
+                case OP_CHECKHEADERSIGVERIFY:
+                {
+                    // TODO get data and continue into next checksig 
+                    return false;
+                }
+                break;
+
                 case OP_CHECKSIG:
                 case OP_CHECKSIGVERIFY:
                 {
@@ -1048,17 +1145,6 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                     }  
                 }
                 break;
-
-                //
-                // LockTime
-                //
-                case OP_CHECKHEADERSIG:
-                case OP_CHECKHEADERSIGVERIFY:
-                {
-                    // TODO 
-                    // put right above OP_CHECKSIG?
-                    return false;
-                }
 
                 default:
                     return false;

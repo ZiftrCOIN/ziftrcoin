@@ -427,10 +427,10 @@ public:
         memset(vchHeaderSigS, 0, 32);
     }
 
-    void CopyHeaderSigFrom(const CBlockHeader* fromBlock) 
+    void CopyHeaderSigFrom(const unsigned char sigR[32], const unsigned char sigS[32]) 
     {
-        memcpy(this->vchHeaderSigR, fromBlock->vchHeaderSigR, sizeof(this->vchHeaderSigR));
-        memcpy(this->vchHeaderSigS, fromBlock->vchHeaderSigS, sizeof(this->vchHeaderSigS));
+        memcpy(vchHeaderSigR, sigR, sizeof(vchHeaderSigR));
+        memcpy(vchHeaderSigS, sigS, sizeof(vchHeaderSigS));
     }
 
     int64_t GetBlockTime() const
@@ -475,14 +475,14 @@ public:
 
     CBlockHeader GetBlockHeader() const
     {
-        CBlockHeader block;
-        block.CopyHeaderSigFrom(this);
-        block.nVersion       = nVersion;
-        block.hashPrevBlock  = hashPrevBlock;
-        block.hashMerkleRoot = hashMerkleRoot;
-        block.nTime          = nTime;
-        block.nBits          = nBits;
-        return block;
+        CBlockHeader header;
+        header.CopyHeaderSigFrom(this->vchHeaderSigR, this->vchHeaderSigS);
+        header.nVersion       = nVersion;
+        header.hashPrevBlock  = hashPrevBlock;
+        header.hashMerkleRoot = hashMerkleRoot;
+        header.nTime          = nTime;
+        header.nBits          = nBits;
+        return header;
     }
 
     uint256 BuildMerkleTree() const;

@@ -10,6 +10,7 @@
 #include "protocol.h"
 #include "util.h"
 #include "script.h"
+#include "base58.h"
 
 #include <boost/assign/list_of.hpp>
 
@@ -104,23 +105,27 @@ static const char* pszTimestamp = "Discus Fish: 24, Unknown: 22, GHash.IO: 22";
 // <= 1: Mine the main net genesis block
 // <= 2: Mine the test net genesis block
 // <= 3: Mine the reg test genesis block
-static int whichGenesisMine = 0;
+static int whichGenesisMine = 1;
 
-static void MineGenesisBlock(CBlock genesis, CBigNum bnProofOfWorkLimit, const string& pref) {
-    genesis.nNonce = ~0;
-    unsigned int nExtraNonce = ~0;
-    uint256 hashGenesisBlock = ~uint256(0);
+static void MineGenesisBlock(CBlock& genesis, CKey& signer, CBigNum& bnProofOfWorkLimit, const string& pref) {
 
-    do 
-    {
-        if (++genesis.nNonce == 0) {
-            printf("%s nExtraNonce: %u\n", pref.c_str(), ++nExtraNonce);
-            genesis.vtx[0].vin[0].scriptSig.clear();
-            genesis.vtx[0].vin[0].scriptSig = CScript() << 0 << CScriptNum(nExtraNonce) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+    uint256 proofOfWorkLimit = bnProofOfWorkLimit.getuint256();
+    std::vector<unsigned char> vchSig;
+    uint256 hashToSign = genesis.GetHash(false);
+    uint256 hashGenesisBlock = 0;
+
+    do {
+        if (!signer.Sign(hashToSign, vchSig)) {
+            printf("couldn't sign...\n");
         }
+        std::cout << "vchSig size: " << vchSig.size() << "\n" << HexStr(vchSig.begin(), vchSig.end()) << "\n";
+        DERDecodeSignature(genesis.vchHeaderSigR, genesis.vchHeaderSigS, vchSig);
         hashGenesisBlock = genesis.GetHash();
-    } while (hashGenesisBlock > bnProofOfWorkLimit.getuint256());
-    printf("%s nonce: %u\n", pref.c_str(), genesis.nNonce);
+    } while (hashGenesisBlock > proofOfWorkLimit);
+    
+    CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+    ssBlock << genesis;
+    printf("%s rawblock: %s\n", pref.c_str(), HexStr(ssBlock.begin(), ssBlock.end()).c_str());
     printf("%s hashGenesisBlock: %s\n", pref.c_str(), hashGenesisBlock.ToString().c_str());
     printf("%s merkleRoot: %s\n", pref.c_str(), genesis.hashMerkleRoot.ToString().c_str());
 }
@@ -128,6 +133,12 @@ static void MineGenesisBlock(CBlock genesis, CBigNum bnProofOfWorkLimit, const s
 class CMainParams : public CChainParams {
 public:
     CMainParams() {
+        base58Prefixes[PUBKEY_ADDRESS] = list_of(80);  // P2PKH addresses start with 'Z'
+        base58Prefixes[SCRIPT_ADDRESS] = list_of(5);   // P2SH  addresses start with '3'
+        base58Prefixes[SECRET_KEY] =     list_of(208); // Priv keys prefixed with 80 + 128
+        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x88)(0xB2)(0x1E);
+        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x88)(0xAD)(0xE4);
+
         // The message start string is designed to be unlikely to occur in normal data.
         // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
         // a large 4-byte int at any alignment.
@@ -139,7 +150,7 @@ public:
         nRPCPort = 10332;
         vAlertPubKey = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");//"0380d4125f5357aac2b98c201ee76c3e26a5ef084a5fcd26e65c9cfff7ad1a026c");
 
-        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 25);
+        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 22);
         // Max period lasts for:           2.5 years, or 2.5*365*24*60 = 1,314,000 blocks
         // Decreasing periodd lasts for:   7.5 years, or 7.5*365*24*60 = 3,942,000 blocks
         nLastMaxSubsidyBlock = 1314000;
@@ -162,17 +173,28 @@ public:
         }
 
         genesis.vtx.push_back(txNew);
+
+        CBitcoinSecret vchSecret;
+        bool fGood = vchSecret.SetString(string("Xtvz9noVZtFuTvmpCQxTzm3KM3kfZimsrqYnKM9TowrvTscbXLAS"));
+        if (!fGood)
+            throw runtime_error("CMainParams() : could not decode signing key");
+        CKey key = vchSecret.GetKey();
         
+        std::vector<unsigned char> vchSigR;
+        vchSigR = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49");
+        std::vector<unsigned char> vchSigS;
+        vchSigS = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49");
+        genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
+
         genesis.hashPrevBlock = 0;
         genesis.hashMerkleRoot = genesis.BuildMerkleTree();
         genesis.nVersion = 1;
         genesis.nTime    = 1416422035;
         genesis.nBits    = bnProofOfWorkLimit.GetCompact();
-        genesis.nNonce   = 68622575;
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine != 0 && whichGenesisMine <= 1) {
-            MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
+            MineGenesisBlock(genesis, key, bnProofOfWorkLimit, strDataDir);
         } else {
             assert(hashGenesisBlock == uint256("0x000000637d51ae8dfebee2177a7f0b3d92f145b9863b1da24e746113d2ae7536"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
             assert(genesis.hashMerkleRoot == uint256("0xe78cf10089ccbd2a585e320ee4c368ba99d92d4a9bb00a414d2087f35ec3fb20"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")); 
@@ -184,12 +206,6 @@ public:
         // vSeeds.push_back(CDNSSeedData("bitcoinstats.com", "seed.bitcoinstats.com"));
         // vSeeds.push_back(CDNSSeedData("bitnodes.io", "seed.bitnodes.io"));
         // vSeeds.push_back(CDNSSeedData("xf2.org", "bitseed.xf2.org"));
-
-        base58Prefixes[PUBKEY_ADDRESS] = list_of(80);  // P2PKH addresses start with 'Z'
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(5);   // P2SH  addresses start with '3'
-        base58Prefixes[SECRET_KEY] =     list_of(208); // Priv keys prefixed with 80 + 128
-        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x88)(0xB2)(0x1E);
-        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x88)(0xAD)(0xE4);
 
         // Convert the pnSeeds array into usable address objects.
         for (unsigned int i = 0; i < ARRAYLEN(pnSeed); i++)
@@ -226,6 +242,12 @@ static CMainParams mainParams;
 class CTestNetParams : public CMainParams {
 public:
     CTestNetParams() {
+        base58Prefixes[PUBKEY_ADDRESS] = list_of(111);
+        base58Prefixes[SCRIPT_ADDRESS] = list_of(196);
+        base58Prefixes[SECRET_KEY]     = list_of(239);
+        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x35)(0x87)(0xCF);
+        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x35)(0x83)(0x94);
+
         // The message start string is designed to be unlikely to occur in normal data.
         // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
         // a large 4-byte int at any alignment.
@@ -238,13 +260,23 @@ public:
         strDataDir = "testnet";
         vAlertPubKey = ParseHex("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");//"02911661822e0b2cd814ed3ff4d23c97cfe7c89ad1eb6ce2ad3181195cfa9e0886");
 
-        // Modify the testnet genesis block so the timestamp is valid for a later start.
+        CBitcoinSecret vchSecret;
+        bool fGood = vchSecret.SetString("cUuXsnyNzefAfyBdLmC9g9yR4WytShBQuXrpfRtQ2nDzC8kqtmJf");
+        if (!fGood)
+            throw runtime_error("CTestNetParams() : could not decode signing key");
+        CKey key = vchSecret.GetKey();
+
+        std::vector<unsigned char> vchSigR;
+        vchSigR = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49");
+        std::vector<unsigned char> vchSigS;
+        vchSigS = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49");
+        genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
+
         genesis.nTime = 1416422036;
-        genesis.nNonce = 58482354;
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine != 0 && whichGenesisMine <= 2) {
-            MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
+            MineGenesisBlock(genesis, key, bnProofOfWorkLimit, strDataDir);
         } else {
             assert(hashGenesisBlock == uint256("0x0000004d427385b02d854549ade016f66763997450ec4cdfcf5915e760987ece"));
         }
@@ -255,11 +287,7 @@ public:
         // vSeeds.push_back(CDNSSeedData("bitcoin.petertodd.org", "testnet-seed.bitcoin.petertodd.org"));
         // vSeeds.push_back(CDNSSeedData("bluematt.me", "testnet-seed.bluematt.me"));
 
-        base58Prefixes[PUBKEY_ADDRESS] = list_of(111);
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(196);
-        base58Prefixes[SECRET_KEY]     = list_of(239);
-        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x35)(0x87)(0xCF);
-        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x35)(0x83)(0x94);
+        
     }
     virtual Network NetworkID() const { return CChainParams::TESTNET; }
 };
@@ -283,13 +311,24 @@ public:
         // nLastDecreasingSubsidyBlock = nLastMaxSubsidyBlock + 60;
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 1);
 
+        CBitcoinSecret vchSecret;
+        bool fGood = vchSecret.SetString("cUuXsnyNzefAfyBdLmC9g9yR4WytShBQuXrpfRtQ2nDzC8kqtmJf");
+        if (!fGood)
+            throw runtime_error("CRegTestParams() : could not decode signing key");
+        CKey key = vchSecret.GetKey();
+
+        std::vector<unsigned char> vchSigR;
+        vchSigR = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49");
+        std::vector<unsigned char> vchSigS;
+        vchSigS = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49");
+        genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
+
         genesis.nTime = 1416422037;
         genesis.nBits = 0x207fffff;
-        genesis.nNonce = 5;
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine != 0 && whichGenesisMine <= 3) {
-            MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
+            MineGenesisBlock(genesis, key, bnProofOfWorkLimit, strDataDir);
         }
         
         assert(hashGenesisBlock == uint256("0x06c56e6db69ff9c14ba3030300d27ffcdb3634f736de89974e6d6adc41abbcd3"));

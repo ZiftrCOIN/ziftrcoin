@@ -361,12 +361,12 @@ enum opcodetype
     OP_NOP10 = 0xb9,
 
     // locktime
-    OP_CHECKLOCKTIME = 0xc0,
-    OP_CHECKLOCKTIMEVERIFY = 0xc1,
+    OP_CHECKLOCKTIME = 0xba,
+    OP_CHECKLOCKTIMEVERIFY = 0xbb,
 
     // headersig verifiers
-    OP_CHECKHEADERSIG = 0xd0,
-    OP_CHECKHEADERSIGVERIFY = 0xd0,
+    OP_CHECKHEADERSIG = 0xbc,
+    OP_CHECKHEADERSIGVERIFY = 0xbd,
 
     // template matching params
     OP_SCRIPTNUMBER = 0xf8,
@@ -802,8 +802,10 @@ public:
     }
 };
 
-bool IsCanonicalPubKey(const std::vector<unsigned char> &vchPubKey, unsigned int flags);
-bool IsCanonicalSignature(const std::vector<unsigned char> &vchSig, unsigned int flags);
+bool IsCanonicalPubKey(const std::vector<unsigned char> &vchPubKey, unsigned int flags=0);
+bool IsCanonicalSignature(const std::vector<unsigned char> &vchSig, unsigned int flags=0);
+bool DEREncodeSignature(const unsigned char sigR[32], const unsigned char sigS[32], std::vector<unsigned char>& vchSig);
+bool DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], const std::vector<unsigned char>& vchSig);
 
 bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);
 bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::vector<unsigned char> >& vSolutionsRet);

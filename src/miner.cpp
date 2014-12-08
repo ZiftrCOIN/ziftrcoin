@@ -63,23 +63,23 @@
 // pinit  - the result of the last SHA256 transform on the previous 64 unsigned chars of data,
 //          or the pSHA256InitState if this is the first 64 bytes of the message being processed.
 // 
-// void SHA256Transform(void* pstate, void* pinput, const void* pinit)
-// {
-//     SHA256_CTX ctx;
-//     unsigned char data[64];
+void SHA256Transform(void* pstate, void* pinput, const void* pinit)
+{
+    SHA256_CTX ctx;
+    unsigned char data[64];
 
-//     SHA256_Init(&ctx);
+    SHA256_Init(&ctx);
 
-//     for (int i = 0; i < 16; i++)
-//         ((uint32_t*)data)[i] = ByteReverse(((uint32_t*)pinput)[i]);
+    for (int i = 0; i < 16; i++)
+        ((uint32_t*)data)[i] = ByteReverse(((uint32_t*)pinput)[i]);
 
-//     for (int i = 0; i < 8; i++)
-//         ctx.h[i] = ((uint32_t*)pinit)[i];
+    for (int i = 0; i < 8; i++)
+        ctx.h[i] = ((uint32_t*)pinit)[i];
 
-//     SHA256_Update(&ctx, data, sizeof(data));
-//     for (int i = 0; i < 8; i++)
-//         ((uint32_t*)pstate)[i] = ctx.h[i];
-// }
+    SHA256_Update(&ctx, data, sizeof(data));
+    for (int i = 0; i < 8; i++)
+        ((uint32_t*)pstate)[i] = ctx.h[i];
+}
 
 // Some explaining would be appreciated
 class COrphan
