@@ -137,6 +137,17 @@ double CTransaction::ComputePriority(double dPriorityInputs, unsigned int nTxSiz
     return dPriorityInputs / nTxSize;
 }
 
+bool CTransaction::IsCoinBase() const
+{
+    BOOST_FOREACH(const CTxOut& out, vout) {
+        if (!out.scriptPubKey.IsCoinbaseOutputType())
+            return false;
+    }
+
+    // Must have at least one null input because the height needs to be put into it
+    return (vin.size() > 0 && vin[0].prevout.IsNull());
+}
+
 std::string CTransaction::ToString() const
 {
     std::string str;

@@ -235,16 +235,7 @@ public:
      * In addition, the first input must be null. Further inputs may optionally be null
      * TODO if they are not null, we should process them as actual spends of TxOuts
      */
-    bool IsCoinBase() const
-    {
-        BOOST_FOREACH(const CTxOut& out, vout) {
-            if (!out.scriptPubKey.IsCoinbaseOutputType())
-                return false;
-        }
-
-        // Must have at least one null input because the height needs to be put into it
-        return (vin.size() > 0 && vin[0].prevout.IsNull());
-    }
+    bool IsCoinBase() const;
 
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {

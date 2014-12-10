@@ -69,11 +69,13 @@ const char* GetTxnOutputType(txnouttype t)
     {
     case TX_NONSTANDARD:        return "nonstandard";
     case TX_PUBKEY:             return "pubkey";
+    case TX_COINBASE:           return "coinbase";
     case TX_PUBKEYHASH:         return "pubkeyhash";
     case TX_SCRIPTHASH:         return "scripthash";
     case TX_MULTISIG:           return "multisig";
     case TX_NULL_DATA:          return "nulldata";
     case TX_DELAYEDPUBKEY:      return "delayedpubkey";
+    case TX_DELAYEDCOINBASE:    return "delayedcoinbase";
     case TX_DELAYEDPUBKEYHASH:  return "delayedpubkeyhash";
     case TX_DELAYEDSCRIPTHASH:  return "delayedscripthash";
     case TX_DELAYEDMULTISIG:    return "delayedmultisig";
@@ -269,7 +271,7 @@ bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags) {
     if (vchSig[0] != 0x30)
         return error("Non-canonical signature: wrong type");
     if (vchSig[1] != vchSig.size()-3)
-        return error("Non-canonical signature: wrong length marker");
+        return false; //error("Non-canonical signature: wrong length marker");
     unsigned int nLenR = vchSig[3];
     if (5 + nLenR >= vchSig.size())
         return error("Non-canonical signature: S length misplaced");
@@ -296,8 +298,11 @@ bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags) {
         return error("Non-canonical signature: S value negative");
     if (nLenS > 1 && (S[0] == 0x00) && !(S[1] & 0x80))
         return error("Non-canonical signature: S value excessively padded");
-    if (S[nLenS-1] & 1)
-        return error("Non-canonical signature: S value odd");
+
+    if (flags & SCRIPT_VERIFY_EVEN_S) {
+        if (S[nLenS-1] & 1)
+            return error("Non-canonical signature: S value odd");
+    }
 
     unsigned char nHashType = vchSig[vchSig.size() - 1] & (~(SIGHASH_ANYONECANPAY));
     if (nHashType < SIGHASH_ALL || nHashType > SIGHASH_SINGLE)
@@ -313,15 +318,17 @@ bool DEREncodeSignature(const unsigned char sigR[32], const unsigned char sigS[3
 
     // First non-zero element of sigR
     int i = 0;
-    for (; i < 32; i++)
+    for (; i < 32; i++) {
         if (sigR[i] != (unsigned char)0x00)
             break;
+    }
 
     // First non-zero element of sigS
     int j = 0;
-    for (; j < 32; j++)
+    for (; j < 32; j++) {
         if (sigS[j] != (unsigned char)0x00)
             break;
+    }
 
     if (i == 32 || j == 32)
         return error("DEREncodeSignature() : all elements of r/s part of signature were 0x00");
@@ -375,6 +382,7 @@ bool DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], const st
     memset(sigS, 0, 32);
 
     const unsigned int nLenR = vchSig[3];
+
     if (nLenR == 33) {
         memcpy(&sigR[0], &vchSig[4+1], nLenR-1);
     } else {
@@ -383,9 +391,9 @@ bool DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], const st
 
     const unsigned int nLenS = vchSig[5+nLenR];
     if (nLenS == 33) {
-        memcpy(&sigS[0], &vchSig[5+nLenS+1], nLenS-1);
+        memcpy(&sigS[0], &vchSig[5+nLenR+1], nLenS-1);
     } else {
-        memcpy(&sigS[32-nLenS], &vchSig[6+nLenS], nLenS);
+        memcpy(&sigS[32-nLenS], &vchSig[6+nLenR], nLenS);
     }    
 
     return true;
@@ -1402,6 +1410,10 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
         mTemplates.insert(make_pair(TX_SCRIPTHASH, CScript() << OP_HASH160 << OP_HASH160HASH << OP_EQUAL));
         mTemplates.insert(make_pair(TX_DELAYEDSCRIPTHASH, CScript() << OP_SCRIPTNUMBER << OP_CHECKLOCKTIMEVERIFY << OP_HASH160 << OP_HASH160HASH << OP_EQUAL));
 
+        // Coinbase output types which are the only types that are allowed to have a OP_CHECKHEADERSIGVERIFY
+        mTemplates.insert(make_pair(TX_COINBASE, CScript() << OP_CHECKHEADERSIGVERIFY << OP_DUP << OP_HASH160 << OP_HASH160HASH << OP_EQUALVERIFY << OP_CHECKSIG));
+        mTemplates.insert(make_pair(TX_DELAYEDCOINBASE, CScript() << OP_SCRIPTNUMBER << OP_CHECKLOCKTIMEVERIFY << OP_CHECKHEADERSIGVERIFY << OP_DUP << OP_HASH160 << OP_HASH160HASH << OP_EQUALVERIFY << OP_CHECKSIG));
+
         // Bitcoin address tx, sender provides hash of pubkey, receiver provides signature and pubkey
         mTemplates.insert(make_pair(TX_PUBKEYHASH, CScript() << OP_DUP << OP_HASH160 << OP_HASH160HASH << OP_EQUALVERIFY << OP_CHECKSIG));
         mTemplates.insert(make_pair(TX_DELAYEDPUBKEYHASH, CScript() << OP_SCRIPTNUMBER << OP_CHECKLOCKTIMEVERIFY << OP_DUP << OP_HASH160 << OP_HASH160HASH << OP_EQUALVERIFY << OP_CHECKSIG));
@@ -1584,11 +1596,13 @@ bool Solver(const CKeyStore& keystore, const CScript& scriptPubKey, uint256 hash
         return false;
     case TX_PUBKEY:
     case TX_DELAYEDPUBKEY:
-        keyID = CPubKey(vSolutions[whichTypeRet == TX_PUBKEY ? 0 : 1]).GetID();
+        keyID = CPubKey(vSolutions[whichTypeRet > DELAYED_DELTA ? 1 : 0]).GetID();
         return Sign1(keyID, keystore, hash, nHashType, scriptSigRet);
+    case TX_COINBASE:
+    case TX_DELAYEDCOINBASE:
     case TX_PUBKEYHASH:
     case TX_DELAYEDPUBKEYHASH:
-        keyID = CKeyID(uint160(vSolutions[whichTypeRet == TX_PUBKEYHASH ? 0 : 1]));
+        keyID = CKeyID(uint160(vSolutions[whichTypeRet > DELAYED_DELTA ? 1 : 0]));
         if (!Sign1(keyID, keystore, hash, nHashType, scriptSigRet))
             return false;
         else
@@ -1600,11 +1614,11 @@ bool Solver(const CKeyStore& keystore, const CScript& scriptPubKey, uint256 hash
         return true;
     case TX_SCRIPTHASH:
     case TX_DELAYEDSCRIPTHASH:
-        return keystore.GetCScript(uint160(vSolutions[whichTypeRet == TX_SCRIPTHASH ? 0 : 1]), scriptSigRet);
+        return keystore.GetCScript(uint160(vSolutions[whichTypeRet > DELAYED_DELTA ? 1 : 0]), scriptSigRet);
     case TX_MULTISIG:
     case TX_DELAYEDMULTISIG:
         scriptSigRet << OP_0; // workaround CHECKMULTISIG bug
-        std::vector<valtype> vKeys(vSolutions.begin() + (whichTypeRet == TX_MULTISIG ? 0 : 1), vSolutions.end());
+        std::vector<valtype> vKeys(vSolutions.begin() + (whichTypeRet > DELAYED_DELTA ? 1 : 0), vSolutions.end());
         return (SignN(vKeys, keystore, hash, nHashType, scriptSigRet));
     }
     return false;
@@ -1620,14 +1634,16 @@ int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned c
     case TX_PUBKEY:
     case TX_DELAYEDPUBKEY:
         return 1;
+    case TX_COINBASE:
+    case TX_DELAYEDCOINBASE:
     case TX_PUBKEYHASH:
     case TX_DELAYEDPUBKEYHASH:
         return 2;
     case TX_MULTISIG:
     case TX_DELAYEDMULTISIG:
-        if (vSolutions.size() < (t == TX_MULTISIG ? 1 : 2) || vSolutions[t == TX_MULTISIG ? 0 : 1].size() < 1)
+        if (vSolutions.size() < (t > DELAYED_DELTA ? 2 : 1) || vSolutions[t > DELAYED_DELTA ? 1 : 0].size() < 1)
             return -1;
-        return vSolutions[t == TX_MULTISIG ? 0 : 1][0] + 1;
+        return vSolutions[t > DELAYED_DELTA ? 1 : 0][0] + 1;
     case TX_SCRIPTHASH:
     case TX_DELAYEDSCRIPTHASH:
         return 1; // doesn't include args needed by the script
@@ -1700,17 +1716,19 @@ bool IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
         return false;
     case TX_PUBKEY:
     case TX_DELAYEDPUBKEY:
-        keyID = CPubKey(vSolutions[whichType == TX_PUBKEY ? 0 : 1]).GetID();
+        keyID = CPubKey(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]).GetID();
         return keystore.HaveKey(keyID);
+    case TX_COINBASE:
+    case TX_DELAYEDCOINBASE:
     case TX_PUBKEYHASH:
     case TX_DELAYEDPUBKEYHASH:
-        keyID = CKeyID(uint160(vSolutions[whichType == TX_PUBKEYHASH ? 0 : 1]));
+        keyID = CKeyID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]));
         return keystore.HaveKey(keyID);
     case TX_SCRIPTHASH:
     case TX_DELAYEDSCRIPTHASH:
     {
         CScript subscript;
-        if (!keystore.GetCScript(CScriptID(uint160(vSolutions[whichType == TX_SCRIPTHASH ? 0 : 1])), subscript))
+        if (!keystore.GetCScript(CScriptID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0])), subscript))
             return false;
         return IsMine(keystore, subscript);
     }
@@ -1724,13 +1742,14 @@ bool IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
         // in shared-wallet situations.
         // N KEY_A ... KEY_B M
         // Don't need the N/M
-        vector<valtype> keys(vSolutions.begin()+(whichType == TX_MULTISIG ? 1 : 2), vSolutions.begin()+vSolutions.size()-1);
+        vector<valtype> keys(vSolutions.begin()+(whichType > DELAYED_DELTA ? 2 : 1), vSolutions.begin()+vSolutions.size()-1);
         return HaveKeys(keys, keystore) == keys.size();
     }
     }
     return false;
 }
 
+// TODO should the delay be encoded in the address? - Probably not, just put in ziftrcoin: URIs like ziftrcoin:Zx...y?delay=12345
 bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
 {
     vector<valtype> vSolutions;
@@ -1740,17 +1759,18 @@ bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
 
     if (whichType == TX_PUBKEY || whichType == TX_DELAYEDPUBKEY)
     {
-        addressRet = CPubKey(vSolutions[whichType == TX_PUBKEY ? 0 : 1]).GetID();
+        addressRet = CPubKey(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]).GetID();
         return true;
     }
-    else if (whichType == TX_PUBKEYHASH || whichType == TX_DELAYEDPUBKEYHASH)
+    else if (whichType == TX_PUBKEYHASH || whichType == TX_DELAYEDPUBKEYHASH || 
+             whichType == TX_COINBASE   || whichType == TX_DELAYEDCOINBASE)
     {
-        addressRet = CKeyID(uint160(vSolutions[whichType == TX_PUBKEYHASH ? 0 : 1]));
+        addressRet = CKeyID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]));
         return true;
     }
     else if (whichType == TX_SCRIPTHASH || whichType == TX_DELAYEDSCRIPTHASH)
     {
-        addressRet = CScriptID(uint160(vSolutions[whichType == TX_SCRIPTHASH ? 0 : 1]));
+        addressRet = CScriptID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]));
         return true;
     }
     // Multisig txns have more than one address... so don't use this method
@@ -1771,8 +1791,8 @@ bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, vecto
 
     if (typeRet == TX_MULTISIG || typeRet == TX_DELAYEDMULTISIG)
     {
-        nRequiredRet = vSolutions.front()[typeRet == TX_MULTISIG ? 0 : 1];
-        for (unsigned int i = (typeRet == TX_MULTISIG ? 1 : 2); i < vSolutions.size()-1; i++)
+        nRequiredRet = vSolutions.front()[typeRet > DELAYED_DELTA ? 1 : 0];
+        for (unsigned int i = (typeRet > DELAYED_DELTA ? 2 : 1); i < vSolutions.size()-1; i++)
         {
             CTxDestination address = CPubKey(vSolutions[i]).GetID();
             addressRet.push_back(address);
@@ -1921,8 +1941,9 @@ static CScript PushAll(const vector<valtype>& values)
     return result;
 }
 
+// TODO test that this works with signing delayed multisig - not sure it does right now
 static CScript CombineMultisig(CScript scriptPubKey, const CTransaction& txTo, unsigned int nIn,
-                               const vector<valtype>& vSolutions,
+                               const vector<valtype>& vSolutions, const txnouttype txType,
                                vector<valtype>& sigs1, vector<valtype>& sigs2)
 {
     // Combine all the signatures we've got:
@@ -1939,15 +1960,16 @@ static CScript CombineMultisig(CScript scriptPubKey, const CTransaction& txTo, u
     }
 
     // Build a map of pubkey -> signature by matching sigs to pubkeys:
-    assert(vSolutions.size() > 1);
-    unsigned int nSigsRequired = vSolutions.front()[0];
-    unsigned int nPubKeys = vSolutions.size()-2;
+    unsigned int delayed = (txType > DELAYED_DELTA ? 1 : 0);
+    assert(vSolutions.size() > (1+delayed));
+    unsigned int nSigsRequired = vSolutions.front()[delayed];
+    unsigned int nPubKeys = vSolutions.size()-(2+delayed);
     map<valtype, valtype> sigs;
     BOOST_FOREACH(const valtype& sig, allsigs)
     {
         for (unsigned int i = 0; i < nPubKeys; i++)
         {
-            const valtype& pubkey = vSolutions[i+1];
+            const valtype& pubkey = vSolutions[i+1+delayed];
             if (sigs.count(pubkey))
                 continue; // Already got a sig for this pubkey
 
@@ -1960,13 +1982,14 @@ static CScript CombineMultisig(CScript scriptPubKey, const CTransaction& txTo, u
     }
     // Now build a merged CScript:
     unsigned int nSigsHave = 0;
-    CScript result; result << OP_0; // pop-one-too-many workaround
+    CScript result; 
+    result << OP_0; // pop-one-too-many workaround
     for (unsigned int i = 0; i < nPubKeys && nSigsHave < nSigsRequired; i++)
     {
-        if (sigs.count(vSolutions[i+1]))
+        if (sigs.count(vSolutions[i+1+delayed]))
         {
-            result << sigs[vSolutions[i+1]];
-            ++nSigsHave;
+            result << sigs[vSolutions[i+1+delayed]];
+            nSigsHave++;
         }
     }
     // Fill any missing with OP_0:
@@ -1990,6 +2013,8 @@ static CScript CombineSignatures(CScript scriptPubKey, const CTransaction& txTo,
         return PushAll(sigs2);
     case TX_PUBKEY:
     case TX_DELAYEDPUBKEY:
+    case TX_COINBASE:
+    case TX_DELAYEDCOINBASE:
     case TX_PUBKEYHASH:
     case TX_DELAYEDPUBKEYHASH:
         // Signatures are bigger than placeholders or empty scripts:
@@ -2019,7 +2044,7 @@ static CScript CombineSignatures(CScript scriptPubKey, const CTransaction& txTo,
         }
     case TX_MULTISIG:
     case TX_DELAYEDMULTISIG:
-        return CombineMultisig(scriptPubKey, txTo, nIn, vSolutions, sigs1, sigs2);
+        return CombineMultisig(scriptPubKey, txTo, nIn, vSolutions, txType, sigs1, sigs2);
     }
 
     return CScript();
@@ -2092,7 +2117,10 @@ unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
 bool CScript::IsPayToScriptHash() const
 {
     // Extra-fast test for simple pay-to-script-hash CScripts:
-    if (this->size() == 23 && this->at(0) == OP_HASH160 && this->at(1) == 0x14 && this->at(22) == OP_EQUAL)
+    if (this->size() == 23 && 
+        this->at(0)  == OP_HASH160 && 
+        this->at(1)  == 0x14 && 
+        this->at(22) == OP_EQUAL)
         return true;
 
     // Slower test for delayed P2SH
@@ -2106,17 +2134,27 @@ bool CScript::IsPayToScriptHash() const
 
 bool CScript::IsCoinbaseOutputType() const
 {
-    // Extra-fast test for simple pay-to-script-hash CScripts:
+    // Extra-fast test for simple coinbase:
     // CScript scriptPubKey = CScript() << OP_CHECKHEADERSIGVERIFY << OP_DUP << OP_HASH160 << pubKey.GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
-    return (this->size() == 26 && 
-            this->at(0)  == OP_CHECKHEADERSIGVERIFY && 
-            this->at(1)  == OP_DUP && 
-            this->at(2)  == OP_HASH160 && 
-            this->at(3)  == 0x14 &&
-            this->at(24) == OP_EQUALVERIFY &&
-            this->at(25) == OP_CHECKSIG);
+    if (this->size() == 26 && 
+        this->at(0)  == OP_CHECKHEADERSIGVERIFY && 
+        this->at(1)  == OP_DUP && 
+        this->at(2)  == OP_HASH160 && 
+        this->at(3)  == 0x14 &&
+        this->at(24) == OP_EQUALVERIFY &&
+        this->at(25) == OP_CHECKSIG)
+        return true;
+
+    // Slower test for delayed P2SH
+    txnouttype typeRet;
+    vector<vector<unsigned char> > vSolutionsRet;
+    if (Solver(*this, typeRet, vSolutionsRet))
+        return typeRet == TX_DELAYEDCOINBASE;
+
+    return false;
 }
 
+// TODO if add OP_VERSION op code, then make sure this recognizes it as a push
 bool CScript::IsPushOnly() const
 {
     const_iterator pc = begin();

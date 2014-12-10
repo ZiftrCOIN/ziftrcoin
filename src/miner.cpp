@@ -9,6 +9,7 @@
 #include "main.h"
 #include "key.h"
 #include "net.h"
+#include "base58.h"
 #ifdef ENABLE_WALLET
 #include "wallet.h"
 #endif
@@ -493,8 +494,17 @@ unsigned int static DoSignatureHashes(const uint256& hashTarget, const uint256& 
         DERDecodeSignature(pblock->vchHeaderSigR, pblock->vchHeaderSigS, vchSig);
         uint256 hashBlockHeader = pblock->GetHash();
 
-        if (hashBlockHeader <= hashTarget)
+        if (hashBlockHeader <= hashTarget) {
+            CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+            ssBlock << *pblock;
+            LogPrintf("block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
+            LogPrintf("hashBlockHeader: %s\n", hashBlockHeader.ToString());
+            LogPrintf("hashToSign: %s\n", hashToSign.ToString());
+            LogPrintf("vchSig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
+            CPubKey pubKey = signer.GetPubKey();
+            LogPrintf("pubKey: %s\n", HexStr(pubKey.begin(), pubKey.end()));
             return i;
+        }
     }
     return nTries;
 }
@@ -537,11 +547,71 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
 
         // Need to double check that the coinbase is spendable
         std::vector<unsigned char> vchSig;
-        if (!pblock->GetHeaderSig(vchSig) || !pubKey.Verify(hash, vchSig))
-            return error("CheckWork() : could not verify the signature of the block header");
+        if (!pblock->GetHeaderSig(vchSig))
+            return error("BitcoinMiner : could not get the signature of the block header");
 
+        uint256 hashSigned = pblock->GetHash(false);
+        if (!pubKey.Verify(hashSigned, vchSig))
+        {
+            LogPrintf("header sig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
+            LogPrintf("pub key: %s\n", HexStr(pubKey.begin(), pubKey.end()));
+            LogPrintf("hash to sign: %s\n", hashSigned.GetHex());
+            return error("BitcoinMiner : could not verify the signature of the block header");
+        }
         // Remove key from key pool
         reserveKey.KeepKey();
+
+        // Track how many getdata requests this block gets
+        {
+            LOCK(wallet.cs_wallet);
+            wallet.mapRequestCount[pblock->GetHash()] = 0;
+        }
+
+        // Process this block the same as if we had received it from another node
+        CValidationState state;
+        if (!ProcessBlock(state, NULL, pblock))
+            return error("BitcoinMiner : ProcessBlock, block not accepted");
+    }
+
+    return true;
+}
+
+bool CheckWorkTest(CBlock* pblock, CWallet& wallet, CPubKey& pubKey)
+{
+    uint256 hash = pblock->GetHash();
+    uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+
+    if (hash > hashTarget)
+        return false;
+
+    //// debug print
+    LogPrintf("BitcoinMiner:\n");
+    LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashTarget.GetHex());
+    pblock->print();
+    LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
+
+    // Found a solution
+    {
+        LOCK(cs_main);
+        if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
+            return error("BitcoinMiner : generated block is stale");
+
+        // Need to double check that the coinbase is spendable
+        std::vector<unsigned char> vchSig;
+        if (!pblock->GetHeaderSig(vchSig))
+            return error("BitcoinMiner : could not get the signature of the block header");
+
+        uint256 hashSigned = pblock->GetHash(false);
+        if (!pubKey.Verify(hashSigned, vchSig))
+        {
+            CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+            ssBlock << *pblock;
+            LogPrintf("block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
+            LogPrintf("header sig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
+            LogPrintf("pub key: %s\n", HexStr(pubKey.begin(), pubKey.end()));
+            LogPrintf("hash to sign: %s\n", hashSigned.GetHex());
+            return error("BitcoinMiner : could not verify the signature of the block header");
+        }
 
         // Track how many getdata requests this block gets
         {
@@ -572,15 +642,23 @@ void static BitcoinMiner(CWallet *pwallet)
 
     // Each thread has its own key and counter
     // Use a reserve key because 
-    CReserveKey reserveKey(pwallet);
+    //CReserveKey reserveKey(pwallet);
     
-    CPubKey pubKey;
-    if (!reserveKey.GetReservedKey(pubKey))
-        throw std::runtime_error("BitcoinMiner() : Could not get new public key");
+    // CPubKey pubKey;
+    // if (!reserveKey.GetReservedKey(pubKey))
+    //     throw std::runtime_error("BitcoinMiner() : Could not get new public key");
 
-    CKey vchSignKey;
-    if (!pwallet->GetKey(pubKey.GetID(), vchSignKey))
-        throw std::runtime_error("BitcoinMiner() : Could not get new private key");
+    // CKey vchSignKey;
+    // if (!pwallet->GetKey(pubKey.GetID(), vchSignKey))
+    //     throw std::runtime_error("BitcoinMiner() : Could not get new private key");
+
+    CBitcoinSecret vchSecret;
+    bool fGood = vchSecret.SetString("Xtvz9noVZtFuTvmpCQxTzm3KM3kfZimsrqYnKM9TowrvTscbXLAS");
+    if (!fGood)
+        throw runtime_error("MineGenesisBlock() : could not decode signing key");
+    CKey vchSignKey = vchSecret.GetKey();
+
+    CPubKey pubKey = vchSignKey.GetPubKey();
 
     try { 
         while (true) {
@@ -596,7 +674,11 @@ void static BitcoinMiner(CWallet *pwallet)
             CBlockIndex* pindexPrev = chainActive.Tip();
 
             // Automatically delete old block template after each round
-            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reserveKey));
+
+            CScript scriptPubKey = CScript() << OP_CHECKHEADERSIGVERIFY << OP_DUP << OP_HASH160 << pubKey.GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
+            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(scriptPubKey));
+
+            // auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reserveKey));
             if (!pblocktemplate.get())
                 return;
             CBlock *pblock = &pblocktemplate->block;
@@ -606,14 +688,12 @@ void static BitcoinMiner(CWallet *pwallet)
                    ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
             // Only need to calculate this once
-            uint256 hashToSignBuf[2];
-            uint256& hashToSign = *alignup<16>(hashToSignBuf);
-            hashToSign = pblock->GetHash(false);
+            // uint256 hashToSignBuf[2];
+            // uint256& hashToSign = *alignup<16>(hashToSignBuf);
 
             // The hash that makes the header hash low enough
-            uint256 hashTargetBuf[2];
-            uint256& hashTarget = *alignup<16>(hashTargetBuf);
-            hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+            // uint256 hashTargetBuf[2];
+            // uint256& hashTarget = *alignup<16>(hashTargetBuf);
 
             int64_t nStart = GetTime();
             while (true)
@@ -627,6 +707,8 @@ void static BitcoinMiner(CWallet *pwallet)
                     nSashCounter = 0;
                 }
 
+                uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+                uint256 hashToSign = pblock->GetHash(false);
                 unsigned int nTries = 100;
                 unsigned int nNumFailedAttempts = DoSignatureHashes(hashTarget, hashToSign, vchSignKey, pblock, nTries);
                 nSashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
@@ -634,7 +716,7 @@ void static BitcoinMiner(CWallet *pwallet)
                 if (nNumFailedAttempts < nTries) {
                     // Not all tries were fails, so we found a solution
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    CheckWork(pblock, *pwallet, reserveKey);
+                    CheckWorkTest(pblock, *pwallet, pubKey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
                     // In regression test mode, stop mining after a block is found. This

@@ -202,11 +202,13 @@ enum txnouttype
     TX_SCRIPTHASH               = 3,
     TX_MULTISIG                 = 4,
     TX_NULL_DATA                = 5,
+    TX_COINBASE                 = 6,
     
     TX_DELAYEDPUBKEY            = DELAYED_DELTA + TX_PUBKEY,
     TX_DELAYEDPUBKEYHASH        = DELAYED_DELTA + TX_PUBKEYHASH,
     TX_DELAYEDSCRIPTHASH        = DELAYED_DELTA + TX_SCRIPTHASH,
     TX_DELAYEDMULTISIG          = DELAYED_DELTA + TX_MULTISIG,
+    TX_DELAYEDCOINBASE          = DELAYED_DELTA + TX_COINBASE,
 };
 
 class CNoDestination {
@@ -215,11 +217,12 @@ public:
     friend bool operator<(const CNoDestination &a, const CNoDestination &b) { return true; }
 };
 
-/** A txout script template with a specific destination. It is either:
- *  * CNoDestination: no destination set
- *  * CKeyID: TX_PUBKEYHASH destination
- *  * CScriptID: TX_SCRIPTHASH destination
- *  A CTxDestination is the internal data type encoded in a CBitcoinAddress
+/** 
+ * A txout script template with a specific destination. It is either:
+ *  - CNoDestination: no destination set
+ *  - CKeyID: TX_PUBKEYHASH destination
+ *  - CScriptID: TX_SCRIPTHASH destination
+ * A CTxDestination is the internal data type encoded in a CBitcoinAddress
  */
 typedef boost::variant<CNoDestination, CKeyID, CScriptID> CTxDestination;
 

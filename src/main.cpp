@@ -498,6 +498,8 @@ unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans)
 
 
 
+// TODO make sure that delayed transactions with a delay value that is in the past
+// are considered non-standard
 bool IsStandardTx(const CTransaction& tx, string& reason)
 {
     AssertLockHeld(cs_main);
