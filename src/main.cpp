@@ -70,10 +70,7 @@ map<uint256, COrphanTx> mapOrphanTransactions;
 map<uint256, set<uint256> > mapOrphanTransactionsByPrev;
 void EraseOrphansFor(NodeId peer);
 
-// Constant stuff for coinbase transactions we create:
-CScript COINBASE_FLAGS;
-
-const string strMessageMagic = "Bitcoin Signed Message:\n";
+const string strMessageMagic = "ZiftrCOIN Signed Message:\n";
 
 // Internal stuff
 namespace {
@@ -684,19 +681,64 @@ unsigned int GetSigOpCount(const CTransaction& tx)
     return nSigOps;
 }
 
-unsigned int GetP2SHSigOpCount(const CTransaction& tx, CCoinsViewCache& inputs)
+unsigned int GetP2SHSigOpCount(const CTransaction& tx, CCoinsViewCache& view)
 {
+    // TODO if coinbases can spend inputs then this might not be the case
     if (tx.IsCoinBase())
         return 0;
 
     unsigned int nSigOps = 0;
     for (unsigned int i = 0; i < tx.vin.size(); i++)
     {
-        const CTxOut& prevout = inputs.GetOutputFor(tx.vin[i]);
+        const CTxOut& prevout = view.GetOutputFor(tx.vin[i]);
         if (prevout.scriptPubKey.IsPayToScriptHash())
             nSigOps += prevout.scriptPubKey.GetSigOpCount(tx.vin[i].scriptSig);
     }
     return nSigOps;
+}
+
+bool TxOutUsesCoinbaseReservedOps(const CTxOut& tx)
+{
+    return txout.scriptPubKey.UsesCoinbaseReservedOps());
+}
+
+// Can be used for a full check (including P2SH) if a view is given. 
+// Or, if no view is given, a partial check will be done (not including the 
+// previous scriptPubKey)
+bool TxInUsesCoinbaseReservedOps(const CTxIn& txin, CCoinsViewCache* view)
+{
+    if (view != NULL) {
+        const CTxOut& prevout = view->GetOutputFor(tx.vin[i]);
+        if (prevout.scriptPubKey.UsesCoinbaseReservedOps(tx.vin[i].scriptSig))
+            return true;
+    } else {
+        if (tx.vin[i].scriptSig.UsesCoinbaseReservedOps())
+            return true;
+    }
+
+    return false;
+}
+
+bool TxUsesCoinbaseReservedOps(const CTransaction& tx, CCoinsViewCache* view)
+{
+    // Maybe this extra check is unneccessary? 
+    // But if take it out, need to check for null prevouts
+    if (tx.IsCoinBase())
+        return true;
+
+    BOOST_FOREACH(const CTxOut& txout, tx.vout)
+    {
+        if (TxOutUsesCoinbaseReservedOps(txout))
+            return true;
+    }
+
+    BOOST_FOREACH(const CTxIn& txin, tx.vin)
+    {
+        if (TxInUsesCoinbaseReservedOps(txin, view))
+            return true;
+    }
+
+    return false;
 }
 
 int CMerkleTx::SetMerkleBranch(const CBlock* pblock)
@@ -767,6 +809,8 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
         return state.DoS(100, error("CheckTransaction() : size limits failed"),
                          REJECT_INVALID, "bad-txns-oversize");
 
+    bool fCoinbase = tx.IsCoinBase();
+
     // Check for negative or overflow output values
     int64_t nValueOut = 0;
     BOOST_FOREACH(const CTxOut& txout, tx.vout)
@@ -781,30 +825,40 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
         if (!MoneyRange(nValueOut))
             return state.DoS(100, error("CheckTransaction() : txout total out of range"),
                              REJECT_INVALID, "bad-txns-txouttotal-toolarge");
+        if (!fCoinbase && TxOutUsesCoinbaseReservedOps(txout))
+            return state.DoS(100, error("CheckTransactionk() : txout uses coinbase reserved ops")
+                            REJECT_INVALID, "bad-tx-usesreservedops");
     }
 
     // Check for duplicate inputs
     set<COutPoint> vInOutPoints;
     BOOST_FOREACH(const CTxIn& txin, tx.vin)
     {
-        if (vInOutPoints.count(txin.prevout))
-            return state.DoS(100, error("CheckTransaction() : duplicate inputs"),
-                             REJECT_INVALID, "bad-txns-inputs-duplicate");
-        vInOutPoints.insert(txin.prevout);
-    }
-
-    if (tx.IsCoinBase())
-    {
-        if (tx.vin[0].scriptSig.size() < 2 || tx.vin[0].scriptSig.size() > 100)
-            return state.DoS(100, error("CheckTransaction() : coinbase script size"),
-                             REJECT_INVALID, "bad-cb-length");
-    }
-    else
-    {
-        BOOST_FOREACH(const CTxIn& txin, tx.vin)
+        // Coinbases can now have multiple null inputs
+        if (fCoinbase) 
+        {
+            // TODO when allow non null coinbase inputs, need make sure con coinbase txouttypes
+            // outputs in the coinbase transaction don't use the coinbase reserved ops
+            if (!txin.prevout.IsNull()) 
+                return state.DoS(10, error("CheckTransaction() : prevout in coinbase is not null"),
+                                 REJECT_INVALID, "bad-txns-prevout-null");
+            if (txin.scriptSig.size() < 2 || txin.scriptSig.size() > 100)
+                return state.DoS(100, error("CheckTransaction() : coinbase script size"),
+                                 REJECT_INVALID, "bad-cb-length");
+        } 
+        else 
+        {
             if (txin.prevout.IsNull())
                 return state.DoS(10, error("CheckTransaction() : prevout is null"),
                                  REJECT_INVALID, "bad-txns-prevout-null");
+            if (vInOutPoints.count(txin.prevout))
+                return state.DoS(100, error("CheckTransaction() : duplicate inputs"),
+                                 REJECT_INVALID, "bad-txns-inputs-duplicate");
+            vInOutPoints.insert(txin.prevout);
+            if (TxInUsesCoinbaseReservedOps(txin, NULL))
+                return state.DoS(100, error("CheckTransactionk() : txout uses coinbase reserved ops")
+                                REJECT_INVALID, "bad-tx-usesreservedops");
+        }
     }
 
     return true;
@@ -863,8 +917,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
     string reason;
     if (Params().NetworkID() == CChainParams::MAIN && !IsStandardTx(tx, reason))
-        return state.DoS(0,
-                         error("AcceptToMemoryPool : nonstandard transaction: %s", reason),
+        return state.DoS(0, error("AcceptToMemoryPool : nonstandard transaction: %s", reason),
                          REJECT_NONSTANDARD, reason);
 
     // is it already in the memory pool?
@@ -900,7 +953,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
             return false;
 
         // do all inputs exist?
-        // Note that this does not check for the presence of actual outputs (see the next check for that),
+        // Note that this does not check for the presence of actual unspent outputs (see the next check for that),
         // only helps filling in pfMissingInputs (to determine missing vs spent).
         BOOST_FOREACH(const CTxIn& txin, tx.vin) {
             if (!view.HaveCoins(txin.prevout.hash)) {
@@ -1041,7 +1094,7 @@ bool CMerkleTx::AcceptToMemoryPool(bool fLimitFree)
 }
 
 
-// Return transaction in tx, and if it was found inside a block, its hash is placed in hashBlock
+// Return transaction in txOut, and if it was found inside a block, its hash is placed in hashBlock
 bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock, bool fAllowSlow)
 {
     CBlockIndex *pindexSlow = NULL;
@@ -1216,31 +1269,31 @@ void static PruneOrphanBlocks()
 /*
 Block reward schedule:
 
-|-------------------
-|                    \
-|                      -
-|                        \
-|                          -
-|                            \
-|                              -
-|                                \
-|                                  -
-|                                    \
-|                                      -
-|                                        \
-|                                          ----------------->
-_____________________________________________________________________ Time
+    |-------------------
+    |                    \
+    |                      -
+    |                        \
+    |                          -
+    |                            \
+    |                              -
+    |                                \
+    |                                  -
+    |                                    \
+    |                                      -
+    |                                        \
+    |                                          ----------------->
+    _____________________________________________________________________ Time
 
 
-Expected block generation rate is 1 block per minute.
+    Expected block generation rate is 1 block per minute.
 
-Broken up into three sections:
+    Broken up into three sections:
 
-     Maximum               Decreasing          Minimum
-<------------------><---------------------><--------------
+         Maximum               Decreasing          Minimum
+    <------------------><---------------------><--------------
 
-Max period lasts for:           2.5 years, or 2.5*365*24*60 = 1,314,000 blocks
-Decreasing periodd lasts for:   7.5 years, or 7.5*365*24*60 = 3,942,000 blocks
+    Max period lasts for:           2.5 years, or 2.5*365*24*60 = 1,314,000 blocks
+    Decreasing periodd lasts for:   7.5 years, or 7.5*365*24*60 = 3,942,000 blocks
 
 */
 
@@ -1576,12 +1629,14 @@ bool VerifySignature(const CCoins& txFrom, const CTransaction& txTo, unsigned in
 
 bool CheckInputs(const CTransaction& tx, CValidationState &state, CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, std::vector<CScriptCheck> *pvChecks)
 {
+    // TODO if coinbase is allowed to spend inputs, this needs to change
+    // probably just need to check all places where IsCoinBase is called
     if (!tx.IsCoinBase())
     {
         if (pvChecks)
             pvChecks->reserve(tx.vin.size());
 
-        // This doesn't trigger the DoS code on purpose; if it did, it would make it easier
+        // This purposefully doesn't trigger the DoS code; if it did, it would make it easier
         // for an attacker to attempt to split the network.
         if (!inputs.HaveInputs(tx))
             return state.Invalid(error("CheckInputs() : %s inputs unavailable", tx.GetHash().ToString()));
@@ -1598,11 +1653,21 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, CCoinsViewCach
             const CCoins &coins = inputs.GetCoins(prevout.hash);
 
             // If prev is coinbase, check that it's matured
+            // TODO this is useful
             if (coins.IsCoinBase()) {
                 if (nSpendHeight - coins.nHeight < COINBASE_MATURITY)
                     return state.Invalid(
                         error("CheckInputs() : tried to spend coinbase at depth %d", nSpendHeight - coins.nHeight),
                         REJECT_INVALID, "bad-txns-premature-spend-of-coinbase");
+            }
+
+            // Also check to make sure transaction doesn't use any coinbase reserved ops
+            // Do a full check for not using coinbase reserved ops
+            if (TxInUsesCoinbaseReservedOps(tx.vin[i], &inputs)) {
+                return state.Invalid(
+                    error("CheckInputs() : tried to make transaction with coinbase reserved ops"),
+                    REJECT_INVALID, "bad-txin-noncoinase-use-coinbase-reserved-op");
+                return false;
             }
 
             // Check for negative or overflow input values
@@ -1786,7 +1851,7 @@ void ThreadScriptCheck() {
 bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)
 {
     AssertLockHeld(cs_main);
-    // Check it again in case a previous version let a bad block in
+    // Check it again in case a previous version let a bad block in, was already checked first time in ProcessBlock()
     if (!CheckBlock(block, state, !fJustCheck, !fJustCheck))
         return false;
 
@@ -1824,7 +1889,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     // TODO make sure that no two transactions with the same TxId can exist
     for (unsigned int i = 0; i < block.vtx.size(); i++) {
         uint256 hash = block.GetTxHash(i);
-        if (view.HaveCoins(hash) && !view.GetCoins(hash).IsPruned())
+        if (view.HaveCoins(hash)) // && !view.GetCoins(hash).IsPruned()
             return state.DoS(100, error("ConnectBlock() : tried to overwrite transaction"),
                              REJECT_INVALID, "bad-txns-BIP30");
     }
@@ -1835,6 +1900,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
  
     // TODO Probably could get rid of the SCRIPT_VERIFY_P2SH flag entirely, since 
     // we will have P2SH from block 0, but will leave it in for now
+    // But maybe it is useful for turning on and off verification?
     unsigned int flags = SCRIPT_VERIFY_NOCACHE | SCRIPT_VERIFY_P2SH;
 
     CBlockUndo blockundo;
@@ -1864,6 +1930,10 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
                 return state.DoS(100, error("ConnectBlock() : inputs missing/spent"),
                                  REJECT_INVALID, "bad-txns-inputs-missingorspent");
 
+            if (TxUsesCoinbaseReservedOps(tx, &view))
+                return state.DoS(100, error("ConnectBlock() : non coinbase tx uses coinbase reserved ops"),
+                                 REJECT_INVALID, "bad-txns-usescoinbasereservedops");
+
             // if (fStrictPayToScriptHash)
             // {
             // }
@@ -1891,6 +1961,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
         vPos.push_back(std::make_pair(block.GetTxHash(i), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
+
     int64_t nTime = GetTimeMicros() - nStart;
     if (fBenchmark)
         LogPrintf("- Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin)\n", (unsigned)block.vtx.size(), 0.001 * nTime, 0.001 * nTime / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * nTime / (nInputs-1));
@@ -1973,6 +2044,7 @@ void static UpdateTip(CBlockIndex *pindexNew) {
     chainActive.SetTip(pindexNew);
 
     // Update best block in wallet (so we can detect restored wallets)
+    // TODO search for and update all instances of 20160 (two weeks) and 144 (one day)
     bool fIsInitialDownload = IsInitialBlockDownload();
     if ((chainActive.Height() % 20160) == 0 || (!fIsInitialDownload && (chainActive.Height() % 144) == 0))
         g_signals.SetBestChain(chainActive.GetLocator());
@@ -2349,6 +2421,7 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
 }
 
 // TODO check that the delayed value in delayed transactions is later than the current block height
+// TODO check that inputs in the coinbase get marked as spent if they are not null 
 bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bool fCheckMerkleRoot)
 {
     // These are checks that are independent of context
@@ -2365,12 +2438,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                          REJECT_INVALID, "high-hash");
 
     // Check timestamp
+    // TODO this is unnecessary - no need for nTime hacks with Sign to Mine
     if (block.GetBlockTime() > GetAdjustedTime() + 2 * 60 * 60)
         return state.Invalid(error("CheckBlock() : block timestamp too far in the future"),
                              REJECT_INVALID, "time-too-new");
 
     // First transaction must be coinbase, the rest must not be
-    // (except in the case of genesis block)
     if (block.vtx.empty() || !block.vtx[0].IsCoinBase())
         return state.DoS(100, error("CheckBlock() : first tx is not coinbase"),
                          REJECT_INVALID, "bad-cb-missing");
@@ -2438,23 +2511,24 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
         // Check proof of work
         if (block.nBits != GetNextWorkRequired(pindexPrev, &block))
             return state.DoS(100, error("AcceptBlock() : incorrect proof of work"),
-                             REJECT_INVALID, "bad-diffbits");
+                                REJECT_INVALID, "bad-diffbits");
 
         // Check timestamp against prev
+        // TODO change this to have new acceptance rules for being in the future
         if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
-            return state.Invalid(error("AcceptBlock() : block's timestamp is too early"),
+            return state.Invalid(error("AcceptBlock() : block's timestamp is too old"),
                                  REJECT_INVALID, "time-too-old");
 
         // Check that all transactions are finalized
         BOOST_FOREACH(const CTransaction& tx, block.vtx)
             if (!IsFinalTx(tx, nHeight, block.GetBlockTime()))
                 return state.DoS(10, error("AcceptBlock() : contains a non-final transaction"),
-                                 REJECT_INVALID, "bad-txns-nonfinal");
+                                REJECT_INVALID, "bad-txns-nonfinal");
 
         // Check that the block chain matches the known block chain up to a checkpoint
         if (!Checkpoints::CheckBlock(nHeight, hash))
             return state.DoS(100, error("AcceptBlock() : rejected by checkpoint lock-in at %d", nHeight),
-                             REJECT_CHECKPOINT, "checkpoint mismatch");
+                                REJECT_CHECKPOINT, "checkpoint mismatch");
 
         // Don't accept any forks from the main chain prior to last checkpoint
         CBlockIndex* pcheckpoint = Checkpoints::GetLastCheckpoint(mapBlockIndex);
@@ -2488,9 +2562,8 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
         // }
 
         // Make sure that the coinbase starts with serialized block height
-        // TODO maybe export this to 
         CScript expect = CScript() << CScriptNum(nHeight);
-        if (block.vtx[0].vin[0].scriptSig.size() < expect.size() ||
+        if (block.vtx[0].vin[0].scriptSig.size() != expect.size() ||
             !std::equal(expect.begin(), expect.end(), block.vtx[0].vin[0].scriptSig.begin()))
         {
             return state.DoS(100, error("AcceptBlock() : block height mismatch in coinbase"),

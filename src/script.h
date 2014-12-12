@@ -668,6 +668,14 @@ public:
     // pay-to-script-hash transactions:
     unsigned int GetSigOpCount(const CScript& scriptSig) const;
 
+    // OP_CHECKHEADERSIG and OP_CHECKHEADERSIGVERIFY are both reserved 
+    // for coinbase transactions only.
+    bool UsesCoinbaseReservedOps() const;
+
+    // If the scriptSig uses a reserved op, then the transaction spending is
+    // considered invalid
+    bool UsesCoinbaseReservedOps(const CScript& scriptSig) const;
+
     bool IsPayToScriptHash() const;
 
     bool IsCoinbaseOutputType() const;

@@ -64,6 +64,7 @@
 // pinit  - the result of the last SHA256 transform on the previous 64 unsigned chars of data,
 //          or the pSHA256InitState if this is the first 64 bytes of the message being processed.
 // 
+// Kept for some unit tests for now
 void SHA256Transform(void* pstate, void* pinput, const void* pinit)
 {
     SHA256_CTX ctx;
@@ -83,6 +84,7 @@ void SHA256Transform(void* pstate, void* pinput, const void* pinit)
 }
 
 // Some explaining would be appreciated
+// See 
 class COrphan
 {
 public:
@@ -278,7 +280,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
             if (nBlockSize + nTxSize >= nBlockMaxSize)
                 continue;
 
-            // Legacy limits on sigOps:
+            // Limits on sigOps:
             unsigned int nTxSigOps = GetSigOpCount(tx);
             if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)
                 continue;
@@ -378,7 +380,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
 void UpdateCoinbaseScriptSig(CBlock* pblock, CBlockIndex* pindexPrev)
 {
     unsigned int nHeight = pindexPrev->nHeight + 1; // Height first in coinbase required
-    pblock->vtx[0].vin[0].scriptSig = (CScript() << CScriptNum(nHeight)) + COINBASE_FLAGS;
+    pblock->vtx[0].vin[0].scriptSig = (CScript() << CScriptNum(nHeight));
     assert(pblock->vtx[0].vin[0].scriptSig.size() <= 100);
 
     pblock->hashMerkleRoot = pblock->BuildMerkleTree();
@@ -485,8 +487,19 @@ int64_t nSPSTimerStart = 0;
 // If ret == nTries, then all failed.
 // Else, there were ret+1 sashes (signature-hashes) done and the last one succeeded
 // TODO there are efficiency improvements that can be made here
-unsigned int static DoSignatureHashes(const uint256& hashTarget, const uint256& hashToSign, const CKey& signer, CBlock* pblock, unsigned int nTries)
+unsigned int static DoSignatureHashes(CBlock* pblock, const CKey& signer, unsigned int nTries)
 {
+    // Only need to calculate this once
+    // uint256 hashToSignBuf[2];
+    // uint256& hashToSign = *alignup<16>(hashToSignBuf);
+
+    // The hash that makes the header hash low enough
+    // uint256 hashTargetBuf[2];
+    // uint256& hashTarget = *alignup<16>(hashTargetBuf);
+
+    uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+    uint256 hashToSign = pblock->GetHash(false);
+
     std::vector<unsigned char> vchSig;
     for (unsigned int i = 0; i < nTries; i++) 
     {
@@ -576,57 +589,57 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
     return true;
 }
 
-bool CheckWorkTest(CBlock* pblock, CWallet& wallet, CPubKey& pubKey)
-{
-    uint256 hash = pblock->GetHash();
-    uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+// bool CheckWorkTest(CBlock* pblock, CWallet& wallet, CPubKey& pubKey)
+// {
+//     uint256 hash = pblock->GetHash();
+//     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
-    if (hash > hashTarget)
-        return false;
+//     if (hash > hashTarget)
+//         return false;
 
-    //// debug print
-    LogPrintf("BitcoinMiner:\n");
-    LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashTarget.GetHex());
-    pblock->print();
-    LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
+//     //// debug print
+//     LogPrintf("BitcoinMiner:\n");
+//     LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashTarget.GetHex());
+//     pblock->print();
+//     LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
 
-    // Found a solution
-    {
-        LOCK(cs_main);
-        if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
-            return error("BitcoinMiner : generated block is stale");
+//     // Found a solution
+//     {
+//         LOCK(cs_main);
+//         if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
+//             return error("BitcoinMiner : generated block is stale");
 
-        // Need to double check that the coinbase is spendable
-        std::vector<unsigned char> vchSig;
-        if (!pblock->GetHeaderSig(vchSig))
-            return error("BitcoinMiner : could not get the signature of the block header");
+//         // Need to double check that the coinbase is spendable
+//         std::vector<unsigned char> vchSig;
+//         if (!pblock->GetHeaderSig(vchSig))
+//             return error("BitcoinMiner : could not get the signature of the block header");
 
-        uint256 hashSigned = pblock->GetHash(false);
-        if (!pubKey.Verify(hashSigned, vchSig))
-        {
-            CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
-            ssBlock << *pblock;
-            LogPrintf("block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
-            LogPrintf("header sig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
-            LogPrintf("pub key: %s\n", HexStr(pubKey.begin(), pubKey.end()));
-            LogPrintf("hash to sign: %s\n", hashSigned.GetHex());
-            return error("BitcoinMiner : could not verify the signature of the block header");
-        }
+//         uint256 hashSigned = pblock->GetHash(false);
+//         if (!pubKey.Verify(hashSigned, vchSig))
+//         {
+//             CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+//             ssBlock << *pblock;
+//             LogPrintf("block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
+//             LogPrintf("header sig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
+//             LogPrintf("pub key: %s\n", HexStr(pubKey.begin(), pubKey.end()));
+//             LogPrintf("hash to sign: %s\n", hashSigned.GetHex());
+//             return error("BitcoinMiner : could not verify the signature of the block header");
+//         }
 
-        // Track how many getdata requests this block gets
-        {
-            LOCK(wallet.cs_wallet);
-            wallet.mapRequestCount[pblock->GetHash()] = 0;
-        }
+//         // Track how many getdata requests this block gets
+//         {
+//             LOCK(wallet.cs_wallet);
+//             wallet.mapRequestCount[pblock->GetHash()] = 0;
+//         }
 
-        // Process this block the same as if we had received it from another node
-        CValidationState state;
-        if (!ProcessBlock(state, NULL, pblock))
-            return error("BitcoinMiner : ProcessBlock, block not accepted");
-    }
+//         // Process this block the same as if we had received it from another node
+//         CValidationState state;
+//         if (!ProcessBlock(state, NULL, pblock))
+//             return error("BitcoinMiner : ProcessBlock, block not accepted");
+//     }
 
-    return true;
-}
+//     return true;
+// }
 
 // 
 // TODO 
@@ -636,49 +649,48 @@ bool CheckWorkTest(CBlock* pblock, CWallet& wallet, CPubKey& pubKey)
 // 
 void static BitcoinMiner(CWallet *pwallet)
 {
-    LogPrintf("BitcoinMiner started\n");
+    LogPrintf("ZiftrCOINMiner started\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
     RenameThread("bitcoin-miner");
 
     // Each thread has its own key and counter
-    // Use a reserve key because 
-    //CReserveKey reserveKey(pwallet);
+    // Use a reserve key because may not want to keep the key if you don't mine anything
+    CReserveKey reserveKey(pwallet);
     
-    // CPubKey pubKey;
-    // if (!reserveKey.GetReservedKey(pubKey))
-    //     throw std::runtime_error("BitcoinMiner() : Could not get new public key");
+    CPubKey pubKey;
+    if (!reserveKey.GetReservedKey(pubKey))
+        throw std::runtime_error("BitcoinMiner() : Could not get new public key");
 
-    // CKey vchSignKey;
-    // if (!pwallet->GetKey(pubKey.GetID(), vchSignKey))
-    //     throw std::runtime_error("BitcoinMiner() : Could not get new private key");
+    CKey vchSignKey;
+    if (!pwallet->GetKey(pubKey.GetID(), vchSignKey))
+        throw std::runtime_error("BitcoinMiner() : Could not get new private key");
 
-    CBitcoinSecret vchSecret;
-    bool fGood = vchSecret.SetString("Xtvz9noVZtFuTvmpCQxTzm3KM3kfZimsrqYnKM9TowrvTscbXLAS");
-    if (!fGood)
-        throw runtime_error("MineGenesisBlock() : could not decode signing key");
-    CKey vchSignKey = vchSecret.GetKey();
-
-    CPubKey pubKey = vchSignKey.GetPubKey();
+    // CBitcoinSecret vchSecret;
+    // bool fGood = vchSecret.SetString("Xtvz9noVZtFuTvmpCQxTzm3KM3kfZimsrqYnKM9TowrvTscbXLAS");
+    // if (!fGood)
+    //     throw runtime_error("MineGenesisBlock() : could not decode signing key");
+    // CKey vchSignKey = vchSecret.GetKey();
+    // 
+    // CPubKey pubKey = vchSignKey.GetPubKey();
 
     try { 
         while (true) {
-            // if (Params().NetworkID() != CChainParams::REGTEST) {
-            //     // Busy-wait for the network to come online so we don't waste time mining
-            //     // on an obsolete chain. In regtest mode we expect to fly solo.
-            //     while (vNodes.empty()) 
-            //         MilliSleep(1000);
-            // }
+            if (CLIENT_VERSION_IS_RELEASE && Params().NetworkID() != CChainParams::REGTEST) {
+                // Busy-wait for the network to come online so we don't waste time mining
+                // on an obsolete chain. In regtest mode we expect to fly solo.
+                while (vNodes.empty()) 
+                    MilliSleep(1000);
+            }
 
             // Create new block
             unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
             CBlockIndex* pindexPrev = chainActive.Tip();
 
+            // CScript scriptPubKey = CScript() << OP_CHECKHEADERSIGVERIFY << OP_DUP << OP_HASH160 << pubKey.GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
+            // auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(scriptPubKey));
+
             // Automatically delete old block template after each round
-
-            CScript scriptPubKey = CScript() << OP_CHECKHEADERSIGVERIFY << OP_DUP << OP_HASH160 << pubKey.GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
-            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(scriptPubKey));
-
-            // auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reserveKey));
+            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reserveKey));
             if (!pblocktemplate.get())
                 return;
             CBlock *pblock = &pblocktemplate->block;
@@ -686,14 +698,6 @@ void static BitcoinMiner(CWallet *pwallet)
 
             LogPrintf("Running BitcoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
                    ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
-
-            // Only need to calculate this once
-            // uint256 hashToSignBuf[2];
-            // uint256& hashToSign = *alignup<16>(hashToSignBuf);
-
-            // The hash that makes the header hash low enough
-            // uint256 hashTargetBuf[2];
-            // uint256& hashTarget = *alignup<16>(hashTargetBuf);
 
             int64_t nStart = GetTime();
             while (true)
@@ -707,16 +711,14 @@ void static BitcoinMiner(CWallet *pwallet)
                     nSashCounter = 0;
                 }
 
-                uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
-                uint256 hashToSign = pblock->GetHash(false);
                 unsigned int nTries = 100;
-                unsigned int nNumFailedAttempts = DoSignatureHashes(hashTarget, hashToSign, vchSignKey, pblock, nTries);
+                unsigned int nNumFailedAttempts = DoSignatureHashes(pblock, vchSignKey, nTries);
                 nSashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
 
                 if (nNumFailedAttempts < nTries) {
                     // Not all tries were fails, so we found a solution
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    CheckWorkTest(pblock, *pwallet, pubKey);
+                    CheckWork(pblock, *pwallet, reserveKey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
                     // In regression test mode, stop mining after a block is found. This
@@ -745,8 +747,8 @@ void static BitcoinMiner(CWallet *pwallet)
 
                 // Check for stop or if block needs to be rebuilt
                 boost::this_thread::interruption_point();
-                // if (vNodes.empty() && !RegTest())
-                //     break;
+                if (CLIENT_VERSION_IS_RELEASE && vNodes.empty() && !RegTest())
+                    break;
                 if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 15)
                     break;
                 if (pindexPrev != chainActive.Tip())

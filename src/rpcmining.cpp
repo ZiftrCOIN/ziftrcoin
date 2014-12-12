@@ -303,7 +303,7 @@ Value getwork(const Array& params, bool fHelp)
             + HelpExampleRpc("getwork", "")
         );
 
-    if (vNodes.empty())
+    if (CLIENT_VERSION_IS_RELEASE && vNodes.empty())
         throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Bitcoin is not connected!");
 
     if (IsInitialBlockDownload())
@@ -479,7 +479,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     if (strMode != "template")
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
 
-    if (vNodes.empty())
+    if (CLIENT_VERSION_IS_RELEASE && vNodes.empty())
         throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Bitcoin is not connected!");
 
     if (IsInitialBlockDownload())
@@ -556,7 +556,6 @@ Value getblocktemplate(const Array& params, bool fHelp)
     }
 
     Object aux;
-    aux.push_back(Pair("flags", HexStr(COINBASE_FLAGS.begin(), COINBASE_FLAGS.end())));
 
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 

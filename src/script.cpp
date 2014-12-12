@@ -1657,7 +1657,7 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType)
     if (!Solver(scriptPubKey, whichType, vSolutions))
         return false;
 
-    if (whichType == TX_MULTISIG)
+    if ((whichType % DELAYED_DELTA) == TX_MULTISIG)
     {
         unsigned char m = vSolutions.front()[0];
         unsigned char n = vSolutions.back()[0];
@@ -1757,18 +1757,18 @@ bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
     if (!Solver(scriptPubKey, whichType, vSolutions))
         return false;
 
-    if (whichType == TX_PUBKEY || whichType == TX_DELAYEDPUBKEY)
+    if ((whichType % DELAYED_DELTA) == TX_PUBKEY)
     {
         addressRet = CPubKey(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]).GetID();
         return true;
     }
-    else if (whichType == TX_PUBKEYHASH || whichType == TX_DELAYEDPUBKEYHASH || 
-             whichType == TX_COINBASE   || whichType == TX_DELAYEDCOINBASE)
+    else if ((whichType % DELAYED_DELTA) == TX_PUBKEYHASH || 
+             (whichType % DELAYED_DELTA) == TX_COINBASE)
     {
         addressRet = CKeyID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]));
         return true;
     }
-    else if (whichType == TX_SCRIPTHASH || whichType == TX_DELAYEDSCRIPTHASH)
+    else if ((whichType % DELAYED_DELTA) == TX_SCRIPTHASH)
     {
         addressRet = CScriptID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]));
         return true;
@@ -1789,7 +1789,7 @@ bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, vecto
         return false;
     }
 
-    if (typeRet == TX_MULTISIG || typeRet == TX_DELAYEDMULTISIG)
+    if ((typeRet % DELAYED_DELTA) == TX_MULTISIG)
     {
         nRequiredRet = vSolutions.front()[typeRet > DELAYED_DELTA ? 1 : 0];
         for (unsigned int i = (typeRet > DELAYED_DELTA ? 2 : 1); i < vSolutions.size()-1; i++)
@@ -1901,7 +1901,7 @@ bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransa
     if (!Solver(keystore, fromPubKey, hash, nHashType, txin.scriptSig, whichType))
         return false;
 
-    if (whichType == TX_SCRIPTHASH || whichType == TX_DELAYEDSCRIPTHASH)
+    if ((whichType % DELAYED_DELTA) == TX_SCRIPTHASH)
     {
         // Solver returns the subscript that need to be evaluated;
         // the final scriptSig is the signatures from that
@@ -2075,7 +2075,8 @@ unsigned int CScript::GetSigOpCount() const
         opcodetype opcode;
         if (!GetOp(pc, opcode))
             break;
-        if (opcode == OP_CHECKSIG || opcode == OP_CHECKSIGVERIFY)
+        if (opcode == OP_CHECKSIG       || opcode == OP_CHECKSIGVERIFY ||
+            opcode == OP_CHECKHEADERSIG || opcode == OP_CHECKHEADERSIGVERIFY)
             n++;
         else if (opcode == OP_CHECKMULTISIG || opcode == OP_CHECKMULTISIGVERIFY)
         {
@@ -2114,6 +2115,46 @@ unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
     return subscript.GetSigOpCount();
 }
 
+bool CScript::UsesCoinbaseReservedOps() const
+{
+    const_iterator pc = begin();
+    while (pc < end())
+    {
+        opcodetype opcode;
+        if (!GetOp(pc, opcode))
+            break;
+        if (opcode == OP_CHECKHEADERSIG || opcode == OP_CHECKHEADERSIGVERIFY)
+            return true;
+    }
+    return false;
+}
+
+// TODO make sure that non-coinbase type outputs in the coinbase tx 
+// can't use reserved op codes
+bool CScript::UsesCoinbaseReservedOps(const CScript& scriptSig) const
+{
+    if (!IsPayToScriptHash())
+        return UsesCoinbaseReservedOps();
+
+    // This is a pay-to-script-hash scriptPubKey;
+    // get the last item that the scriptSig
+    // pushes onto the stack:
+    const_iterator pc = scriptSig.begin();
+    vector<unsigned char> data;
+    while (pc < scriptSig.end())
+    {
+        opcodetype opcode;
+        if (!scriptSig.GetOp(pc, opcode, data))
+            return false;
+        if (opcode == OP_CHECKHEADERSIG || opcode == OP_CHECKHEADERSIGVERIFY)
+            return true;
+    }
+
+    // This should still work even with delayed TXs because push data is on the end
+    CScript subscript(data.begin(), data.end());
+    return subscript.UsesCoinbaseReservedOps();
+}
+
 bool CScript::IsPayToScriptHash() const
 {
     // Extra-fast test for simple pay-to-script-hash CScripts:
@@ -2126,10 +2167,10 @@ bool CScript::IsPayToScriptHash() const
     // Slower test for delayed P2SH
     txnouttype typeRet;
     vector<vector<unsigned char> > vSolutionsRet;
-    if (Solver(*this, typeRet, vSolutionsRet))
-        return typeRet == TX_DELAYEDSCRIPTHASH;
+    if (!Solver(*this, typeRet, vSolutionsRet))
+        return false;
 
-    return false;
+    return typeRet == TX_DELAYEDSCRIPTHASH;
 }
 
 bool CScript::IsCoinbaseOutputType() const
@@ -2148,10 +2189,10 @@ bool CScript::IsCoinbaseOutputType() const
     // Slower test for delayed P2SH
     txnouttype typeRet;
     vector<vector<unsigned char> > vSolutionsRet;
-    if (Solver(*this, typeRet, vSolutionsRet))
-        return typeRet == TX_DELAYEDCOINBASE;
+    if (!Solver(*this, typeRet, vSolutionsRet))
+        return false;
 
-    return false;
+    return typeRet == TX_DELAYEDCOINBASE;
 }
 
 // TODO if add OP_VERSION op code, then make sure this recognizes it as a push

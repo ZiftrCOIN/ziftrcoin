@@ -160,6 +160,7 @@ int64_t CCoinsViewCache::GetValueIn(const CTransaction& tx)
 
 bool CCoinsViewCache::HaveInputs(const CTransaction& tx)
 {
+    // TODO this will have to change when we allow coinbase txins to spend prevouts
     if (!tx.IsCoinBase()) {
         // first check whether information about the prevout hash is available
         for (unsigned int i = 0; i < tx.vin.size(); i++) {

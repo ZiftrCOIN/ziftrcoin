@@ -87,8 +87,6 @@ static const unsigned char REJECT_DUST = 0x41;
 static const unsigned char REJECT_INSUFFICIENTFEE = 0x42;
 static const unsigned char REJECT_CHECKPOINT = 0x43;
 
-
-extern CScript COINBASE_FLAGS;
 extern CCriticalSection cs_main;
 extern CTxMemPool mempool;
 extern std::map<uint256, CBlockIndex*> mapBlockIndex;
@@ -749,8 +747,7 @@ public:
         nStatus = 0;
         nSequenceId = 0;
 
-        memset(vchHeaderSigR, 0, 32);
-        memset(vchHeaderSigS, 0, 32);
+        ClearHeaderSig()
         nVersion       = 0;
         hashMerkleRoot = 0;
         nTime          = 0;
@@ -776,6 +773,12 @@ public:
         hashMerkleRoot  = block.hashMerkleRoot;
         nTime           = block.nTime;
         nBits           = block.nBits;
+    }
+
+    void ClearHeaderSig()
+    {
+        memset(vchHeaderSigR, 0, 32);
+        memset(vchHeaderSigS, 0, 32);
     }
 
     void CopyHeaderSigFrom(const unsigned char sigR[32], const unsigned char sigS[32]) 
