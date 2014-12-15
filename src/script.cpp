@@ -5,8 +5,8 @@
 
 #include "script.h"
 
-#include "core.h"
 #include "hash.h"
+#include "core.h"
 #include "key.h"
 #include "keystore.h"
 #include "sync.h"
@@ -31,6 +31,7 @@ static const CScriptNum bnFalse(0);
 static const CScriptNum bnTrue(1);
 
 bool CheckSig(vector<unsigned char> vchSig, const vector<unsigned char> &vchPubKey, const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, int flags);
+bool CheckRawSig(const vector<unsigned char>& vchSig, const vector<unsigned char>& vchPubKey, const uint256& sighash, int flags);
 
 bool CastToBool(const valtype& vch)
 {
@@ -399,7 +400,7 @@ bool DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], const st
     return true;
 }
 
-bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType)
+bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType, const CBlockHeader * pBlockHeader)
 {
     CScript::const_iterator pc = script.begin();
     CScript::const_iterator pend = script.end();
@@ -939,17 +940,6 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                 }
                 break;
 
-                //
-                // LockTime
-                //
-                case OP_CHECKHEADERSIG:
-                case OP_CHECKHEADERSIGVERIFY:
-                {
-                    // TODO get data and continue into next checksig 
-                    return false;
-                }
-                break;
-
                 case OP_CHECKSIG:
                 case OP_CHECKSIGVERIFY:
                 {
@@ -975,6 +965,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
 
                     popstack(stack);
                     popstack(stack);
+                    
                     stack.push_back(fSuccess ? vchTrue : vchFalse);
                     if (opcode == OP_CHECKSIGVERIFY)
                     {
@@ -1154,9 +1145,50 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                 }
                 break;
 
+                //
+                // HeaderSig Verifiers
+                //
+                case OP_CHECKHEADERSIG:
+                case OP_CHECKHEADERSIGVERIFY:
+                {
+                    if (pBlockHeader == NULL)
+                        return error("OP_CHECKHEADERSIG used with null header sig. ");
+
+                    // (pubkey --> pubkey bool)
+                    if (stack.size() < 1)
+                        return false;
+
+                    valtype vchSig;
+                    if (!pBlockHeader->GetHeaderSig(vchSig))
+                        return false;
+                    valtype& vchPubKey = stacktop(-1);
+                    uint256 sighash = pBlockHeader->GetHash(false);
+
+                    ////// debug print
+                    //PrintHex(vchSig.begin(), vchSig.end(), "sig: %s\n");
+                    //PrintHex(vchPubKey.begin(), vchPubKey.end(), "pubkey: %s\n");
+
+                    bool fSuccess = IsCanonicalSignature(vchSig, flags) && IsCanonicalPubKey(vchPubKey, flags) &&
+                        CheckRawSig(vchSig, vchPubKey, sighash, 0);
+
+                    // Notice, don't pop pubkey off, as this is more convenient for scripts
+                    
+                    stack.push_back(fSuccess ? vchTrue : vchFalse);
+                    if (opcode == OP_CHECKHEADERSIGVERIFY)
+                    {
+                        if (fSuccess)
+                            popstack(stack);
+                        else
+                            return false;
+                    }
+                }
+                break;
+
                 default:
                     return false;
             }
+
+
 
             // Size limits
             if (stack.size() + altstack.size() > 1000)
@@ -1357,15 +1389,9 @@ public:
     }
 };
 
-bool CheckSig(vector<unsigned char> vchSig, const vector<unsigned char> &vchPubKey, const CScript &scriptCode,
+bool CheckSig(vector<unsigned char> vchSig, const vector<unsigned char>& vchPubKey, const CScript& scriptCode,
               const CTransaction& txTo, unsigned int nIn, int nHashType, int flags)
 {
-    static CSignatureCache signatureCache;
-
-    CPubKey pubkey(vchPubKey);
-    if (!pubkey.IsValid())
-        return false;
-
     // Hash type is one byte tacked on to the end of the signature
     if (vchSig.empty())
         return false;
@@ -1376,6 +1402,17 @@ bool CheckSig(vector<unsigned char> vchSig, const vector<unsigned char> &vchPubK
     vchSig.pop_back();
 
     uint256 sighash = SignatureHash(scriptCode, txTo, nIn, nHashType);
+
+    return CheckRawSig(vchSig, vchPubKey, sighash, flags);
+}
+
+bool CheckRawSig(const vector<unsigned char>& vchSig, const vector<unsigned char>& vchPubKey, const uint256& sighash, int flags)
+{
+    static CSignatureCache signatureCache;
+
+    CPubKey pubkey(vchPubKey);
+    if (!pubkey.IsValid())
+        return false;
 
     if (signatureCache.Get(sighash, vchSig, pubkey))
         return true;
@@ -1460,10 +1497,10 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
             {
                 // Found a match
                 typeRet = tplate.first;
-                if (typeRet == TX_MULTISIG)
+                if ((typeRet % DELAYED_DELTA) == TX_MULTISIG)
                 {
                     // Additional checks for TX_MULTISIG:
-                    unsigned char m = vSolutionsRet.front()[0];
+                    unsigned char m = vSolutionsRet[typeRet > DELAYED_DELTA ? 1 : 0][0];
                     unsigned char n = vSolutionsRet.back()[0];
                     if (m < 1 || n < 1 || m > n || vSolutionsRet.size()-2 != n)
                         return false;
@@ -1659,7 +1696,7 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType)
 
     if ((whichType % DELAYED_DELTA) == TX_MULTISIG)
     {
-        unsigned char m = vSolutions.front()[0];
+        unsigned char m = vSolutions[whichType > DELAYED_DELTA ? 0 : 1][0];
         unsigned char n = vSolutions.back()[0];
         // Support up to x-of-3 multisig txns as standard
         if (n < 1 || n > 3)
@@ -1791,7 +1828,7 @@ bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, vecto
 
     if ((typeRet % DELAYED_DELTA) == TX_MULTISIG)
     {
-        nRequiredRet = vSolutions.front()[typeRet > DELAYED_DELTA ? 1 : 0];
+        nRequiredRet = vSolutions[typeRet > DELAYED_DELTA ? 1 : 0][0];
         for (unsigned int i = (typeRet > DELAYED_DELTA ? 2 : 1); i < vSolutions.size()-1; i++)
         {
             CTxDestination address = CPubKey(vSolutions[i]).GetID();
@@ -1847,14 +1884,16 @@ void ExtractAffectedKeys(const CKeyStore &keystore, const CScript& scriptPubKey,
 }
 
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn,
-                  unsigned int flags, int nHashType)
+                  unsigned int flags, int nHashType, const CBlockHeader * pBlockHeader)
 {
+    assert(scriptPubKey.IsCoinbaseOutputType() == (pBlockHeader != NULL));
+
     vector<vector<unsigned char> > stack, stackCopy;
     if (!EvalScript(stack, scriptSig, txTo, nIn, flags, nHashType))
         return false;
     if (flags & SCRIPT_VERIFY_P2SH)
         stackCopy = stack;
-    if (!EvalScript(stack, scriptPubKey, txTo, nIn, flags, nHashType))
+    if (!EvalScript(stack, scriptPubKey, txTo, nIn, flags, nHashType, pBlockHeader))
         return false;
     if (stack.empty())
         return false;
@@ -1962,7 +2001,7 @@ static CScript CombineMultisig(CScript scriptPubKey, const CTransaction& txTo, u
     // Build a map of pubkey -> signature by matching sigs to pubkeys:
     unsigned int delayed = (txType > DELAYED_DELTA ? 1 : 0);
     assert(vSolutions.size() > (1+delayed));
-    unsigned int nSigsRequired = vSolutions.front()[delayed];
+    unsigned int nSigsRequired = vSolutions[delayed][0];
     unsigned int nPubKeys = vSolutions.size()-(2+delayed);
     map<valtype, valtype> sigs;
     BOOST_FOREACH(const valtype& sig, allsigs)
@@ -2090,6 +2129,7 @@ unsigned int CScript::GetSigOpCount() const
     return n;
 }
 
+// Gets only P2SH sig op count
 unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
 {
     if (!IsPayToScriptHash())
@@ -2131,20 +2171,21 @@ bool CScript::UsesCoinbaseReservedOps() const
 
 // TODO make sure that non-coinbase type outputs in the coinbase tx 
 // can't use reserved op codes
-bool CScript::UsesCoinbaseReservedOps(const CScript& scriptSig) const
+
+bool CScript::UsesCoinbaseReservedOps(const CScript& scriptPubKey) const
 {
-    if (!IsPayToScriptHash())
+    if (!scriptPubKey.IsPayToScriptHash())
         return UsesCoinbaseReservedOps();
 
-    // This is a pay-to-script-hash scriptPubKey;
-    // get the last item that the scriptSig
-    // pushes onto the stack:
-    const_iterator pc = scriptSig.begin();
+    // We have a pay-to-script-hash scriptPubKey.
+    // Check all of this scriptSig, including the last 
+    // item that the scriptSig pushes onto the stack.
+    const_iterator pc = begin();
     vector<unsigned char> data;
-    while (pc < scriptSig.end())
+    while (pc < end())
     {
         opcodetype opcode;
-        if (!scriptSig.GetOp(pc, opcode, data))
+        if (!GetOp(pc, opcode, data))
             return false;
         if (opcode == OP_CHECKHEADERSIG || opcode == OP_CHECKHEADERSIGVERIFY)
             return true;

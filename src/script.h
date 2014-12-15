@@ -20,6 +20,7 @@
 class CCoins;
 class CKeyStore;
 class CTransaction;
+class CBlockHeader;
 
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
 static const unsigned int MAX_OP_RETURN_RELAY = 80;      // bytes
@@ -345,7 +346,7 @@ enum opcodetype
     OP_SHA256 = 0xa8,
     OP_HASH160 = 0xa9,
     OP_HASH256 = 0xaa,
-    OP_CODESEPARATOR = 0xab,
+    OP_CODESEPARATOR = 0xab, // TODO delete this?
     OP_CHECKSIG = 0xac,
     OP_CHECKSIGVERIFY = 0xad,
     OP_CHECKMULTISIG = 0xae,
@@ -670,11 +671,15 @@ public:
 
     // OP_CHECKHEADERSIG and OP_CHECKHEADERSIGVERIFY are both reserved 
     // for coinbase transactions only.
+    // Can be used for a scriptSig or scriptPubKey, but doesn't include checking 
+    // of the P2SH redeemScript
     bool UsesCoinbaseReservedOps() const;
 
     // If the scriptSig uses a reserved op, then the transaction spending is
     // considered invalid
-    bool UsesCoinbaseReservedOps(const CScript& scriptSig) const;
+    // Assumes *this is a scriptSig, and the corresponding scriptPubKey is given.
+    // Fully checks *this, including checking the redeemScript if scriptPubKey is a P2SH.
+    bool UsesCoinbaseReservedOps(const CScript& scriptPubKey) const;
 
     bool IsPayToScriptHash() const;
 
@@ -818,9 +823,9 @@ bool IsCanonicalSignature(const std::vector<unsigned char> &vchSig, unsigned int
 bool DEREncodeSignature(const unsigned char sigR[32], const unsigned char sigS[32], std::vector<unsigned char>& vchSig);
 bool DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], const std::vector<unsigned char>& vchSig);
 
-bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);
+bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType, const CBlockHeader * pBlockHeader = NULL);
 bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::vector<unsigned char> >& vSolutionsRet);
-int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned char> >& vSolutions);
+int  ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned char> >& vSolutions);
 bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType);
 bool IsMine(const CKeyStore& keystore, const CScript& scriptPubKey);
 bool IsMine(const CKeyStore& keystore, const CTxDestination &dest);
@@ -829,7 +834,7 @@ bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
 bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<CTxDestination>& addressRet, int& nRequiredRet);
 bool SignSignature(const CKeyStore& keystore, const CScript& fromPubKey, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);
 bool SignSignature(const CKeyStore& keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);
-bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);
+bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType, const CBlockHeader * pBlockHeader = NULL);
 
 // Given two sets of signatures for scriptPubKey, possibly with OP_0 placeholders,
 // combine them intelligently and return the result.

@@ -178,7 +178,7 @@ void UpdateTime(CBlockHeader& block, const CBlockIndex* pindexPrev);
 /** Create a new block index entry for a given block hash */
 CBlockIndex * InsertBlockIndex(uint256 hash);
 /** Verify a signature */
-bool VerifySignature(const CCoins& txFrom, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);
+bool VerifySignature(const CCoins& txFrom, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType, const CBlockIndex * pBlockIndex = NULL);
 /** Abort with a message */
 bool AbortNode(const std::string &msg);
 /** Get statistics from node state */
@@ -307,10 +307,10 @@ inline bool AllowFree(double dPriority)
 
 // Check whether all inputs of this transaction are valid (no double spends, scripts & sigs, amounts)
 // This does not modify the UTXO set. If pvChecks is not NULL, script checks are pushed onto it
-// instead of being performed inline.
+// instead of being performed inline. If (and only if) tx is a coinbase, the pvchHeaderSig must not be null.
 bool CheckInputs(const CTransaction& tx, CValidationState &state, CCoinsViewCache &view, bool fScriptChecks = true,
                  unsigned int flags = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC,
-                 std::vector<CScriptCheck> *pvChecks = NULL);
+                 std::vector<CScriptCheck>* pvChecks = NULL);
 
 // Apply the effects of this transaction on the UTXO set represented by view
 void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCache &inputs, CTxUndo &txundo, int nHeight, const uint256 &txhash);
@@ -396,8 +396,12 @@ public:
 };
 
 
-/** Closure representing one script verification
- *  Note that this stores references to the spending transaction */
+/** 
+ * Closure representing one script verification
+ * Note that this stores references both to the spending transaction 
+ * and the header signature, as is needed for verification of the 
+ * OP_CHECKHEADERSIG. 
+ */
 class CScriptCheck
 {
 private:
@@ -406,12 +410,13 @@ private:
     unsigned int nIn;
     unsigned int nFlags;
     int nHashType;
+    const CBlockIndex * pBlockIndex;
 
 public:
     CScriptCheck() {}
-    CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, int nHashTypeIn) :
+    CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, int nHashTypeIn, const CBlockIndex * pBlockIndexIn) :
         scriptPubKey(txFromIn.vout[txToIn.vin[nInIn].prevout.n].scriptPubKey),
-        ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), nHashType(nHashTypeIn) { }
+        ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), nHashType(nHashTypeIn), pBlockIndex(pBlockIndexIn) {}
 
     bool operator()() const;
 
@@ -421,6 +426,7 @@ public:
         std::swap(nIn, check.nIn);
         std::swap(nFlags, check.nFlags);
         std::swap(nHashType, check.nHashType);
+        std::swap(pBlockIndex, check.pBlockIndex);
     }
 };
 
@@ -747,7 +753,7 @@ public:
         nStatus = 0;
         nSequenceId = 0;
 
-        ClearHeaderSig()
+        ClearHeaderSig();
         nVersion       = 0;
         hashMerkleRoot = 0;
         nTime          = 0;
