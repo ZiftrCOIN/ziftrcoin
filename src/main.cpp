@@ -827,7 +827,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
                              REJECT_INVALID, "bad-txns-txouttotal-toolarge");
         if (!fCoinbase && TxOutUsesCoinbaseReservedOps(txout))
             return state.DoS(100, error("CheckTransactionk() : txout uses coinbase reserved ops"),
-                            REJECT_INVALID, "bad-tx-usesreservedops");
+                            REJECT_INVALID, "bad-txout-usesreservedops");
     }
 
     // Check for duplicate inputs
@@ -857,7 +857,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
             vInOutPoints.insert(txin.prevout);
             if (TxInUsesCoinbaseReservedOps(txin, NULL))
                 return state.DoS(100, error("CheckTransactionk() : txout uses coinbase reserved ops"),
-                                REJECT_INVALID, "bad-tx-usesreservedops");
+                                REJECT_INVALID, "bad-txin-usesreservedops");
         }
     }
 
@@ -1031,7 +1031,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         // This is done last to help prevent CPU exhaustion denial-of-service attacks.
         if (!CheckInputs(tx, state, view, true, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC))
         {
-            return error("AcceptToMemoryPool: : ConnectInputs failed %s", hash.ToString());
+            return error("AcceptToMemoryPool: : CheckInputs failed %s", hash.ToString());
         }
         // Store transaction in memory
         pool.addUnchecked(hash, entry);
@@ -1134,7 +1134,7 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock
                 if (view.GetCoins(hash, coins))
                     nHeight = coins.nHeight;
             }
-            if (nHeight > 0)
+            if (nHeight >= 0)
                 pindexSlow = chainActive[nHeight];
         }
     }
@@ -1618,14 +1618,12 @@ void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCach
 bool CScriptCheck::operator()() const {
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
     
-    CBlockHeader* pBlockHeader = NULL;
+    CBlockHeader blockHeader;
     if (pBlockIndex != NULL) {
-        CBlockHeader blockHeader = pBlockIndex->GetBlockHeader();
-        pBlockHeader = &blockHeader;
+        blockHeader = pBlockIndex->GetBlockHeader();
     }
-        
 
-    if (!VerifyScript(scriptSig, scriptPubKey, *ptxTo, nIn, nFlags, nHashType, pBlockHeader))
+    if (!VerifyScript(scriptSig, scriptPubKey, *ptxTo, nIn, nFlags, nHashType, pBlockIndex != NULL ? &blockHeader : NULL))
         return error("CScriptCheck() : %s VerifySignature failed", ptxTo->GetHash().ToString());
     return true;
 }
@@ -1674,7 +1672,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, CCoinsViewCach
             if (TxInUsesCoinbaseReservedOps(tx.vin[i], &inputs))
                 return state.Invalid(
                     error("CheckInputs() : tried to make transaction with coinbase reserved ops"),
-                    REJECT_INVALID, "bad-txin-noncoinase-use-coinbase-reserved-op");
+                    REJECT_INVALID, "bad-txin-noncoinbase-use-coinbase-reserved-op");
 
             // Check for negative or overflow input values
             nValueIn += coins.vout[prevout.n].nValue;

@@ -653,33 +653,46 @@ void static BitcoinMiner(CWallet *pwallet)
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
     RenameThread("bitcoin-miner");
 
-    // Each thread has its own key and counter
-    // Use a reserve key because may not want to keep the key if you don't mine anything
+
     CReserveKey reserveKey(pwallet);
-    
-    CPubKey pubKey;
-    if (!reserveKey.GetReservedKey(pubKey))
-        throw std::runtime_error("BitcoinMiner() : Could not get new public key");
+    CKey signKey;
 
-    CKey vchSignKey;
-    if (!pwallet->GetKey(pubKey.GetID(), vchSignKey))
-        throw std::runtime_error("BitcoinMiner() : Could not get new private key");
-
-    // CBitcoinSecret vchSecret;
-    // bool fGood = vchSecret.SetString("Xtvz9noVZtFuTvmpCQxTzm3KM3kfZimsrqYnKM9TowrvTscbXLAS");
-    // if (!fGood)
-    //     throw runtime_error("MineGenesisBlock() : could not decode signing key");
-    // CKey vchSignKey = vchSecret.GetKey();
-    // 
-    // CPubKey pubKey = vchSignKey.GetPubKey();
-
+    bool fGetNewKey = true;
     try { 
         while (true) {
-            if (CLIENT_VERSION_IS_RELEASE && Params().NetworkID() != CChainParams::REGTEST) {
+            if (CLIENT_VERSION_IS_RELEASE && !RegTest()) {
                 // Busy-wait for the network to come online so we don't waste time mining
                 // on an obsolete chain. In regtest mode we expect to fly solo.
-                while (vNodes.empty()) 
+                while (vNodes.empty()) {
                     MilliSleep(1000);
+                }
+            }
+
+            if (fGetNewKey) {
+                // Each thread has its own key and counter
+                // Use a reserve key because may not want to keep the key if you don't mine anything
+                CReserveKey tmpReserveKey(pwallet);
+
+                CPubKey tmpPubKey;
+                if (!tmpReserveKey.GetReservedKey(tmpPubKey))
+                    throw std::runtime_error("BitcoinMiner() : Could not get new public key");
+
+                CKey tmpSignKey;
+                if (!pwallet->GetKey(tmpPubKey.GetID(), tmpSignKey))
+                    throw std::runtime_error("BitcoinMiner() : Could not get new private key");
+
+                // CBitcoinSecret vchSecret;
+                // bool fGood = vchSecret.SetString("Xtvz9noVZtFuTvmpCQxTzm3KM3kfZimsrqYnKM9TowrvTscbXLAS");
+                // if (!fGood)
+                //     throw runtime_error("MineGenesisBlock() : could not decode signing key");
+                // CKey vchSignKey = vchSecret.GetKey();
+                // 
+                // CPubKey pubKey = vchSignKey.GetPubKey();
+
+                reserveKey = tmpReserveKey;
+                signKey = tmpSignKey;
+
+                fGetNewKey = false;
             }
 
             // Create new block
@@ -693,6 +706,7 @@ void static BitcoinMiner(CWallet *pwallet)
             auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reserveKey));
             if (!pblocktemplate.get())
                 return;
+
             CBlock *pblock = &pblocktemplate->block;
             UpdateCoinbaseScriptSig(pblock, pindexPrev);
 
@@ -712,7 +726,7 @@ void static BitcoinMiner(CWallet *pwallet)
                 }
 
                 unsigned int nTries = 100;
-                unsigned int nNumFailedAttempts = DoSignatureHashes(pblock, vchSignKey, nTries);
+                unsigned int nNumFailedAttempts = DoSignatureHashes(pblock, signKey, nTries);
                 nSashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
 
                 if (nNumFailedAttempts < nTries) {
@@ -721,9 +735,11 @@ void static BitcoinMiner(CWallet *pwallet)
                     CheckWork(pblock, *pwallet, reserveKey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
+                    fGetNewKey = true;
+
                     // In regression test mode, stop mining after a block is found. This
                     // allows developers to controllably generate a block on demand.
-                    if (Params().NetworkID() == CChainParams::REGTEST)
+                    if (RegTest())
                         throw boost::thread_interrupted();
 
                     break;
@@ -749,7 +765,7 @@ void static BitcoinMiner(CWallet *pwallet)
                 boost::this_thread::interruption_point();
                 if (CLIENT_VERSION_IS_RELEASE && vNodes.empty() && !RegTest())
                     break;
-                if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 15)
+                if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 10)
                     break;
                 if (pindexPrev != chainActive.Tip())
                     break;
