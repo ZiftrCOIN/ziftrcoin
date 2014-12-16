@@ -193,9 +193,9 @@ public:
         genesis.vtx.push_back(txNew);
         
         std::vector<unsigned char> vchSigR;
-        vchSigR = ParseHex("141173513f8c2da72dfc217d7051c60abeaf7e642326f8ac9717941754ca90a2");
+        vchSigR = ParseHex("e0e7e1afda67a7242e1a8c0d26a07d9e1954b0019bd7e217c01e061828ffffa1");
         std::vector<unsigned char> vchSigS;
-        vchSigS = ParseHex("1b431d8f727f7d17af20516dfcc03a573e40d57b06dcd2bfccf6ce088f3c3d06");
+        vchSigS = ParseHex("38055b8efc1e605aa1a9c6e092ff3c038ca40eb4846ce827698acf5d05e3886a");
         genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
 
         genesis.hashPrevBlock = 0;
@@ -232,8 +232,8 @@ public:
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         } 
 
-        assert(hashGenesisBlock == uint256("0x00006b06882ea784a665a5e53d219922483d174d5c991799c122006f6f5b3997"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
-        assert(genesis.hashMerkleRoot == uint256("0x0124b341c48d1f32515e74c90efe878395aecfeae6573bdf6071b6b2a04b6ffd"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));     
+        assert(hashGenesisBlock == uint256("0x0000045b2a34fd5bb091dea78304b23886aaaff3c0bb35d502c09db7439820c2"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
+        assert(genesis.hashMerkleRoot == uint256("0x42b24a77cd86d537f4997e49fa98567f2bf6ce3d5d33ec53fb6491e4854ff798"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));     
 
         // vSeeds.push_back(CDNSSeedData("bitcoin.sipa.be", "seed.bitcoin.sipa.be"));
         // vSeeds.push_back(CDNSSeedData("bluematt.me", "dnsseed.bluematt.me"));
@@ -296,9 +296,9 @@ public:
         vAlertPubKey = ParseHex("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");//"02911661822e0b2cd814ed3ff4d23c97cfe7c89ad1eb6ce2ad3181195cfa9e0886");
 
         std::vector<unsigned char> vchSigR;
-        vchSigR = ParseHex("0e2dc747913720614c62182478a4b535d20c3f59734239599247076cde228b62");
+        vchSigR = ParseHex("ebc12faff5fc06e45b760bde92cae0febb81d4c7eb425883b531b4920f73b468");
         std::vector<unsigned char> vchSigS;
-        vchSigS = ParseHex("5b6e0026ef19e026f5f2e34f6eeecb9be1a46bde6196496ff6e3961c3ae1ab30");
+        vchSigS = ParseHex("6cec352853ae32eb718ee6828c3538c6dd733ee3c11e037e30e66cb6a5be4383");
         genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
 
         genesis.nTime = 1416422036;
@@ -308,7 +308,7 @@ public:
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         }
 
-        assert(hashGenesisBlock == uint256("0x00009ac00f0453fe2fd52cafa45f5d7fa287afab4d9170f156ef006a70abfbef"));
+        assert(hashGenesisBlock == uint256("0x000003a37f7a4a2740d5d54a6ded671cbfb8d25d55b4a098a2d96c7fbf39a847"));
         // Merkle root is the same as parent
 
         vFixedSeeds.clear();
@@ -341,9 +341,9 @@ public:
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 1);
 
         std::vector<unsigned char> vchSigR;
-        vchSigR = ParseHex("e29371913dbec9aea087a907e8c293bac359f92592deebad8cd3e8e69cd5da14");
+        vchSigR = ParseHex("1a89a5a9909aea6772e30a846adc24e135e2a59db77bd4633ce87331baa72823");
         std::vector<unsigned char> vchSigS;
-        vchSigS = ParseHex("71aad7855ff587e0a87e724a4981181fb4e91cd0e48a2ab8d5ea29528709eb67");
+        vchSigS = ParseHex("4b74a733919a804621484372f5cb7c779cfc6324cb5efac7b29bee13e3d381b1");
         genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
 
         genesis.nTime = 1416422037;
@@ -354,7 +354,7 @@ public:
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         }
         
-        assert(hashGenesisBlock == uint256("0x075d8c2574a83cf899b7e105386ffa93aacc0bd800c2a884165446630576467f"));
+        assert(hashGenesisBlock == uint256("0x358ed5a3c134ccedb300dd36260eb1b01a6cc34023aa57d8cf38216bedd359ef"));
         // Merkle root is the same as parent
 
         vSeeds.clear();  // Regtest mode doesn't have any DNS seeds.

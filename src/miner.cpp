@@ -508,14 +508,14 @@ unsigned int static DoSignatureHashes(CBlock* pblock, const CKey& signer, unsign
         uint256 hashBlockHeader = pblock->GetHash();
 
         if (hashBlockHeader <= hashTarget) {
-            CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
-            ssBlock << *pblock;
-            LogPrintf("block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
-            LogPrintf("hashBlockHeader: %s\n", hashBlockHeader.ToString());
-            LogPrintf("hashToSign: %s\n", hashToSign.ToString());
-            LogPrintf("vchSig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
-            CPubKey pubKey = signer.GetPubKey();
-            LogPrintf("pubKey: %s\n", HexStr(pubKey.begin(), pubKey.end()));
+            // CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+            // ssBlock << *pblock;
+            // LogPrintf("block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
+            // LogPrintf("hashBlockHeader: %s\n", hashBlockHeader.ToString());
+            // LogPrintf("hashToSign: %s\n", hashToSign.ToString());
+            // LogPrintf("vchSig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
+            // CPubKey pubKey = signer.GetPubKey();
+            // LogPrintf("pubKey: %s\n", HexStr(pubKey.begin(), pubKey.end()));
             return i;
         }
     }
@@ -549,7 +549,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
     //// debug print
     LogPrintf("BitcoinMiner:\n");
     LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashTarget.GetHex());
-    pblock->print();
+    //pblock->print();
     LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
 
     // Found a solution
@@ -653,11 +653,6 @@ void static BitcoinMiner(CWallet *pwallet)
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
     RenameThread("bitcoin-miner");
 
-
-    CReserveKey reserveKey(pwallet);
-    CKey signKey;
-
-    bool fGetNewKey = true;
     try { 
         while (true) {
             if (CLIENT_VERSION_IS_RELEASE && !RegTest()) {
@@ -668,34 +663,26 @@ void static BitcoinMiner(CWallet *pwallet)
                 }
             }
 
-            if (fGetNewKey) {
-                // Each thread has its own key and counter
-                // Use a reserve key because may not want to keep the key if you don't mine anything
-                CReserveKey tmpReserveKey(pwallet);
+            // Each thread has its own key and counter
+            // Use a reserve key because may not want to keep the key if you don't mine anything
+            CReserveKey reserveKey(pwallet);
 
-                CPubKey tmpPubKey;
-                if (!tmpReserveKey.GetReservedKey(tmpPubKey))
-                    throw std::runtime_error("BitcoinMiner() : Could not get new public key");
+            CPubKey pubKey;
+            if (!reserveKey.GetReservedKey(pubKey))
+                throw std::runtime_error("BitcoinMiner() : Could not get new public key");
 
-                CKey tmpSignKey;
-                if (!pwallet->GetKey(tmpPubKey.GetID(), tmpSignKey))
-                    throw std::runtime_error("BitcoinMiner() : Could not get new private key");
+            CKey signKey;
+            if (!pwallet->GetKey(pubKey.GetID(), signKey))
+                throw std::runtime_error("BitcoinMiner() : Could not get new private key");
 
-                // CBitcoinSecret vchSecret;
-                // bool fGood = vchSecret.SetString("Xtvz9noVZtFuTvmpCQxTzm3KM3kfZimsrqYnKM9TowrvTscbXLAS");
-                // if (!fGood)
-                //     throw runtime_error("MineGenesisBlock() : could not decode signing key");
-                // CKey vchSignKey = vchSecret.GetKey();
-                // 
-                // CPubKey pubKey = vchSignKey.GetPubKey();
+            // CBitcoinSecret vchSecret;
+            // bool fGood = vchSecret.SetString("Xtvz9noVZtFuTvmpCQxTzm3KM3kfZimsrqYnKM9TowrvTscbXLAS");
+            // if (!fGood)
+            //     throw runtime_error("MineGenesisBlock() : could not decode signing key");
+            // CKey vchSignKey = vchSecret.GetKey();
+            // 
+            // CPubKey pubKey = vchSignKey.GetPubKey();
 
-                reserveKey = tmpReserveKey;
-                signKey = tmpSignKey;
-
-                fGetNewKey = false;
-            }
-
-            // Create new block
             unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
             CBlockIndex* pindexPrev = chainActive.Tip();
 
@@ -734,8 +721,6 @@ void static BitcoinMiner(CWallet *pwallet)
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
                     CheckWork(pblock, *pwallet, reserveKey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
-
-                    fGetNewKey = true;
 
                     // In regression test mode, stop mining after a block is found. This
                     // allows developers to controllably generate a block on demand.
