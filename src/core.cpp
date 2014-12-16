@@ -139,21 +139,28 @@ double CTransaction::ComputePriority(double dPriorityInputs, unsigned int nTxSiz
 
 
 // TODO should we make it so that if the input value and the output value
-// at the corresponding index are equal, then no need for the OP_CHECKHEADERSIGVERIFY? 
-bool CTransaction::IsCoinBase() const
+// at the corresponding index are equal, then no need for the headersig check?
+bool CTransaction::IsCoinBase(const CBlockHeader * pBlockHeader) const
 {
     if (vin.size() == 0) 
         return false;
-
-    BOOST_FOREACH(const CTxOut& out, vout) {
-        if (!out.scriptPubKey.IsCoinbaseOutputType())
-            return false;
-    }
 
     BOOST_FOREACH(const CTxIn& input, vin) {
         if (!input.prevout.IsNull())
             return false;
     }
+
+    BOOST_FOREACH(const CTxOut& out, vout) {
+        if (pBlockHeader != NULL) {
+            if (!out.scriptPubKey.VerifyHeaderSig(pBlockHeader))
+                return false;
+        } else {
+            if (!out.scriptPubKey.IsPayToPubKey())
+                return false;
+        }
+    }
+
+    
 
     // Must have at least one null input because the height needs to be put into it
     

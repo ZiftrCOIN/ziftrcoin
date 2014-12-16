@@ -707,21 +707,17 @@ Value signrawtransaction(const Array& params, bool fHelp)
         }
         const CScript& prevPubKey = coins.vout[txin.prevout.n].scriptPubKey;
 
-        CBlockHeader blockHeader;
-        if (coins.IsCoinBase())
-            blockHeader = chainActive[coins.nHeight]->GetBlockHeader(); // already have lock on cs_main, so safe
-
         txin.scriptSig.clear();
         // Only sign SIGHASH_SINGLE if there's a corresponding output:
         if (!fHashSingle || (i < mergedTx.vout.size()))
-            SignSignature(keystore, prevPubKey, mergedTx, i, nHashType, coins.IsCoinBase() ? &blockHeader : NULL);
+            SignSignature(keystore, prevPubKey, mergedTx, i, nHashType);
 
         // ... and merge in other signatures:
         BOOST_FOREACH(const CTransaction& txv, txVariants)
         {
             txin.scriptSig = CombineSignatures(prevPubKey, mergedTx, i, txin.scriptSig, txv.vin[i].scriptSig);
         }
-        if (!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, 0, coins.IsCoinBase() ? &blockHeader : NULL))
+        if (!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, 0))
             fComplete = false;
     }
 

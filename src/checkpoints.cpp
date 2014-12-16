@@ -39,7 +39,7 @@ namespace Checkpoints
     // + Contains no strange transactions
     static MapCheckpoints mapCheckpoints =
         boost::assign::map_list_of
-        (0, uint256("0x0000045b2a34fd5bb091dea78304b23886aaaff3c0bb35d502c09db7439820c2"))// uint256("0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"))
+        (0, uint256("0x0000e1de3f3df38de44508b26c0e47aea341c0e60492bc46ac0a5589d9657608"))// uint256("0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"))
         // ( 11111, uint256("0x0000000069e244f73d78e8fd29ba2fd2ed618bd6fa2ee92559f542fdb26e7c1d"))
         // ( 33333, uint256("0x000000002dd5588a74784eaa7ab0507a18ad16a236e7b1ce69f00d7ddfb5d0a6"))
         // ( 74000, uint256("0x0000000000573993a3c9e41ce34471c079dcf5f52a0e824a81e7f953b8661a20"))
@@ -64,7 +64,7 @@ namespace Checkpoints
 
     static MapCheckpoints mapCheckpointsTestnet =
         boost::assign::map_list_of
-        (0, uint256("0x000003a37f7a4a2740d5d54a6ded671cbfb8d25d55b4a098a2d96c7fbf39a847"))// uint256("0x000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943"))
+        (0, uint256("0x00005757f7e2796bc0256efe092ae74d86b8319f205ebd4bb590c2eba69d6e13"))// uint256("0x000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943"))
         // ( 546, uint256("000000002a936ca763904c3c35fce2f3556c559c0214345d31b1bcebf76acb70"))
         ;
     static const CCheckpointData dataTestnet = {
@@ -76,7 +76,7 @@ namespace Checkpoints
 
     static MapCheckpoints mapCheckpointsRegtest =
         boost::assign::map_list_of
-        (0, uint256("0x358ed5a3c134ccedb300dd36260eb1b01a6cc34023aa57d8cf38216bedd359ef"))//uint256("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"))
+        (0, uint256("0x05aec2210110e765c26c65c50078b9f6f797676b8dc498a31de4442c1b011e58"))//uint256("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"))
         ;
     static const CCheckpointData dataRegtest = {
         &mapCheckpointsRegtest,

@@ -178,7 +178,7 @@ void UpdateTime(CBlockHeader& block, const CBlockIndex* pindexPrev);
 /** Create a new block index entry for a given block hash */
 CBlockIndex * InsertBlockIndex(uint256 hash);
 /** Verify a signature */
-bool VerifySignature(const CCoins& txFrom, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType, const CBlockIndex * pBlockIndex = NULL);
+bool VerifySignature(const CCoins& txFrom, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);
 /** Abort with a message */
 bool AbortNode(const std::string &msg);
 /** Get statistics from node state */
@@ -398,9 +398,7 @@ public:
 
 /** 
  * Closure representing one script verification
- * Note that this stores references both to the spending transaction 
- * and the header signature, as is needed for verification of the 
- * OP_CHECKHEADERSIG. 
+ * Note that this stores a reference to the spending transaction.
  */
 class CScriptCheck
 {
@@ -410,13 +408,12 @@ private:
     unsigned int nIn;
     unsigned int nFlags;
     int nHashType;
-    const CBlockIndex * pBlockIndex;
 
 public:
     CScriptCheck() {}
-    CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, int nHashTypeIn, const CBlockIndex * pBlockIndexIn) :
+    CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, int nHashTypeIn) :
         scriptPubKey(txFromIn.vout[txToIn.vin[nInIn].prevout.n].scriptPubKey),
-        ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), nHashType(nHashTypeIn), pBlockIndex(pBlockIndexIn) {}
+        ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), nHashType(nHashTypeIn) {}
 
     bool operator()() const;
 
@@ -426,7 +423,6 @@ public:
         std::swap(nIn, check.nIn);
         std::swap(nFlags, check.nFlags);
         std::swap(nHashType, check.nHashType);
-        std::swap(pBlockIndex, check.pBlockIndex);
     }
 };
 

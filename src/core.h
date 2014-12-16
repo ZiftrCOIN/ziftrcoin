@@ -228,14 +228,13 @@ public:
 
     /**
      * In ziftrCOIN, a coinbase transaction must have all of the TxOuts
-     * be in a very specific format:
-     * 
-     *     OP_CHECKHEADERSIGVERIFY  OP_DUP  OP_HASH160  {KeyID}  OP_EQUALVERIFY  OP_CHECKSIG
+     * be simple pay-to-pubkey outputs so that the header sig can be verified
+     * before propogating.
      * 
      * In addition, the first input must be null. Further inputs may optionally be null
      * TODO if they are not null, we should process them as actual spends of TxOuts
      */
-    bool IsCoinBase() const;
+    bool IsCoinBase(const CBlockHeader * pBlockHeader = NULL) const;
 
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {

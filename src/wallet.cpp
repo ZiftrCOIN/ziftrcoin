@@ -1354,32 +1354,13 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend,
 
                 // Sign
                 int nIn = 0;
-                BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setCoins) {
-                    const CTransaction * const pTxFrom = coin.first;
-                    bool fPrevoutIsCoinbase = pTxFrom->IsCoinBase();
-
-                    CBlockHeader blockHeader;
-                    if (fPrevoutIsCoinbase)
-                    {
-                        CCoinsViewCache& view = *pcoinsTip;
-                        CCoins coins;
-                        uint256 hashPrevTx = pTxFrom->GetHash();
-                        if (!view.GetCoins(hashPrevTx, coins)) 
-                        {
-                            strFailReason = _("Could not get coins/nHeight for coinbase");
-                            return false;
-                        }
-
-                        blockHeader = chainActive[coins.nHeight]->GetBlockHeader(); // already have lock on cs_main, so safe
-                    }
-
-                    if (!SignSignature(*this, *pTxFrom, wtxNew, nIn, SIGHASH_ALL, fPrevoutIsCoinbase ? &blockHeader : NULL))
+                BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setCoins) 
+                {
+                    if (!SignSignature(*this, *coin.first, wtxNew, nIn++))
                     {
                         strFailReason = _("Signing transaction failed");
                         return false;
                     }
-                    
-                    nIn++;
                 }
 
                 // Limit size

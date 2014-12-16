@@ -204,13 +204,11 @@ enum txnouttype
     TX_SCRIPTHASH               = 3,
     TX_MULTISIG                 = 4,
     TX_NULL_DATA                = 5,
-    TX_COINBASE                 = 6,
     
     TX_DELAYEDPUBKEY            = DELAYED_DELTA + TX_PUBKEY,
     TX_DELAYEDPUBKEYHASH        = DELAYED_DELTA + TX_PUBKEYHASH,
     TX_DELAYEDSCRIPTHASH        = DELAYED_DELTA + TX_SCRIPTHASH,
     TX_DELAYEDMULTISIG          = DELAYED_DELTA + TX_MULTISIG,
-    TX_DELAYEDCOINBASE          = DELAYED_DELTA + TX_COINBASE,
 };
 
 class CNoDestination {
@@ -368,9 +366,6 @@ enum opcodetype
     // locktime
     OP_CHECKLOCKTIME = 0xba,
     OP_CHECKLOCKTIMEVERIFY = 0xbb,
-
-    // headersig verifier
-    OP_CHECKHEADERSIGVERIFY = 0xbc,
 
     // template matching params
     OP_SCRIPTNUMBER = 0xf8,
@@ -669,21 +664,11 @@ public:
     // pay-to-script-hash transactions:
     unsigned int GetSigOpCount(const CScript& scriptSig) const;
 
-    // OP_CHECKHEADERSIG and OP_CHECKHEADERSIGVERIFY are both reserved 
-    // for coinbase transactions only.
-    // Can be used for a scriptSig or scriptPubKey, but doesn't include checking 
-    // of the P2SH redeemScript
-    bool UsesCoinbaseReservedOps() const;
-
-    // If the scriptSig uses a reserved op, then the transaction spending is
-    // considered invalid
-    // Assumes *this is a scriptSig, and the corresponding scriptPubKey is given.
-    // Fully checks *this, including checking the redeemScript if scriptPubKey is a P2SH.
-    bool UsesCoinbaseReservedOps(const CScript& scriptPubKey) const;
-
     bool IsPayToScriptHash() const;
 
-    bool IsCoinbaseOutputType() const;
+    bool VerifyHeaderSig(const CBlockHeader * pBlockHeader) const;
+
+    bool IsPayToPubKey() const;
 
     // Called by IsStandardTx and P2SH VerifyScript (which makes it consensus-critical).
     bool IsPushOnly() const;
@@ -823,7 +808,7 @@ bool IsCanonicalSignature(const std::vector<unsigned char> &vchSig, unsigned int
 bool DEREncodeSignature(const unsigned char sigR[32], const unsigned char sigS[32], std::vector<unsigned char>& vchSig);
 bool DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], const std::vector<unsigned char>& vchSig);
 
-bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType, const CBlockHeader * pBlockHeader = NULL);
+bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);
 bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::vector<unsigned char> >& vSolutionsRet);
 int  ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned char> >& vSolutions);
 bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType);
@@ -832,9 +817,9 @@ bool IsMine(const CKeyStore& keystore, const CTxDestination &dest);
 void ExtractAffectedKeys(const CKeyStore &keystore, const CScript& scriptPubKey, std::vector<CKeyID> &vKeys);
 bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet);
 bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<CTxDestination>& addressRet, int& nRequiredRet);
-bool SignSignature(const CKeyStore& keystore, const CScript& fromPubKey, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL, const CBlockHeader * pBlockHeader = NULL);
-bool SignSignature(const CKeyStore& keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL, const CBlockHeader * pBlockHeader = NULL);
-bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType, const CBlockHeader * pBlockHeader = NULL);
+bool SignSignature(const CKeyStore& keystore, const CScript& fromPubKey, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);
+bool SignSignature(const CKeyStore& keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);
+bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);
 
 // Given two sets of signatures for scriptPubKey, possibly with OP_0 placeholders,
 // combine them intelligently and return the result.

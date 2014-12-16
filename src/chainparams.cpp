@@ -186,16 +186,16 @@ public:
             txNew.vout[i].scriptPubKey.clear();
             if (i > 0) 
                 txNew.vout[i].scriptPubKey << CScriptNum(25 * i) << OP_CHECKLOCKTIMEVERIFY;
-            txNew.vout[i].scriptPubKey << OP_CHECKHEADERSIGVERIFY << OP_DUP << OP_HASH160 << CKeyID(uint160("0xa079889dffd0e5eb2a8cdbd636ca1cf963461080")) << OP_EQUALVERIFY << OP_CHECKSIG;
+            txNew.vout[i].scriptPubKey << ParseHex("037e6d28a34b6fc0f305162a245ac55b81c3dfff7726f65dd80493b04fcebc76e7") << OP_CHECKSIG;
             txNew.vout[i].nValue = (i > 0 ? 25000000 * COIN : 350000000 * COIN);
         }
 
         genesis.vtx.push_back(txNew);
         
         std::vector<unsigned char> vchSigR;
-        vchSigR = ParseHex("e0e7e1afda67a7242e1a8c0d26a07d9e1954b0019bd7e217c01e061828ffffa1");
+        vchSigR = ParseHex("a2db96afbfc6cd95190e075ebc75f7d323c545719754bbc78c90dd8f91029915");
         std::vector<unsigned char> vchSigS;
-        vchSigS = ParseHex("38055b8efc1e605aa1a9c6e092ff3c038ca40eb4846ce827698acf5d05e3886a");
+        vchSigS = ParseHex("20384aadd6174fbe0cec3c5851f5364fa3ffc2a970311de6f8619464d12cb9a9");
         genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
 
         genesis.hashPrevBlock = 0;
@@ -232,8 +232,8 @@ public:
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         } 
 
-        assert(hashGenesisBlock == uint256("0x0000045b2a34fd5bb091dea78304b23886aaaff3c0bb35d502c09db7439820c2"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
-        assert(genesis.hashMerkleRoot == uint256("0x42b24a77cd86d537f4997e49fa98567f2bf6ce3d5d33ec53fb6491e4854ff798"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));     
+        assert(hashGenesisBlock == uint256("0x0000e1de3f3df38de44508b26c0e47aea341c0e60492bc46ac0a5589d9657608"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
+        assert(genesis.hashMerkleRoot == uint256("0xb04109fc6bfaf59fe0d393b471a1837aad5c77bdccb528975f30ac827b040512"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));     
 
         // vSeeds.push_back(CDNSSeedData("bitcoin.sipa.be", "seed.bitcoin.sipa.be"));
         // vSeeds.push_back(CDNSSeedData("bluematt.me", "dnsseed.bluematt.me"));
@@ -296,9 +296,9 @@ public:
         vAlertPubKey = ParseHex("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");//"02911661822e0b2cd814ed3ff4d23c97cfe7c89ad1eb6ce2ad3181195cfa9e0886");
 
         std::vector<unsigned char> vchSigR;
-        vchSigR = ParseHex("ebc12faff5fc06e45b760bde92cae0febb81d4c7eb425883b531b4920f73b468");
+        vchSigR = ParseHex("9744af46acb3ef1dd5d0e61ec8d0bea4f9914fa37d4e1ee8873c5fe66e7504fc");
         std::vector<unsigned char> vchSigS;
-        vchSigS = ParseHex("6cec352853ae32eb718ee6828c3538c6dd733ee3c11e037e30e66cb6a5be4383");
+        vchSigS = ParseHex("31ca0aaa604c7ef238eb4054cfb24ee46e8f762ca2ec6ab8a4c0c2a0456a8d73");
         genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
 
         genesis.nTime = 1416422036;
@@ -308,7 +308,7 @@ public:
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         }
 
-        assert(hashGenesisBlock == uint256("0x000003a37f7a4a2740d5d54a6ded671cbfb8d25d55b4a098a2d96c7fbf39a847"));
+        assert(hashGenesisBlock == uint256("0x00005757f7e2796bc0256efe092ae74d86b8319f205ebd4bb590c2eba69d6e13"));
         // Merkle root is the same as parent
 
         vFixedSeeds.clear();
@@ -341,9 +341,9 @@ public:
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 1);
 
         std::vector<unsigned char> vchSigR;
-        vchSigR = ParseHex("1a89a5a9909aea6772e30a846adc24e135e2a59db77bd4633ce87331baa72823");
+        vchSigR = ParseHex("a280dec219d2f9d186961fe1cdf1cc5e5b52cc1324f76c68a46e6ae8b386d8b4");
         std::vector<unsigned char> vchSigS;
-        vchSigS = ParseHex("4b74a733919a804621484372f5cb7c779cfc6324cb5efac7b29bee13e3d381b1");
+        vchSigS = ParseHex("6d7a6425c0883b3ec63f6bca61a66c69352a6384cce6aab42bf79fec4ef96c72");
         genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
 
         genesis.nTime = 1416422037;
@@ -354,7 +354,7 @@ public:
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         }
         
-        assert(hashGenesisBlock == uint256("0x358ed5a3c134ccedb300dd36260eb1b01a6cc34023aa57d8cf38216bedd359ef"));
+        assert(hashGenesisBlock == uint256("0x05aec2210110e765c26c65c50078b9f6f797676b8dc498a31de4442c1b011e58"));
         // Merkle root is the same as parent
 
         vSeeds.clear();  // Regtest mode doesn't have any DNS seeds.
