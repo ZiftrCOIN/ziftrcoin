@@ -1097,8 +1097,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
 
                     // Now that we know we're comparing apples-to-apples, and that the lock time in txTo
                     // is actually in effect, the comparison is a simple numeric one.
-                    bool fLockTimeSatisfied = (nLockTime <= (int64_t)txTo.nLockTime);
-
+                    //
                     // Lock time requirement has to be satisfied and enabled
                     // by having at least one non-final input
                     // Finally the nLockTime feature can be disabled and thus
@@ -1106,21 +1105,10 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                     // finalized by setting nSequence to maxint. The
                     // transaction would be allowed into the blockchain, making
                     // the opcode ineffective. Need at least one non-final input to 
-                    // make the lock time go into effect
-                    if (fLockTimeSatisfied) 
-                    {
-                        int nNumNonFinalInputs = 0;
-                        BOOST_FOREACH(const CTxIn& txin, txTo.vin)
-                        {
-                            if (!txin.IsFinal())
-                            {
-                                nNumNonFinalInputs++;
-                                break;
-                            }
-                        }
-                        if (nNumNonFinalInputs == 0) 
-                            fLockTimeSatisfied = false;
-                    }
+                    // make the lock time go into effect. We just require the one
+                    // at the input given in order to minimize the data required 
+                    // to prove correct CHECKLOCKTIMEVERIFY execution.
+                    bool fLockTimeSatisfied = ((nLockTime <= (int64_t)txTo.nLockTime) && txTo.vin[nIn].IsFinal());
 
                     // Put the result on the stack
                     stack.push_back(fLockTimeSatisfied ? vchTrue : vchFalse);
