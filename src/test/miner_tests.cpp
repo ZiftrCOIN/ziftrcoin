@@ -28,6 +28,9 @@ static struct {
 // NOTE: These tests rely on CreateNewBlock doing its own self-validation!
 BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
 {
+    if (!fEnabled)
+        return;
+
     CScript scriptPubKey = CScript() << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f") << OP_CHECKSIG;
     CBlockTemplate *pblocktemplate;
     CTransaction tx,tx2;
@@ -55,8 +58,8 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
             txFirst.push_back(new CTransaction(pblock->vtx[0]));
         pblock->hashMerkleRoot = pblock->BuildMerkleTree();
         CValidationState state;
-        BOOST_CHECK(!fEnabled || ProcessBlock(state, NULL, pblock));
-        BOOST_CHECK(!fEnabled || state.IsValid());
+        BOOST_CHECK(ProcessBlock(state, NULL, pblock));
+        BOOST_CHECK(state.IsValid());
         pblock->hashPrevBlock = pblock->GetHash();
     }
     delete pblocktemplate;
@@ -194,7 +197,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx.nLockTime = chainActive.Tip()->nHeight+1;
     hash = tx.GetHash();
     mempool.addUnchecked(hash, CTxMemPoolEntry(tx, 11, GetTime(), 111.0, 11));
-    BOOST_CHECK(!fEnabled || !IsFinalTx(tx, chainActive.Tip()->nHeight + 1));
+    BOOST_CHECK(!IsFinalTx(tx, chainActive.Tip()->nHeight + 1));
 
     // time locked
     tx2.vin.resize(1);
@@ -208,23 +211,23 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx2.nLockTime = chainActive.Tip()->GetMedianTimePast()+1;
     hash = tx2.GetHash();
     mempool.addUnchecked(hash, CTxMemPoolEntry(tx2, 11, GetTime(), 111.0, 11));
-    BOOST_CHECK(!fEnabled || !IsFinalTx(tx2));
+    BOOST_CHECK(!IsFinalTx(tx2));
 
     BOOST_CHECK(pblocktemplate = CreateNewBlock(scriptPubKey));
 
     // Neither tx should have make it into the template.
-    if (fEnabled) BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 1);
+    BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 1);
     delete pblocktemplate;
 
     // However if we advance height and time by one, both will.
     chainActive.Tip()->nHeight++;
     SetMockTime(chainActive.Tip()->GetMedianTimePast()+2);
 
-    BOOST_CHECK(!fEnabled || IsFinalTx(tx, chainActive.Tip()->nHeight + 1));
-    BOOST_CHECK(!fEnabled || IsFinalTx(tx2));
+    BOOST_CHECK(IsFinalTx(tx, chainActive.Tip()->nHeight + 1));
+    BOOST_CHECK(IsFinalTx(tx2));
 
     BOOST_CHECK(pblocktemplate = CreateNewBlock(scriptPubKey));
-    if (fEnabled) BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 3);
+    BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 3);
     delete pblocktemplate;
 
     chainActive.Tip()->nHeight--;
@@ -237,6 +240,9 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
 
 BOOST_AUTO_TEST_CASE(sha256transform_equality)
 {
+    if (!fEnabled)
+        return;
+
     unsigned int pSHA256InitState[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 
 
