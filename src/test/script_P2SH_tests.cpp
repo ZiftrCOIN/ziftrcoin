@@ -196,6 +196,9 @@ BOOST_AUTO_TEST_CASE(set)
     }
     for (int i = 0; i < 4; i++)
     {
+        // CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
+        // ssTx << txTo[i];
+        // std::cout << "tx: " << HexStr(ssTx.begin(), ssTx.end()) << "\n";
         BOOST_CHECK_MESSAGE(SignSignature(keystore, txFrom, txTo[i], 0), strprintf("SignSignature %d", i));
         BOOST_CHECK_MESSAGE(IsStandardTx(txTo[i], reason), strprintf("txTo[%d].IsStandard", i));
     }

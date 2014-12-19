@@ -77,6 +77,7 @@ BOOST_AUTO_TEST_CASE(tx_valid)
             stream >> tx;
 
             CValidationState state;
+
             BOOST_CHECK_MESSAGE(CheckTransaction(tx, state), strTest);
             BOOST_CHECK(state.IsValid());
 
@@ -88,6 +89,8 @@ BOOST_AUTO_TEST_CASE(tx_valid)
                     break;
                 }
 
+                if (strTest == string("[[[\"0000000000000000000000000000000000000000000000000000000000000000\",-1,\"1\"]],\"01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff648a41722cf8b9aa11d15411012f096432ed008705e042abcaae8cf68c950ab2658a41722cf8b9aa11d15411012f096432ed008705e042abcaae8cf68c950ab2658a41722cf8b9aa11d15411012f096432ed008705e042abcaae8cf68c950ab26511111111ffffffff0107c7a51000000000232102105c22f3215a070d07898196b508a0c88e13d72ffa8c105681d9c0a8f5418ffeac00000000\",true]"))
+                    std::cout << "stop here\n";
                 BOOST_CHECK_MESSAGE(VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout], tx, i, test[2].get_bool() ? SCRIPT_VERIFY_P2SH : SCRIPT_VERIFY_NONE, 0), strTest);
             }
         }

@@ -836,7 +836,7 @@ public:
         bnTarget.SetCompact(nBits);
         if (bnTarget <= 0)
             return 0;
-        return (CBigNum(1)<<256) / (bnTarget+1);
+        return ((CBigNum(1)<<256) / (bnTarget+1));
     }
 
     bool CheckIndex() const
@@ -844,7 +844,7 @@ public:
         return CheckProofOfWork(GetBlockHash(), nBits);
     }
 
-    enum { nMedianTimeSpan=11 }; // TODO new rule that requires time to be more strict since no need for nTime hacks with sign to mine
+    enum { nMedianTimeSpan=11 }; // TODO new rule that requires time to be more strict since no need for nTime hacks with sign to mine?
 
     int64_t GetMedianTimePast() const
     {

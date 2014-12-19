@@ -797,7 +797,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
                                  REJECT_INVALID, "bad-txns-prevout-null");
             if (txin.scriptSig.size() < 2 || txin.scriptSig.size() > 100)
                 return state.DoS(100, error("CheckTransaction() : coinbase script size"),
-                                 REJECT_INVALID, "bad-cb-length");
+                                 REJECT_INVALID, "bad-cb-length"); 
         } 
         else 
         {
@@ -1247,6 +1247,46 @@ Block reward schedule:
 
 */
 
+// Return average network hashes per second based on the last 'nLookUp' blocks,
+// or from the last difficulty change if 'nLookUp' is nonpositive.
+// If 'nHeight' is nonnegative, compute the estimate at the time when a given block was found.
+int64_t GetNetworkHashPS(int nLookUp, int nHeight) {
+    CBlockIndex* pBlockStart = chainActive[nHeight];
+    if (pBlockStart == NULL)
+        pBlockStart = chainActive.Tip();
+
+    int nChainSize = chainActive.Height() + 1;
+    if (nLookUp < 0)
+        nLookUp = ;
+    else if (nLookUp > )
+
+    // If nLookUp is larger than chain, then set it to chain length.
+    if (nLookUp > (1 + pb->nHeight)
+        nLookUp = pb->nHeight;
+
+    if (pb == NULL || !pb->nHeight)
+        return 0;
+
+    CBlockIndex *pb0 = pb;
+    int64_t minTime = pb0->GetBlockTime();
+    int64_t maxTime = minTime;
+    for (int i = 0; i < nLookUp+1; i++) {
+        pb0 = pb0->pprev;
+        int64_t time = pb0->GetBlockTime();
+        minTime = std::min(time, minTime);
+        maxTime = std::max(time, maxTime);
+    }
+
+    // In case there's a situation where minTime == maxTime, we don't want a divide by zero exception.
+    if (minTime == maxTime)
+        return 0;
+
+    uint256 workDiff = pb->nChainWork - pb0->nChainWork;
+    int64_t timeDiff = maxTime - minTime;
+
+    return (int64_t)(workDiff.getdouble() / timeDiff);
+}
+
 int64_t GetBlockValue(int nHeight, int64_t nFees)
 {
     if (nHeight > Params().LastDecreasingSubsidyBlock())
@@ -1261,9 +1301,10 @@ int64_t GetBlockValue(int nHeight, int64_t nFees)
     return nSubsidy + nFees;
 }
 
-static const int64_t nTargetTimespan = 14 * 24 * 60 * 60; // two weeks
-static const int64_t nTargetSpacing = 10 * 60;
-static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
+static const int64_t nDiffFactorRange = 12;                                 // The number of blocks to include when calculating the hash rate of the network    (blocks)
+static const int64_t nTargetSpacing   = 60;                                 // Target number of seconds per block solve - TODO figure out better value          (seconds/block)
+static const int64_t nTargetTimespan  = nDiffFactorRange * nTargetSpacing;  // Target number of seconds between block difficulty readjustments                  (seconds)
+//static const int64_t nInterval = nTargetTimespan / nTargetSpacing;        // Actual number of blocks  between block difficulty readjustments                  (blocks)
 
 //
 // minimum amount of work that could possibly be required nTime after
@@ -1271,7 +1312,7 @@ static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
 //
 unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 {
-    const CBigNum &bnLimit = Params().ProofOfWorkLimit();
+    const CBigNum& bnLimit = Params().ProofOfWorkLimit();
     // Testnet has min-difficulty blocks
     // after nTargetSpacing*2 time between blocks:
     if (TestNet() && nTime > nTargetSpacing*2)
@@ -1300,30 +1341,15 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
         return nProofOfWorkLimit;
 
     // Only change once per interval
-    if ((pindexLast->nHeight+1) % nInterval != 0)
-    {
-        if (TestNet())
-        {
-            // Special difficulty rule for testnet:
-            // If the new block's timestamp is more than 2* 10 minutes
-            // then allow mining of a min-difficulty block.
-            if (pblock->nTime > pindexLast->nTime + nTargetSpacing*2)
-                return nProofOfWorkLimit;
-            else
-            {
-                // Return the last non-special-min-difficulty-rules-block
-                const CBlockIndex* pindex = pindexLast;
-                while (pindex->pprev && pindex->nHeight % nInterval != 0 && pindex->nBits == nProofOfWorkLimit)
-                    pindex = pindex->pprev;
-                return pindex->nBits;
-            }
-        }
-        return pindexLast->nBits;
-    }
-
+    // Special difficulty rule for testnet:
+    // If the new block's timestamp is more than 2* 10 minutes
+    // then allow mining of a min-difficulty block.
+    if (TestNet() && pblock->nTime > pindexLast->nTime + nTargetSpacing*2)
+        return nProofOfWorkLimit;
+        
     // Go back by what we want to be 14 days worth of blocks
     const CBlockIndex* pindexFirst = pindexLast;
-    for (int i = 0; pindexFirst && i < nInterval-1; i++)
+    for (int i = 0; pindexFirst && i < nDiffFactorRange; i++)
         pindexFirst = pindexFirst->pprev;
     assert(pindexFirst);
 
@@ -2134,7 +2160,8 @@ void static FindMostWorkChain() {
             if (pindexTest->nStatus & BLOCK_FAILED_MASK) {
                 // Candidate has an invalid ancestor, remove entire chain from the set.
                 if (pindexBestInvalid == NULL || pindexNew->nChainWork > pindexBestInvalid->nChainWork)
-                    pindexBestInvalid = pindexNew;                CBlockIndex *pindexFailed = pindexNew;
+                    pindexBestInvalid = pindexNew;
+                CBlockIndex *pindexFailed = pindexNew;
                 while (pindexTest != pindexFailed) {
                     pindexFailed->nStatus |= BLOCK_FAILED_CHILD;
                     setBlockIndexValid.erase(pindexFailed);
@@ -2383,6 +2410,10 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         return state.Invalid(error("CheckBlock() : block timestamp too far in the future"),
                              REJECT_INVALID, "time-too-new");
 
+    // Part of the proof of work is that the first transaction is a true coinbase with the 
+    // headersig verifying. This is necessary because if a block could be solved without verifying the 
+    // proof of work, then an attacker could put in non-sensical data for the header sig, mine much faster
+    // than everyone else, and essentially just burn coins and throw off the difficulty.
     // First transaction must be coinbase, the rest must not be
     if (block.vtx.empty() || !block.vtx[0].IsCoinBase(fCheckPOW ? &block : NULL))
         return state.DoS(100, error("CheckBlock() : first tx is not coinbase"),
@@ -2457,7 +2488,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
         // TODO change this to have new acceptance rules for being in the future
         if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
             return state.Invalid(error("AcceptBlock() : block's timestamp is too old"),
-                                 REJECT_INVALID, "time-too-old");
+                                REJECT_INVALID, "time-too-old");
 
         // Check that all transactions are finalized
         BOOST_FOREACH(const CTransaction& tx, block.vtx)
@@ -2503,7 +2534,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
 
         // Make sure that the coinbase starts with serialized block height
         CScript expect = CScript() << CScriptNum(nHeight);
-        if (block.vtx[0].vin[0].scriptSig.size() != expect.size() ||
+        if (block.vtx[0].vin[0].scriptSig.size() < expect.size() ||
             !std::equal(expect.begin(), expect.end(), block.vtx[0].vin[0].scriptSig.begin()))
         {
             return state.DoS(100, error("AcceptBlock() : block height mismatch in coinbase"),

@@ -258,6 +258,9 @@ bool IsCanonicalPubKey(const valtype &vchPubKey, unsigned int flags) {
 // excessively padded (do not start with a 0 byte, unless an otherwise negative number follows,
 // in which case a single 0 byte is necessary and even required).
 bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags) {
+    if (!(flags & SCRIPT_VERIFY_STRICTENC))
+        return true;
+
     if (vchSig.size() < 9)
         return error("Non-canonical signature: too short");
     if (vchSig.size() > 73)
@@ -350,6 +353,7 @@ bool DEREncodeSignature(const unsigned char sigR[32], const unsigned char sigS[3
     if (extraS) vchSig.push_back((unsigned char) 0x00);
     vchSig.insert(vchSig.end(), &sigS[j], &sigS[32]);
 
+    // TODO probably don't need to check this every time, should be a unit test instead
     if (!IsCanonicalSignature(vchSig, SCRIPT_VERIFY_NOAPPENDSIGHASHTYPE)) {
         vchSig.clear();
         return error("DEREncodeSignature() : Signature was encoded but not canonical");
@@ -1627,7 +1631,7 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType)
 
     if ((whichType % DELAYED_DELTA) == TX_MULTISIG)
     {
-        unsigned char m = vSolutions[whichType > DELAYED_DELTA ? 0 : 1][0];
+        unsigned char m = vSolutions[whichType > DELAYED_DELTA ? 1 : 0][0];
         unsigned char n = vSolutions.back()[0];
         // Support up to x-of-3 multisig txns as standard
         if (n < 1 || n > 3)
@@ -1888,14 +1892,14 @@ bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransa
     return VerifyScript(txin.scriptSig, fromPubKey, txTo, nIn, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, 0);
 }
 
-bool SignSignature(const CKeyStore &keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashTypeIn)
+bool SignSignature(const CKeyStore &keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType)
 {
     assert(nIn < txTo.vin.size());
     CTxIn& txin = txTo.vin[nIn];
     assert(txin.prevout.n < txFrom.vout.size());
     const CTxOut& txout = txFrom.vout[txin.prevout.n];
 
-    return SignSignature(keystore, txout.scriptPubKey, txTo, nIn, nHashTypeIn);
+    return SignSignature(keystore, txout.scriptPubKey, txTo, nIn, nHashType);
 }
 
 static CScript PushAll(const vector<valtype>& values)

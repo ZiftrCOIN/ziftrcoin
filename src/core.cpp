@@ -150,6 +150,9 @@ bool CTransaction::IsCoinBase(const CBlockHeader * pBlockHeader) const
             return false;
     }
 
+    // Coinbase signatures are verified with a cache, so not a problem if an attacker publishes a block with
+    // a large number of coinbase outputs
+
     BOOST_FOREACH(const CTxOut& out, vout) {
         if (pBlockHeader != NULL) {
             if (!out.scriptPubKey.VerifyHeaderSig(pBlockHeader))
