@@ -93,6 +93,17 @@ void ShutdownRPCMining()
 //     return (int64_t)(workDiff.getdouble() / timeDiff);
 // }
 
+// CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval) 
+Value GetNetworkSashPS(int nLookUp, int nHeight) 
+{
+    CBigNum sashpersec = GetNetworkSashPer(nLookUp, nHeight, 1));
+
+    if (sashpersec == CBigNum(-1))
+        return 0;
+
+    return sashpersec.getuint256().GetLow64();
+}
+
 Value getnetworkhashps(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 2)
@@ -111,7 +122,7 @@ Value getnetworkhashps(const Array& params, bool fHelp)
             + HelpExampleRpc("getnetworkhashps", "")
        );
 
-    return GetNetworkHashPS(params.size() > 0 ? params[0].get_int() : 120, params.size() > 1 ? params[1].get_int() : -1);
+    return GetNetworkSashPS(params.size() > 0 ? params[0].get_int() : 120, params.size() > 1 ? params[1].get_int() : -1);
 }
 
 #ifdef ENABLE_WALLET

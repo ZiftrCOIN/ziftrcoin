@@ -77,8 +77,9 @@ protected:
     int nDefaultPort;
     int nRPCPort;
     CBigNum bnProofOfWorkLimit;
-    int nLastMaxSubsidyBlock;
-    int nLastDecreasingSubsidyBlock;
+    int nLastIncrBlock;
+    int nLastCnstBlock;
+    int nLastDecrBlock;
     string strDataDir;
     vector<CDNSSeedData> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];

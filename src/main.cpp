@@ -668,6 +668,7 @@ bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs)
     return true;
 }
 
+// TODO should the number of txouts in the coinbase be included into the sigops count? Probably
 unsigned int GetSigOpCount(const CTransaction& tx)
 {
     unsigned int nSigOps = 0;
@@ -1219,74 +1220,85 @@ void static PruneOrphanBlocks()
 /*
 Block reward schedule:
 
-    |-------------------
-    |                    \
-    |                      -
-    |                        \
-    |                          -
-    |                            \
-    |                              -
-    |                                \
-    |                                  -
-    |                                    \
-    |                                      -
-    |                                        \
-    |                                          ----------------->
-    _____________________________________________________________________ Time
+        Coins awarded per block
+      |
+      |
+1423  |                        --------------------
+      |                      -                        \
+      |                     /                            -- 
+      |                   -                                  \
+      |                 /                                       --
+      |               -                                            \
+      |             /                                                 --
+      |           -                                                      \
+      |         /                                                           --
+      |       -                                                                \
+      |     /                                                                     --
+      |   -                                                                          \
+50    | /                                                                               ----------------->
+      | _______________________|__________________|____________________________________|_______________________ Time
+                            5 years             10 years                            20 years
 
-
-    Expected block generation rate is 1 block per minute.
-
-    Broken up into three sections:
-
-         Maximum               Decreasing          Minimum
-    <------------------><---------------------><--------------
-
-    Max period lasts for:           2.5 years, or 2.5*365*24*60 = 1,314,000 blocks
-    Decreasing periodd lasts for:   7.5 years, or 7.5*365*24*60 = 3,942,000 blocks
-
+Expected block generation rate is 1 block per minute.
 */
 
-// Return average network hashes per second based on the last 'nLookUp' blocks,
-// or from the last difficulty change if 'nLookUp' is nonpositive.
-// If 'nHeight' is nonnegative, compute the estimate at the time when a given block was found.
-int64_t GetNetworkHashPS(int nLookUp, int nHeight) {
-    CBlockIndex* pBlockStart = chainActive[nHeight];
-    if (pBlockStart == NULL)
-        pBlockStart = chainActive.Tip();
+static const uint64_t MAX_TENTH_PERCENTAGE_CHANGE = 75;
+static const uint64_t DIFF_FACTOR_RANGE           = 12;                                  // The number of intervals to include when calculating the hash rate of the network    (blocks)
+static const uint64_t TARGET_SPACING              = 60;                                  // Target number of seconds per block solve                                            (seconds/block)
 
-    int nChainSize = chainActive.Height() + 1;
-    if (nLookUp < 0)
-        nLookUp = ;
-    else if (nLookUp > )
+// Return average network hashes per second based on the last 'nLookUp' intervals,
+// or from the last DIFF_FACTOR_RANGE intervals if 'nLookUp' is nonpositive.
+//
+// If 'nHeight' is legitimate, i.e. there exists a block at the height give, then it uses that block.
+// If there is not a block at nHeight, then it uses the tip of the currently active chain.
+//
+// Ex.
+// nLookUp = 2
+// nHeight = 5
+//      C0      C1      C2      C3      C4      C5      ...
+//                               <- 2 -> <- 1 -> 
+CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval) 
+{
+    CBlockIndex* pBlockLast = chainActive[nHeight];
+    if (pBlockLast == NULL)
+        pBlockLast = chainActive.Tip();
 
-    // If nLookUp is larger than chain, then set it to chain length.
-    if (nLookUp > (1 + pb->nHeight)
-        nLookUp = pb->nHeight;
+    if (nLookUp <= 0)
+        nLookUp = DIFF_FACTOR_RANGE;
+    if (nLookUp > pBlockLast->nHeight)
+        nLookUp = pBlockLast->nHeight;
 
-    if (pb == NULL || !pb->nHeight)
-        return 0;
+    // If no last block or last block is genesis block
+    if (pBlockLast == NULL || pBlockLast->nHeight == 0)
+        return CBigNum(-1);
 
-    CBlockIndex *pb0 = pb;
-    int64_t minTime = pb0->GetBlockTime();
+    CBlockIndex* pBlockFirst = pBlockLast;
+    int64_t minTime = pBlockFirst->GetBlockTime();
     int64_t maxTime = minTime;
-    for (int i = 0; i < nLookUp+1; i++) {
-        pb0 = pb0->pprev;
-        int64_t time = pb0->GetBlockTime();
-        minTime = std::min(time, minTime);
-        maxTime = std::max(time, maxTime);
+    for (int i = 0; i < nLookUp; i++) {
+        pBlockFirst = pBlockFirst->pprev;
+        int64_t nTime = pBlockFirst->GetBlockTime();
+        minTime = std::min(nTime, minTime);
+        maxTime = std::max(nTime, maxTime);
     }
 
     // In case there's a situation where minTime == maxTime, we don't want a divide by zero exception.
     if (minTime == maxTime)
-        return 0;
+        return CBigNum(-1);
 
-    uint256 workDiff = pb->nChainWork - pb0->nChainWork;
-    int64_t timeDiff = maxTime - minTime;
+    CBigNum num;
+    num.setuint256(pBlockLast->nChainWork - pBlockFirst->nChainWork);
 
-    return (int64_t)(workDiff.getdouble() / timeDiff);
+    CBigNum den;
+    den.setuint64(maxTime - minTime);
+
+    CBigNum val;
+    val.setuint64(nInterval);
+
+    return (val * num / den);
 }
 
+// TODO change this
 int64_t GetBlockValue(int nHeight, int64_t nFees)
 {
     if (nHeight > Params().LastDecreasingSubsidyBlock())
@@ -1300,11 +1312,6 @@ int64_t GetBlockValue(int nHeight, int64_t nFees)
 
     return nSubsidy + nFees;
 }
-
-static const int64_t nDiffFactorRange = 12;                                 // The number of blocks to include when calculating the hash rate of the network    (blocks)
-static const int64_t nTargetSpacing   = 60;                                 // Target number of seconds per block solve - TODO figure out better value          (seconds/block)
-static const int64_t nTargetTimespan  = nDiffFactorRange * nTargetSpacing;  // Target number of seconds between block difficulty readjustments                  (seconds)
-//static const int64_t nInterval = nTargetTimespan / nTargetSpacing;        // Actual number of blocks  between block difficulty readjustments                  (blocks)
 
 //
 // minimum amount of work that could possibly be required nTime after
@@ -1332,51 +1339,53 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
     return bnResult.GetCompact();
 }
 
+
+// TODO make a similar method to track the max block size
+
+// Ex.
+// nLookUp = 4
+// nHeight = 8
+//      C0      C1      C2      C3      C4      C5      C6      C7      C8      ...
+//                                       <- 4 -> <- 3 -> <- 2 -> <- 1 ->
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
     unsigned int nProofOfWorkLimit = Params().ProofOfWorkLimit().GetCompact();
 
     // Genesis block
-    if (pindexLast == NULL)
+    if (pindexLast == NULL || pindexLast->nHeight < 2*DIFF_FACTOR_RANGE)
         return nProofOfWorkLimit;
 
-    // Only change once per interval
     // Special difficulty rule for testnet:
-    // If the new block's timestamp is more than 2* 10 minutes
+    // If the new block's timestamp is more than 2*TARGET_SPACING minutes
     // then allow mining of a min-difficulty block.
-    if (TestNet() && pblock->nTime > pindexLast->nTime + nTargetSpacing*2)
+    if (TestNet() && pblock->nTime > pindexLast->nTime + 2*TARGET_SPACING)
         return nProofOfWorkLimit;
-        
-    // Go back by what we want to be 14 days worth of blocks
-    const CBlockIndex* pindexFirst = pindexLast;
-    for (int i = 0; pindexFirst && i < nDiffFactorRange; i++)
-        pindexFirst = pindexFirst->pprev;
-    assert(pindexFirst);
 
-    // Limit adjustment step
-    int64_t nActualTimespan = pindexLast->GetBlockTime() - pindexFirst->GetBlockTime();
-    LogPrintf("  nActualTimespan = %d  before bounds\n", nActualTimespan);
-    if (nActualTimespan < nTargetTimespan/4)
-        nActualTimespan = nTargetTimespan/4;
-    if (nActualTimespan > nTargetTimespan*4)
-        nActualTimespan = nTargetTimespan*4;
+    CBigNum nPrevSashPerInterval = GetNetworkSashPer(DIFF_FACTOR_RANGE, pindexLast->nHeight - DIFF_FACTOR_RANGE, TARGET_SPACING);
+    CBigNum nCurrSashPerInterval = GetNetworkSashPer(DIFF_FACTOR_RANGE, pindexLast->nHeight, TARGET_SPACING);
+    CBigNum nNextSashPerInterval = nCurrSashPerInterval + (DIFF_FACTOR_RANGE/2 + 1) * ((nCurrSashPerInterval-nPrevSashPerInterval)/DIFF_FACTOR_RANGE);
+    
+    CBigNum nTipNumHashes = ((CBigNum(1) << 256) / (CBigNum().SetCompact(pindex->nBits) + 1));
 
-    // Retarget
-    CBigNum bnNew;
-    bnNew.SetCompact(pindexLast->nBits);
-    bnNew *= nActualTimespan;
-    bnNew /= nTargetTimespan;
+    CBigNum nMaxChange((1000 + MAX_TENTH_PERCENTAGE_CHANGE) * nTipNumHashes / 1000);
+    CBigNum nMinChange((1000 - MAX_TENTH_PERCENTAGE_CHANGE) * nTipNumHashes / 1000);
+    if (nNextSashPerInterval > nMaxChange)
+        nNextSashPerInterval = nMaxChange;
+    if (nNextSashPerInterval < nMinChange)
+        nNextSashPerInterval = nMinChange;
 
-    if (bnNew > Params().ProofOfWorkLimit())
-        bnNew = Params().ProofOfWorkLimit();
+    CBigNum bnTarget = ((CBigNum(1) << 256) / nNextSashPerInterval) - 1;
 
-    /// debug print
-    LogPrintf("GetNextWorkRequired RETARGET\n");
-    LogPrintf("nTargetTimespan = %d    nActualTimespan = %d\n", nTargetTimespan, nActualTimespan);
-    LogPrintf("Before: %08x  %s\n", pindexLast->nBits, CBigNum().SetCompact(pindexLast->nBits).getuint256().ToString());
-    LogPrintf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.getuint256().ToString());
+    if (bnTarget > Params().ProofOfWorkLimit())
+        bnTarget = Params().ProofOfWorkLimit();
 
-    return bnNew.GetCompact();
+    /// debug print - probably don't want to print this every time anymore, since can 
+    // LogPrintf("GetNextWorkRequired RETARGET\n");
+    // LogPrintf("nTargetTimespan = %d    nActualTimespan = %d\n", nTargetTimespan, nActualTimespan);
+    // LogPrintf("Before: %08x  %s\n", pindexLast->nBits, CBigNum().SetCompact(pindexLast->nBits).getuint256().ToString());
+    // LogPrintf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.getuint256().ToString());
+
+    return bnTarget.GetCompact();
 }
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits)
@@ -1425,6 +1434,7 @@ void CheckForkWarningConditions()
 
     // If our best fork is no longer within 72 blocks (+/- 12 hours if no one mines it)
     // of our head, drop it
+    // TODO does this number need to be changed?
     if (pindexBestForkTip && chainActive.Height() - pindexBestForkTip->nHeight >= 72)
         pindexBestForkTip = NULL;
 
@@ -1483,6 +1493,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     // or a chain that is entirely longer than ours and invalid (note that this should be detected by both)
     // We define it this way because it allows us to only store the highest fork tip (+ base) which meets
     // the 7-block condition and from this always have the most-likely-to-cause-warning fork
+    // TODO do any of the constants here need to be changed?
     if (pfork && (!pindexBestForkTip || (pindexBestForkTip && pindexNewForkTip->nHeight > pindexBestForkTip->nHeight)) &&
             pindexNewForkTip->nChainWork - pfork->nChainWork > (pfork->GetBlockWork() * 7).getuint256() &&
             chainActive.Height() - pindexNewForkTip->nHeight < 72)
