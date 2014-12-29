@@ -57,9 +57,9 @@ public:
     const vector<unsigned char>& AlertKey() const { return vAlertPubKey; }
     int GetDefaultPort() const { return nDefaultPort; }
     const CBigNum& ProofOfWorkLimit() const { return bnProofOfWorkLimit; }
-    unsigned int NumIncrBlocks() const { return nNumIncrBlocks; }
-    unsigned int NumConstBlocks()const { return nNumConstBlocks; }
-    unsigned int NumDecrBlocks() const { return nNumDecrBlocks; }
+    int NumIncrBlocks() const { return nNumIncrBlocks; }
+    int NumConstBlocks()const { return nNumConstBlocks; }
+    int NumDecrBlocks() const { return nNumDecrBlocks; }
     virtual const CBlock& GenesisBlock() const = 0;
     virtual bool RequireRPCPassword() const { return true; }
     const string& DataDir() const { return strDataDir; }

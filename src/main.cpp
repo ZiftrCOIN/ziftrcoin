@@ -1908,7 +1908,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     int64_t nStart = GetTimeMicros();
     int64_t nFees = 0;
     int nInputs = 0;
-    unsigned int nSigOps = 0;
+    unsigned int nSigOps = 0; 
     CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));
     std::vector<std::pair<uint256, CDiskTxPos> > vPos;
     vPos.reserve(block.vtx.size());

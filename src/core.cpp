@@ -149,16 +149,22 @@ bool CTransaction::IsCoinBase(const CBlockHeader * pBlockHeader) const
             return false;
     }
 
-    // There must be one pay-to-pubkey output
-    if (vout.size() != 1)
+    // There must be at least one pay-to-pubkey output
+    if (vout.size() == 0)
         return false;
 
+    const CScript& firstScriptPubKey = vout[0].scriptPubKey;
+
+    for (unsigned int i = 1; i < vout.size(); i++) {
+        if (firstScriptPubKey != vout[i].scriptPubKey)
+            return false;
+    }
 
     if (pBlockHeader != NULL) {
-        if (!vout[0].scriptPubKey.VerifyHeaderSig(pBlockHeader))
+        if (!firstScriptPubKey.VerifyHeaderSig(pBlockHeader))
             return false;
     } else {
-        if (!vout[0].scriptPubKey.IsPayToPubKey())
+        if (!firstScriptPubKey.IsPayToPubKey())
             return false;
     }
     
