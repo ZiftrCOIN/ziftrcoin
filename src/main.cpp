@@ -615,7 +615,6 @@ bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)
 //
 bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs)
 {
-    // TODO will change when allow spends in coinbase
     if (tx.IsCoinBase())
         return true; // Coinbases don't use vin normally
 
@@ -642,7 +641,8 @@ bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs)
         if (!EvalScript(stack, tx.vin[i].scriptSig, tx, i, false, 0))
             return false;
 
-        if ((whichType % DELAYED_DELTA) == TX_SCRIPTHASH)
+        // if ((whichType % DELAYED_DELTA) == TX_SCRIPTHASH)
+        if (whichType == TX_SCRIPTHASH)
         {
             if (stack.empty())
                 return false;
@@ -651,7 +651,8 @@ bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs)
             txnouttype whichType2;
             if (!Solver(subscript, whichType2, vSolutions2))
                 return false;
-            if ((whichType2 % DELAYED_DELTA) == TX_SCRIPTHASH)
+            // if ((whichType2 % DELAYED_DELTA) == TX_SCRIPTHASH)
+            if (whichType2 == TX_SCRIPTHASH)
                 return false;
 
             int tmpExpected;
@@ -685,7 +686,6 @@ unsigned int GetSigOpCount(const CTransaction& tx)
 
 unsigned int GetP2SHSigOpCount(const CTransaction& tx, CCoinsViewCache& view)
 {
-    // TODO if coinbases can spend inputs then this might not be the case
     if (tx.IsCoinBase())
         return 0;
 
@@ -791,8 +791,6 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
         // Coinbases can now have multiple null inputs
         if (fCoinbase) 
         {
-            // TODO when allow non null coinbase inputs, need make sure con coinbase txouttypes
-            // outputs in the coinbase transaction don't use the coinbase reserved ops
             if (!txin.prevout.IsNull()) 
                 return state.DoS(10, error("CheckTransaction() : prevout in coinbase is not null"),
                                  REJECT_INVALID, "bad-txns-prevout-null");
@@ -1217,6 +1215,7 @@ void static PruneOrphanBlocks()
 
 
 
+
 /*
 Block reward schedule:
 
@@ -1242,9 +1241,40 @@ Block reward schedule:
 Expected block generation rate is 1 block per minute.
 */
 
-static const uint64_t MAX_TENTH_PERCENTAGE_CHANGE = 75;
-static const uint64_t DIFF_FACTOR_RANGE           = 12;                                  // The number of intervals to include when calculating the hash rate of the network    (blocks)
-static const uint64_t TARGET_SPACING              = 60;                                  // Target number of seconds per block solve                                            (seconds/block)
+
+
+
+//
+//      0   1   2   3   4   5   6   7   8   9
+
+int64_t GetBlockValue(int nHeight, int64_t nFees)
+{
+    int64_t nBlockReward;
+    if (nHeight < Params().NumIncrBlocks())
+    {
+        double dIncrPerBlock = (double)((MAX_SUBSIDY - MIN_SUBSIDY)/Params().NumIncrBlocks());
+        nBlockReward = MIN_SUBSIDY + ((int64_t) (nHeight * dIncrPerBlock));
+    }
+    else if (nHeight < (Params().NumIncrBlocks() + Params().NumConstBlocks()))
+    {
+        nBlockReward = MAX_SUBSIDY;
+    }
+    else if (nHeight < (Params().NumIncrBlocks() + Params().NumConstBlocks() + Params().NumDecrBlocks()))
+    {
+        double dDecrPerBlock = (double)((MAX_SUBSIDY - MIN_SUBSIDY)/Params().NumDecrBlocks());
+        nBlockReward = MAX_SUBSIDY - ((int64_t) ((nHeight - Params().NumIncrBlocks() - Params().NumConstBlocks() + 1) * dDecrPerBlock));
+    } 
+    else 
+    {
+        nBlockReward = MIN_SUBSIDY;
+    }
+    
+    return nBlockReward + nFees;
+}
+
+static const int64_t MAX_TENTH_PERCENTAGE_CHANGE = 75;
+static const int64_t DIFF_FACTOR_RANGE           = 12;                                  // TODO The number of intervals to include when calculating the hash rate of the network    (blocks) 
+static const int64_t TARGET_SPACING              = 60;                                  // Target number of seconds per block solve                                                 (seconds/block)
 
 // Return average network hashes per second based on the last 'nLookUp' intervals,
 // or from the last DIFF_FACTOR_RANGE intervals if 'nLookUp' is nonpositive.
@@ -1257,7 +1287,7 @@ static const uint64_t TARGET_SPACING              = 60;                         
 // nHeight = 5
 //      C0      C1      C2      C3      C4      C5      ...
 //                               <- 2 -> <- 1 -> 
-CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval) 
+CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval)
 {
     CBlockIndex* pBlockLast = chainActive[nHeight];
     if (pBlockLast == NULL)
@@ -1298,21 +1328,6 @@ CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval)
     return (val * num / den);
 }
 
-// TODO change this
-int64_t GetBlockValue(int nHeight, int64_t nFees)
-{
-    if (nHeight > Params().LastDecreasingSubsidyBlock())
-        return MIN_SUBSIDY + nFees;
-
-    int64_t nSubsidy = MAX_SUBSIDY;
-    
-    int nBlocksPastEndMaxPeriod = (nHeight > Params().LastMaxSubsidyBlock() ? nHeight-Params().LastMaxSubsidyBlock() : 0);
-    int64_t nDecreasePerBlockPastEndMaxPeriod = (MAX_SUBSIDY - MIN_SUBSIDY)/(Params().LastDecreasingSubsidyBlock() - Params().LastMaxSubsidyBlock());
-    nSubsidy -= nBlocksPastEndMaxPeriod * nDecreasePerBlockPastEndMaxPeriod;
-
-    return nSubsidy + nFees;
-}
-
 //
 // minimum amount of work that could possibly be required nTime after
 // minimum work required was nBase
@@ -1321,21 +1336,26 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 {
     const CBigNum& bnLimit = Params().ProofOfWorkLimit();
     // Testnet has min-difficulty blocks
-    // after nTargetSpacing*2 time between blocks:
-    if (TestNet() && nTime > nTargetSpacing*2)
+    // after TARGET_SPACING*2 time between blocks:
+    if (TestNet() && nTime > TARGET_SPACING*2)
         return bnLimit.GetCompact();
 
     CBigNum bnResult;
     bnResult.SetCompact(nBase);
     while (nTime > 0 && bnResult < bnLimit)
     {
-        // Maximum 400% adjustment...
-        bnResult *= 4;
-        // ... in best-case exactly 4-times-normal target time
-        nTime -= nTargetTimespan*4;
+        // Maximum MAX_TENTH_PERCENTAGE_CHANGE adjustment ...
+        CBigNum nTipNumHashes = ((CBigNum(1) << 256) / (bnResult + 1));
+        CBigNum nMinChange((1000 - MAX_TENTH_PERCENTAGE_CHANGE) * nTipNumHashes / 1000);
+        bnResult = ((CBigNum(1) << 256) / nMinChange) - 1;
+
+        // ... have to take at least this amount of time
+        nTime -= TARGET_SPACING;
     }
+
     if (bnResult > bnLimit)
         bnResult = bnLimit;
+
     return bnResult.GetCompact();
 }
 
@@ -1365,7 +1385,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     CBigNum nCurrSashPerInterval = GetNetworkSashPer(DIFF_FACTOR_RANGE, pindexLast->nHeight, TARGET_SPACING);
     CBigNum nNextSashPerInterval = nCurrSashPerInterval + (DIFF_FACTOR_RANGE/2 + 1) * ((nCurrSashPerInterval-nPrevSashPerInterval)/DIFF_FACTOR_RANGE);
     
-    CBigNum nTipNumHashes = ((CBigNum(1) << 256) / (CBigNum().SetCompact(pindex->nBits) + 1));
+    CBigNum nTipNumHashes = ((CBigNum(1) << 256) / (CBigNum().SetCompact(pindexLast->nBits) + 1));
 
     CBigNum nMaxChange((1000 + MAX_TENTH_PERCENTAGE_CHANGE) * nTipNumHashes / 1000);
     CBigNum nMinChange((1000 - MAX_TENTH_PERCENTAGE_CHANGE) * nTipNumHashes / 1000);
@@ -1432,10 +1452,9 @@ void CheckForkWarningConditions()
     if (IsInitialBlockDownload())
         return;
 
-    // If our best fork is no longer within 72 blocks (+/- 12 hours if no one mines it)
+    // If our best fork is no longer within FORK_HEIGHT_DIFF_ALERT blocks (~6 hours if no one mines it)
     // of our head, drop it
-    // TODO does this number need to be changed?
-    if (pindexBestForkTip && chainActive.Height() - pindexBestForkTip->nHeight >= 72)
+    if (pindexBestForkTip && chainActive.Height() - pindexBestForkTip->nHeight >= FORK_HEIGHT_DIFF_ALERT)
         pindexBestForkTip = NULL;
 
     if (pindexBestForkTip || (pindexBestInvalid && pindexBestInvalid->nChainWork > chainActive.Tip()->nChainWork + (chainActive.Tip()->GetBlockWork() * 6).getuint256()))
@@ -1487,7 +1506,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     }
 
     // We define a condition which we should warn the user about as a fork of at least 7 blocks
-    // who's tip is within 72 blocks (+/- 12 hours if no one mines it) of ours
+    // who's tip is within FORK_HEIGHT_DIFF_ALERT blocks (~6 hours if no one mines it) of ours
     // We use 7 blocks rather arbitrarily as it represents just under 10% of sustained network
     // hash rate operating on the fork.
     // or a chain that is entirely longer than ours and invalid (note that this should be detected by both)
@@ -1496,7 +1515,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     // TODO do any of the constants here need to be changed?
     if (pfork && (!pindexBestForkTip || (pindexBestForkTip && pindexNewForkTip->nHeight > pindexBestForkTip->nHeight)) &&
             pindexNewForkTip->nChainWork - pfork->nChainWork > (pfork->GetBlockWork() * 7).getuint256() &&
-            chainActive.Height() - pindexNewForkTip->nHeight < 72)
+            chainActive.Height() - pindexNewForkTip->nHeight < FORK_HEIGHT_DIFF_ALERT)
     {
         pindexBestForkTip = pindexNewForkTip;
         pindexBestForkBase = pfork;
@@ -1618,8 +1637,6 @@ bool VerifySignature(const CCoins& txFrom, const CTransaction& txTo, unsigned in
 bool CheckInputs(const CTransaction& tx, CValidationState &state, CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, std::vector<CScriptCheck> *pvChecks)
 {
     AssertLockHeld(cs_main);
-    // TODO if coinbase is allowed to spend inputs, this needs to change
-    // probably just need to check all places where IsCoinBase is called
     if (!tx.IsCoinBase())
     {
         if (pvChecks)
@@ -1754,7 +1771,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         outs = CCoins();
 
         // restore inputs
-        if (i > 0) { // not coinbases
+        if (i > 0) { // not coinbase 
             const CTxUndo &txundo = blockUndo.vtxundo[i-1];
             if (txundo.vprevout.size() != tx.vin.size())
                 return error("DisconnectBlock() : transaction and undo data inconsistent");
@@ -1841,7 +1858,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     assert(hashPrevBlock == view.GetBestBlock());
 
     // Special case for the genesis block, skipping connection of its transactions
-    // (its coinbase is unspendable)
+    // (its coinbase is unspendable) - not in ziftrCOIN
     //if (block.GetHash() == Params().HashGenesisBlock()) {
     //    view.SetBestBlock(pindex->GetBlockHash());
     //    return true;
@@ -2304,7 +2321,7 @@ bool AddToBlockIndex(CBlock& block, CValidationState& state, const CDiskBlockPos
 }
 
 
-bool FindBlockPos(CValidationState &state, CDiskBlockPos &pos, unsigned int nAddSize, unsigned int nHeight, uint64_t nTime, bool fKnown = false)
+bool FindBlockPos(CValidationState &state, CDiskBlockPos &pos, unsigned int nAddSize, int nHeight, uint64_t nTime, bool fKnown = false)
 {
     bool fUpdatedLast = false;
 
@@ -2398,8 +2415,6 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
     return true;
 }
 
-// TODO check that the delayed value in delayed transactions is later than the current block height
-// TODO check that inputs in the coinbase get marked as spent if they are not null 
 bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bool fCheckMerkleRoot)
 {
     // These are checks that are independent of context
@@ -2417,7 +2432,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
 
     // Check timestamp
     // TODO this is unnecessary - no need for nTime hacks with Sign to Mine
-    if (block.GetBlockTime() > GetAdjustedTime() + 2 * 60 * 60)
+    if (block.GetBlockTime() > GetAdjustedTime() + MAX_BLOCK_TIME_OFFSET)
         return state.Invalid(error("CheckBlock() : block timestamp too far in the future"),
                              REJECT_INVALID, "time-too-new");
 

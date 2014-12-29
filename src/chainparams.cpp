@@ -5,13 +5,13 @@
 
 #include "chainparams.h"
 
-#include "assert.h"
 #include "core.h"
 #include "protocol.h"
 #include "util.h"
 #include "script.h"
 #include "base58.h"
 
+#include <assert.h>
 #include <boost/assign/list_of.hpp>
 
 using namespace boost::assign;
@@ -169,11 +169,10 @@ public:
         vAlertPubKey = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");//"0380d4125f5357aac2b98c201ee76c3e26a5ef084a5fcd26e65c9cfff7ad1a026c");
 
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 16);
-        // Max period lasts for:           2.5 years, or 2.5*365*24*60 = 1,314,000 blocks
-        // Decreasing periodd lasts for:   7.5 years, or 7.5*365*24*60 = 3,942,000 blocks
-        nLastMaxSubsidyBlock = 1314000;
-        nLastDecreasingSubsidyBlock = nLastMaxSubsidyBlock + 3942000;
-        
+        nNumIncrBlocks =  5  * 365 * 24 * 60;
+        nNumConstBlocks = 5  * 365 * 24 * 60;
+        nNumDecrBlocks =  10 * 365 * 24 * 60;
+
         CTransaction txNew;
 
         // Set the input of the coinbase
@@ -336,8 +335,6 @@ public:
         nDefaultPort = 12333;
         strDataDir = "regtest";
 
-        // nLastMaxSubsidyBlock = 20;
-        // nLastDecreasingSubsidyBlock = nLastMaxSubsidyBlock + 60;
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 1);
 
         std::vector<unsigned char> vchSigR;

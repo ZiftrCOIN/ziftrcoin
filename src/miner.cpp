@@ -710,7 +710,7 @@ void static BitcoinMiner(CWallet *pwallet)
                     nSashCounter = 0;
                 }
 
-                unsigned int nTries = 50;
+                unsigned int nTries = 100;
                 unsigned int nNumFailedAttempts = DoSignatureHashes(pblock, signKey, nTries);
                 nSashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
 

@@ -138,10 +138,9 @@ double CTransaction::ComputePriority(double dPriorityInputs, unsigned int nTxSiz
 }
 
 
-// TODO should we make it so that if the input value and the output value
-// at the corresponding index are equal, then no need for the headersig check?
 bool CTransaction::IsCoinBase(const CBlockHeader * pBlockHeader) const
 {
+    // Must have at least one null input because the height needs to be put into it
     if (vin.size() == 0) 
         return false;
 
@@ -150,29 +149,20 @@ bool CTransaction::IsCoinBase(const CBlockHeader * pBlockHeader) const
             return false;
     }
 
-    // Coinbase signatures are verified with a cache, so not a problem if an attacker publishes a block with
-    // a large number of coinbase outputs
+    // There must be one pay-to-pubkey output
+    if (vout.size() != 1)
+        return false;
 
-    BOOST_FOREACH(const CTxOut& out, vout) {
-        if (pBlockHeader != NULL) {
-            if (!out.scriptPubKey.VerifyHeaderSig(pBlockHeader))
-                return false;
-        } else {
-            if (!out.scriptPubKey.IsPayToPubKey())
-                return false;
-        }
+
+    if (pBlockHeader != NULL) {
+        if (!vout[0].scriptPubKey.VerifyHeaderSig(pBlockHeader))
+            return false;
+    } else {
+        if (!vout[0].scriptPubKey.IsPayToPubKey())
+            return false;
     }
-
     
-
-    // Must have at least one null input because the height needs to be put into it
-    
-
     return true;
-
-
-
-
 
     // New param: CCoinsViewCache& view
 
@@ -214,8 +204,6 @@ bool CTransaction::IsCoinBase(const CBlockHeader * pBlockHeader) const
     //     }
     // }
     // return true;
-
-
 
 }
 

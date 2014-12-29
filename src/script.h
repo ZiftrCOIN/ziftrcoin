@@ -194,7 +194,7 @@ enum
     SCRIPT_VERIFY_NOAPPENDSIGHASHTYPE   = (1U << 4),            // for when using signatures without the sighashtype appended
 };
 
-const int DELAYED_DELTA = 100;
+// const int DELAYED_DELTA = 100;
 enum txnouttype
 {
     TX_NONSTANDARD              = 0,
@@ -205,10 +205,10 @@ enum txnouttype
     TX_MULTISIG                 = 4,
     TX_NULL_DATA                = 5,
     
-    TX_DELAYEDPUBKEY            = DELAYED_DELTA + TX_PUBKEY,
-    TX_DELAYEDPUBKEYHASH        = DELAYED_DELTA + TX_PUBKEYHASH,
-    TX_DELAYEDSCRIPTHASH        = DELAYED_DELTA + TX_SCRIPTHASH,
-    TX_DELAYEDMULTISIG          = DELAYED_DELTA + TX_MULTISIG,
+    // TX_DELAYEDPUBKEY            = DELAYED_DELTA + TX_PUBKEY,
+    // TX_DELAYEDPUBKEYHASH        = DELAYED_DELTA + TX_PUBKEYHASH,
+    // TX_DELAYEDSCRIPTHASH        = DELAYED_DELTA + TX_SCRIPTHASH,
+    // TX_DELAYEDMULTISIG          = DELAYED_DELTA + TX_MULTISIG,
 };
 
 class CNoDestination {

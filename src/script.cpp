@@ -74,10 +74,10 @@ const char* GetTxnOutputType(txnouttype t)
     case TX_SCRIPTHASH:         return "scripthash";
     case TX_MULTISIG:           return "multisig";
     case TX_NULL_DATA:          return "nulldata";
-    case TX_DELAYEDPUBKEY:      return "delayedpubkey";
-    case TX_DELAYEDPUBKEYHASH:  return "delayedpubkeyhash";
-    case TX_DELAYEDSCRIPTHASH:  return "delayedscripthash";
-    case TX_DELAYEDMULTISIG:    return "delayedmultisig";
+    // case TX_DELAYEDPUBKEY:      return "delayedpubkey";
+    // case TX_DELAYEDPUBKEYHASH:  return "delayedpubkeyhash";
+    // case TX_DELAYEDSCRIPTHASH:  return "delayedscripthash";
+    // case TX_DELAYEDMULTISIG:    return "delayedmultisig";
     }
     return NULL;
 }
@@ -1099,9 +1099,6 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                         (txTo.nLockTime >= LOCKTIME_THRESHOLD && nLockTime <   LOCKTIME_THRESHOLD))
                         return false;
 
-                    // Now that we know we're comparing apples-to-apples, and that the lock time in txTo
-                    // is actually in effect, the comparison is a simple numeric one.
-                    //
                     // Lock time requirement has to be satisfied and enabled
                     // by having at least one non-final input
                     // Finally the nLockTime feature can be disabled and thus
@@ -1112,7 +1109,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                     // make the lock time go into effect. We just require the one
                     // at the input given in order to minimize the data required 
                     // to prove correct CHECKLOCKTIMEVERIFY execution.
-                    bool fLockTimeSatisfied = ((nLockTime <= (int64_t)txTo.nLockTime) && txTo.vin[nIn].IsFinal());
+                    bool fLockTimeSatisfied = ((nLockTime <= (int64_t)txTo.nLockTime) && !txTo.vin[nIn].IsFinal());
 
                     // Put the result on the stack
                     stack.push_back(fLockTimeSatisfied ? vchTrue : vchFalse);
@@ -1388,19 +1385,19 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
     {
         // P2SH puts the redemption conditions in the hands of the receiver
         mTemplates.insert(make_pair(TX_SCRIPTHASH, CScript() << OP_HASH160 << OP_HASH160HASH << OP_EQUAL));
-        mTemplates.insert(make_pair(TX_DELAYEDSCRIPTHASH, CScript() << OP_SCRIPTNUMBER << OP_CHECKLOCKTIMEVERIFY << OP_HASH160 << OP_HASH160HASH << OP_EQUAL));
+        // mTemplates.insert(make_pair(TX_DELAYEDSCRIPTHASH, CScript() << OP_SCRIPTNUMBER << OP_CHECKLOCKTIMEVERIFY << OP_HASH160 << OP_HASH160HASH << OP_EQUAL));
 
         // Bitcoin address tx, sender provides hash of pubkey, receiver provides signature and pubkey
         mTemplates.insert(make_pair(TX_PUBKEYHASH, CScript() << OP_DUP << OP_HASH160 << OP_HASH160HASH << OP_EQUALVERIFY << OP_CHECKSIG));
-        mTemplates.insert(make_pair(TX_DELAYEDPUBKEYHASH, CScript() << OP_SCRIPTNUMBER << OP_CHECKLOCKTIMEVERIFY << OP_DUP << OP_HASH160 << OP_HASH160HASH << OP_EQUALVERIFY << OP_CHECKSIG));
+        // mTemplates.insert(make_pair(TX_DELAYEDPUBKEYHASH, CScript() << OP_SCRIPTNUMBER << OP_CHECKLOCKTIMEVERIFY << OP_DUP << OP_HASH160 << OP_HASH160HASH << OP_EQUALVERIFY << OP_CHECKSIG));
 
         // Old Standard tx, sender provides pubkey, receiver adds signature
         mTemplates.insert(make_pair(TX_PUBKEY, CScript() << OP_PUBKEY << OP_CHECKSIG));
-        mTemplates.insert(make_pair(TX_DELAYEDPUBKEY, CScript() << OP_SCRIPTNUMBER << OP_CHECKLOCKTIMEVERIFY << OP_PUBKEY << OP_CHECKSIG));
+        // mTemplates.insert(make_pair(TX_DELAYEDPUBKEY, CScript() << OP_SCRIPTNUMBER << OP_CHECKLOCKTIMEVERIFY << OP_PUBKEY << OP_CHECKSIG));
 
         // Sender provides N pubkeys, receivers provides M signatures
         mTemplates.insert(make_pair(TX_MULTISIG, CScript() << OP_SMALLINTEGER << OP_PUBKEYS << OP_SMALLINTEGER << OP_CHECKMULTISIG));
-        mTemplates.insert(make_pair(TX_DELAYEDMULTISIG, CScript() << OP_SCRIPTNUMBER << OP_CHECKLOCKTIMEVERIFY << OP_SMALLINTEGER << OP_PUBKEYS << OP_SMALLINTEGER << OP_CHECKMULTISIG));
+        // mTemplates.insert(make_pair(TX_DELAYEDMULTISIG, CScript() << OP_SCRIPTNUMBER << OP_CHECKLOCKTIMEVERIFY << OP_SMALLINTEGER << OP_PUBKEYS << OP_SMALLINTEGER << OP_CHECKMULTISIG));
 
         // Empty, provably prunable, data-carrying output
         mTemplates.insert(make_pair(TX_NULL_DATA, CScript() << OP_RETURN << OP_SMALLDATA));
@@ -1409,13 +1406,13 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
 
     // Shortcut for pay-to-script-hash, which are more constrained than the other types:
     // it is always OP_HASH160 20 [20 byte hash] OP_EQUAL
-    // if (scriptPubKey.IsPayToScriptHash())
-    // {
-    //     typeRet = TX_SCRIPTHASH;
-    //     vector<unsigned char> hashBytes(scriptPubKey.begin()+2, scriptPubKey.begin()+22);
-    //     vSolutionsRet.push_back(hashBytes);
-    //     return true;
-    // }
+    if (scriptPubKey.IsPayToScriptHash())
+    {
+        typeRet = TX_SCRIPTHASH;
+        vector<unsigned char> hashBytes(scriptPubKey.begin()+2, scriptPubKey.begin()+22);
+        vSolutionsRet.push_back(hashBytes);
+        return true;
+    }
 
     // Scan templates
     const CScript& script1 = scriptPubKey;
@@ -1436,10 +1433,11 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
             {
                 // Found a match
                 typeRet = tplate.first;
-                if ((typeRet % DELAYED_DELTA) == TX_MULTISIG)
+                // if ((typeRet % DELAYED_DELTA) == TX_MULTISIG)
+                if (typeRet == TX_MULTISIG)
                 {
                     // Additional checks for TX_MULTISIG:
-                    unsigned char m = vSolutionsRet[typeRet > DELAYED_DELTA ? 1 : 0][0];
+                    unsigned char m = vSolutionsRet.front()[0];
                     unsigned char n = vSolutionsRet.back()[0];
                     if (m < 1 || n < 1 || m > n || vSolutionsRet.size()-2 != n)
                         return false;
@@ -1571,14 +1569,18 @@ bool Solver(const CKeyStore& keystore, const CScript& scriptPubKey, uint256 hash
     case TX_NULL_DATA:
         return false;
     case TX_PUBKEY:
-    case TX_DELAYEDPUBKEY:
-        keyID = CPubKey(vSolutions[whichTypeRet > DELAYED_DELTA ? 1 : 0]).GetID();
+    // case TX_DELAYEDPUBKEY:
+        // keyID = CPubKey(vSolutions[whichTypeRet > DELAYED_DELTA ? 1 : 0]).GetID();
+        keyID = CPubKey(vSolutions[0]).GetID();
         return Sign1(keyID, keystore, hash, nHashType, scriptSigRet);
     case TX_PUBKEYHASH:
-    case TX_DELAYEDPUBKEYHASH:
-        keyID = CKeyID(uint160(vSolutions[whichTypeRet > DELAYED_DELTA ? 1 : 0]));
+    // case TX_DELAYEDPUBKEYHASH:
+        // keyID = CKeyID(uint160(vSolutions[whichTypeRet > DELAYED_DELTA ? 1 : 0]));
+        keyID = CKeyID(uint160(vSolutions[0]));
         if (!Sign1(keyID, keystore, hash, nHashType, scriptSigRet))
+        {
             return false;
+        }
         else
         {
             CPubKey vch;
@@ -1587,12 +1589,14 @@ bool Solver(const CKeyStore& keystore, const CScript& scriptPubKey, uint256 hash
         }
         return true;
     case TX_SCRIPTHASH:
-    case TX_DELAYEDSCRIPTHASH:
-        return keystore.GetCScript(uint160(vSolutions[whichTypeRet > DELAYED_DELTA ? 1 : 0]), scriptSigRet);
+    // case TX_DELAYEDSCRIPTHASH:
+        // return keystore.GetCScript(uint160(vSolutions[whichTypeRet > DELAYED_DELTA ? 1 : 0]), scriptSigRet);
+        return keystore.GetCScript(uint160(vSolutions[0]), scriptSigRet);
     case TX_MULTISIG:
-    case TX_DELAYEDMULTISIG:
+    // case TX_DELAYEDMULTISIG:
         scriptSigRet << OP_0; // workaround CHECKMULTISIG bug
-        std::vector<valtype> vKeys(vSolutions.begin() + (whichTypeRet > DELAYED_DELTA ? 1 : 0), vSolutions.end());
+        // std::vector<valtype> vKeys(vSolutions.begin() + (whichTypeRet > DELAYED_DELTA ? 1 : 0), vSolutions.end());
+        std::vector<valtype> vKeys(vSolutions.begin(), vSolutions.end());
         return (SignN(vKeys, keystore, hash, nHashType, scriptSigRet));
     }
     return false;
@@ -1606,18 +1610,20 @@ int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned c
     case TX_NULL_DATA:
         return -1;
     case TX_PUBKEY:
-    case TX_DELAYEDPUBKEY:
+    // case TX_DELAYEDPUBKEY:
         return 1;
     case TX_PUBKEYHASH:
-    case TX_DELAYEDPUBKEYHASH:
+    // case TX_DELAYEDPUBKEYHASH:
         return 2;
     case TX_MULTISIG:
-    case TX_DELAYEDMULTISIG:
-        if (vSolutions.size() < (t > DELAYED_DELTA ? 2 : 1) || vSolutions[t > DELAYED_DELTA ? 1 : 0].size() < 1)
+    // case TX_DELAYEDMULTISIG:
+        // if (vSolutions.size() < (t > DELAYED_DELTA ? 2 : 1) || vSolutions[t > DELAYED_DELTA ? 1 : 0].size() < 1)
+        if (vSolutions.size() < 1 || vSolutions[0].size() < 1)
             return -1;
-        return vSolutions[t > DELAYED_DELTA ? 1 : 0][0] + 1;
+        // return vSolutions[t > DELAYED_DELTA ? 1 : 0][0] + 1;
+        return vSolutions[0][0] + 1;
     case TX_SCRIPTHASH:
-    case TX_DELAYEDSCRIPTHASH:
+    // case TX_DELAYEDSCRIPTHASH:
         return 1; // doesn't include args needed by the script
     }
     return -1;
@@ -1629,9 +1635,11 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType)
     if (!Solver(scriptPubKey, whichType, vSolutions))
         return false;
 
-    if ((whichType % DELAYED_DELTA) == TX_MULTISIG)
+    // if ((whichType % DELAYED_DELTA) == TX_MULTISIG)
+    if (whichType == TX_MULTISIG)
     {
-        unsigned char m = vSolutions[whichType > DELAYED_DELTA ? 1 : 0][0];
+        // unsigned char m = vSolutions[whichType > DELAYED_DELTA ? 1 : 0][0];
+        unsigned char m = vSolutions.front()[0];
         unsigned char n = vSolutions.back()[0];
         // Support up to x-of-3 multisig txns as standard
         if (n < 1 || n > 3)
@@ -1687,23 +1695,26 @@ bool IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
     case TX_NULL_DATA:
         return false;
     case TX_PUBKEY:
-    case TX_DELAYEDPUBKEY:
-        keyID = CPubKey(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]).GetID();
+    // case TX_DELAYEDPUBKEY:
+    //     keyID = CPubKey(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]).GetID();
+        keyID = CPubKey(vSolutions[0]).GetID();
         return keystore.HaveKey(keyID);
     case TX_PUBKEYHASH:
-    case TX_DELAYEDPUBKEYHASH:
-        keyID = CKeyID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]));
+    // case TX_DELAYEDPUBKEYHASH:
+    //     keyID = CKeyID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]));
+        keyID = CKeyID(uint160(vSolutions[0]));
         return keystore.HaveKey(keyID);
     case TX_SCRIPTHASH:
-    case TX_DELAYEDSCRIPTHASH:
+    // case TX_DELAYEDSCRIPTHASH:
     {
         CScript subscript;
-        if (!keystore.GetCScript(CScriptID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0])), subscript))
+        // if (!keystore.GetCScript(CScriptID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0])), subscript))
+        if (!keystore.GetCScript(CScriptID(uint160(vSolutions[0])), subscript))
             return false;
         return IsMine(keystore, subscript);
     }
     case TX_MULTISIG:
-    case TX_DELAYEDMULTISIG:
+    // case TX_DELAYEDMULTISIG:
     {
         // Only consider transactions "mine" if we own ALL the
         // keys involved. multi-signature transactions that are
@@ -1712,7 +1723,8 @@ bool IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
         // in shared-wallet situations.
         // N KEY_A ... KEY_B M
         // Don't need the N/M
-        vector<valtype> keys(vSolutions.begin()+(whichType > DELAYED_DELTA ? 2 : 1), vSolutions.begin()+vSolutions.size()-1);
+        // vector<valtype> keys(vSolutions.begin()+(whichType > DELAYED_DELTA ? 2 : 1), vSolutions.begin()+vSolutions.size()-1);
+        vector<valtype> keys(vSolutions.begin()+1, vSolutions.begin()+vSolutions.size()-1);
         return HaveKeys(keys, keystore) == keys.size();
     }
     }
@@ -1727,19 +1739,25 @@ bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
     if (!Solver(scriptPubKey, whichType, vSolutions))
         return false;
 
-    if ((whichType % DELAYED_DELTA) == TX_PUBKEY)
+    // if ((whichType % DELAYED_DELTA) == TX_PUBKEY)
+    if (whichType == TX_PUBKEY)
     {
-        addressRet = CPubKey(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]).GetID();
+        // addressRet = CPubKey(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]).GetID();
+        addressRet = CPubKey(vSolutions[0]).GetID();
         return true;
     }
-    else if ((whichType % DELAYED_DELTA) == TX_PUBKEYHASH)
+    // else if ((whichType % DELAYED_DELTA) == TX_PUBKEYHASH)
+    else if (whichType == TX_PUBKEYHASH)
     {
-        addressRet = CKeyID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]));
+        // addressRet = CKeyID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]));
+        addressRet = CKeyID(uint160(vSolutions[0]));
         return true;
     }
-    else if ((whichType % DELAYED_DELTA) == TX_SCRIPTHASH)
+    // else if ((whichType % DELAYED_DELTA) == TX_SCRIPTHASH)
+    else if (whichType == TX_SCRIPTHASH)
     {
-        addressRet = CScriptID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]));
+        // addressRet = CScriptID(uint160(vSolutions[whichType > DELAYED_DELTA ? 1 : 0]));
+        addressRet = CScriptID(uint160(vSolutions[0]));
         return true;
     }
     // Multisig txns have more than one address... so don't use this method
@@ -1758,10 +1776,13 @@ bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, vecto
         return false;
     }
 
-    if ((typeRet % DELAYED_DELTA) == TX_MULTISIG)
+    // if ((typeRet % DELAYED_DELTA) == TX_MULTISIG)
+    if (typeRet == TX_MULTISIG)
     {
-        nRequiredRet = vSolutions[typeRet > DELAYED_DELTA ? 1 : 0][0];
-        for (unsigned int i = (typeRet > DELAYED_DELTA ? 2 : 1); i < vSolutions.size()-1; i++)
+        // nRequiredRet = vSolutions[typeRet > DELAYED_DELTA ? 1 : 0][0];
+        nRequiredRet = vSolutions[0][0];
+        // for (unsigned int i = (typeRet > DELAYED_DELTA ? 2 : 1); i < vSolutions.size()-1; i++)
+        for (unsigned int i = 1; i < vSolutions.size()-1; i++)
         {
             CTxDestination address = CPubKey(vSolutions[i]).GetID();
             addressRet.push_back(address);
@@ -1870,7 +1891,8 @@ bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransa
     if (!Solver(keystore, fromPubKey, hash, nHashType, txin.scriptSig, whichType))
         return false;
 
-    if ((whichType % DELAYED_DELTA) == TX_SCRIPTHASH)
+    // if ((whichType % DELAYED_DELTA) == TX_SCRIPTHASH)
+    if (whichType == TX_SCRIPTHASH)
     {
         // Solver returns the subscript that need to be evaluated;
         // the final scriptSig is the signatures from that
@@ -1881,8 +1903,10 @@ bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransa
         uint256 hash2 = SignatureHash(subscript, txTo, nIn, nHashType);
 
         txnouttype subType;
+        // bool fSolved = Solver(keystore, subscript, hash2, nHashType, txin.scriptSig, subType) 
+        //         && (subType % DELAYED_DELTA) != TX_SCRIPTHASH;
         bool fSolved = Solver(keystore, subscript, hash2, nHashType, txin.scriptSig, subType) 
-                && (subType % DELAYED_DELTA) != TX_SCRIPTHASH;
+                && subType != TX_SCRIPTHASH;
         // Append serialized subscript whether or not it is completely signed:
         txin.scriptSig << static_cast<valtype>(subscript);
         if (!fSolved) return false;
@@ -1929,7 +1953,8 @@ static CScript CombineMultisig(CScript scriptPubKey, const CTransaction& txTo, u
     }
 
     // Build a map of pubkey -> signature by matching sigs to pubkeys:
-    unsigned int delayed = (txType > DELAYED_DELTA ? 1 : 0);
+    // unsigned int delayed = (txType > DELAYED_DELTA ? 1 : 0);
+    unsigned int delayed = 0;
     assert(vSolutions.size() > (1+delayed));
     unsigned int nSigsRequired = vSolutions[delayed][0];
     unsigned int nPubKeys = vSolutions.size()-(2+delayed);
@@ -1981,15 +2006,15 @@ static CScript CombineSignatures(CScript scriptPubKey, const CTransaction& txTo,
             return PushAll(sigs1);
         return PushAll(sigs2);
     case TX_PUBKEY:
-    case TX_DELAYEDPUBKEY:
+    // case TX_DELAYEDPUBKEY:
     case TX_PUBKEYHASH:
-    case TX_DELAYEDPUBKEYHASH:
+    // case TX_DELAYEDPUBKEYHASH:
         // Signatures are bigger than placeholders or empty scripts:
         if (sigs1.empty() || sigs1[0].empty())
             return PushAll(sigs2);
         return PushAll(sigs1);
     case TX_SCRIPTHASH:
-    case TX_DELAYEDSCRIPTHASH:
+    // case TX_DELAYEDSCRIPTHASH:
         if (sigs1.empty() || sigs1.back().empty())
             return PushAll(sigs2);
         else if (sigs2.empty() || sigs2.back().empty())
@@ -2010,7 +2035,7 @@ static CScript CombineSignatures(CScript scriptPubKey, const CTransaction& txTo,
             return result;
         }
     case TX_MULTISIG:
-    case TX_DELAYEDMULTISIG:
+    // case TX_DELAYEDMULTISIG:
         return CombineMultisig(scriptPubKey, txTo, nIn, vSolutions, txType, sigs1, sigs2);
     }
 
@@ -2089,39 +2114,41 @@ unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
 bool CScript::IsPayToScriptHash() const
 {
     // Extra-fast test for simple pay-to-script-hash CScripts:
-    if (this->size() == 23 && 
-        this->at(0)  == OP_HASH160 && 
-        this->at(1)  == 0x14 && 
-        this->at(22) == OP_EQUAL)
-        return true;
+    return (this->size() == 23 && 
+            this->at(0)  == OP_HASH160 && 
+            this->at(1)  == 0x14 && 
+            this->at(22) == OP_EQUAL);
 
     // Slower test for delayed P2SH
-    txnouttype typeRet;
-    vector<vector<unsigned char> > vSolutionsRet;
-    if (!Solver(*this, typeRet, vSolutionsRet))
-        return false;
+    // txnouttype typeRet;
+    // vector<vector<unsigned char> > vSolutionsRet;
+    // if (!Solver(*this, typeRet, vSolutionsRet))
+    //     return false;
 
-    return typeRet == TX_DELAYEDSCRIPTHASH;
+    // return typeRet == TX_DELAYEDSCRIPTHASH;
 }
 
 // Expensive
 bool CScript::VerifyHeaderSig(const CBlockHeader * pBlockHeader) const
 {
+    if (pBlockHeader == NULL)
+        return false;
+
     txnouttype typeRet;
     vector<vector<unsigned char> > vSolutions;
     if (!Solver(*this, typeRet, vSolutions))
         return false;
 
-    if ((typeRet % DELAYED_DELTA) != TX_PUBKEY)
-        return false;
-
-    if (pBlockHeader == NULL)
+    // if ((typeRet % DELAYED_DELTA) != TX_PUBKEY)
+    if (typeRet != TX_PUBKEY)
         return false;
 
     vector<unsigned char> vchSig;
     if (!pBlockHeader->GetHeaderSig(vchSig))
         return false;
-    vector<unsigned char> vchPubKey = vSolutions[typeRet > DELAYED_DELTA ? 1 : 0];
+
+    // vector<unsigned char> vchPubKey = vSolutions[typeRet > DELAYED_DELTA ? 1 : 0];
+    vector<unsigned char> vchPubKey = vSolutions[0];
     uint256 sighash = pBlockHeader->GetHash(false);
 
     ////// debug print
@@ -2139,7 +2166,8 @@ bool CScript::IsPayToPubKey() const
     if (!Solver(*this, typeRet, vSolutions))
         return false;
 
-    return (typeRet % DELAYED_DELTA) == TX_PUBKEY;
+    // return (typeRet % DELAYED_DELTA) == TX_PUBKEY;
+    return typeRet == TX_PUBKEY;
 }
 
 // TODO if add OP_VERSION op code, then make sure this recognizes it as a push

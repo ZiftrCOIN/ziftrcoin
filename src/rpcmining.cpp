@@ -96,7 +96,7 @@ void ShutdownRPCMining()
 // CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval) 
 Value GetNetworkSashPS(int nLookUp, int nHeight) 
 {
-    CBigNum sashpersec = GetNetworkSashPer(nLookUp, nHeight, 1));
+    CBigNum sashpersec = GetNetworkSashPer(nLookUp, nHeight, 1);
 
     if (sashpersec == CBigNum(-1))
         return 0;

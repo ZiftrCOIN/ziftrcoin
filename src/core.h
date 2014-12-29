@@ -227,12 +227,11 @@ public:
     double ComputePriority(double dPriorityInputs, unsigned int nTxSize=0) const;
 
     /**
-     * In ziftrCOIN, a coinbase transaction must have all of the TxOuts
+     * In ziftrCOIN, a coinbase transaction must have the single TxOut
      * be simple pay-to-pubkey outputs so that the header sig can be verified
      * before propogating.
      * 
-     * In addition, the first input must be null. Further inputs may optionally be null
-     * TODO if they are not null, we should process them as actual spends of TxOuts
+     * In addition, all inputs (may be multiple) must be null.
      */
     bool IsCoinBase(const CBlockHeader * pBlockHeader = NULL) const;
 

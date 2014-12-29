@@ -15,7 +15,8 @@ BOOST_AUTO_TEST_CASE(subsidy_limit_test)
     // Takes a little longer, but is more accurate
     
 	uint64_t nSum = 45000000000000; // Genesis block reward is this much
-    for (int nHeight = 1; nHeight <= Params().LastDecreasingSubsidyBlock(); ++nHeight) {
+    int nNumDistrBlocks = Params().NumIncrBlocks() + Params().NumConstBlocks() + Params().NumDecrBlocks();
+    for (int nHeight = 1; nHeight <= nNumDistrBlocks; nHeight++) {
         uint64_t nSubsidy = GetBlockValue(nHeight, 0);
         BOOST_CHECK(nSubsidy <= MAX_SUBSIDY);
         nSum += nSubsidy;

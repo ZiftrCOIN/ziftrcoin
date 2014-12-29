@@ -215,7 +215,7 @@ Value importwallet(const Array& params, bool fHelp)
     pwalletMain->ShowProgress("", 100); // hide progress dialog in GUI
 
     CBlockIndex *pindex = chainActive.Tip();
-    while (pindex && pindex->pprev && pindex->nTime > nTimeBegin - 7200)
+    while (pindex && pindex->pprev && pindex->nTime > nTimeBegin - MAX_BLOCK_TIME_OFFSET)
         pindex = pindex->pprev;
 
     if (!pwalletMain->nTimeFirstKey || nTimeBegin < pwalletMain->nTimeFirstKey)
