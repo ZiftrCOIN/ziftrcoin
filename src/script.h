@@ -194,7 +194,7 @@ enum
     SCRIPT_VERIFY_NOAPPENDSIGHASHTYPE   = (1U << 4),            // for when using signatures without the sighashtype appended
 };
 
-// const int DELAYED_DELTA = 100;
+const int DELAYED_DELTA = 100;
 enum txnouttype
 {
     TX_NONSTANDARD              = 0,
@@ -205,7 +205,7 @@ enum txnouttype
     TX_MULTISIG                 = 4,
     TX_NULL_DATA                = 5,
     
-    // TX_DELAYEDPUBKEY            = DELAYED_DELTA + TX_PUBKEY,
+    TX_DELAYEDPUBKEY            = DELAYED_DELTA + TX_PUBKEY,
     // TX_DELAYEDPUBKEYHASH        = DELAYED_DELTA + TX_PUBKEYHASH,
     // TX_DELAYEDSCRIPTHASH        = DELAYED_DELTA + TX_SCRIPTHASH,
     // TX_DELAYEDMULTISIG          = DELAYED_DELTA + TX_MULTISIG,
@@ -668,8 +668,6 @@ public:
 
     bool VerifyHeaderSig(const CBlockHeader * pBlockHeader) const;
 
-    bool IsPayToPubKey() const;
-
     // Called by IsStandardTx and P2SH VerifyScript (which makes it consensus-critical).
     bool IsPushOnly() const;
 
@@ -815,6 +813,7 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType);
 bool IsMine(const CKeyStore& keystore, const CScript& scriptPubKey);
 bool IsMine(const CKeyStore& keystore, const CTxDestination &dest);
 void ExtractAffectedKeys(const CKeyStore &keystore, const CScript& scriptPubKey, std::vector<CKeyID> &vKeys);
+bool ExtractPubKey(const CScript& scriptPubKey, std::vector<unsigned char>& pubKey);
 bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet);
 bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<CTxDestination>& addressRet, int& nRequiredRet);
 bool SignSignature(const CKeyStore& keystore, const CScript& fromPubKey, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);

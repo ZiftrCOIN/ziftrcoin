@@ -487,6 +487,8 @@ int64_t nSPSTimerStart = 0;
 // If ret == nTries, then all failed.
 // Else, there were ret+1 sashes (signature-hashes) done and the last one succeeded
 // TODO there are efficiency improvements that can be made here
+// TODO could probably get an ~2x improvement by using (R, S) and (R, -S) for each try, since 
+// both are valid signatures for the same data. https://bitcointalk.org/index.php?topic=8392.msg1245898#msg1245898
 unsigned int static DoSignatureHashes(CBlock* pblock, const CKey& signer, unsigned int nTries)
 {
     // Only need to calculate this once

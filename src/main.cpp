@@ -638,11 +638,10 @@ bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs)
         // beside "push data" in the scriptSig the
         // IsStandard() call returns false
         vector<vector<unsigned char> > stack;
-        if (!EvalScript(stack, tx.vin[i].scriptSig, tx, i, false, 0))
+        if (!EvalScript(stack, tx.vin[i].scriptSig, tx, i, SCRIPT_VERIFY_NONE, 0))
             return false;
 
-        // if ((whichType % DELAYED_DELTA) == TX_SCRIPTHASH)
-        if (whichType == TX_SCRIPTHASH)
+        if ((whichType % DELAYED_DELTA) == TX_SCRIPTHASH)
         {
             if (stack.empty())
                 return false;
@@ -651,8 +650,7 @@ bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs)
             txnouttype whichType2;
             if (!Solver(subscript, whichType2, vSolutions2))
                 return false;
-            // if ((whichType2 % DELAYED_DELTA) == TX_SCRIPTHASH)
-            if (whichType2 == TX_SCRIPTHASH)
+            if ((whichType2 % DELAYED_DELTA) == TX_SCRIPTHASH)
                 return false;
 
             int tmpExpected;
@@ -1158,7 +1156,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos)
     }
 
     // Check the header
-    if (!CheckProofOfWork(block.GetHash(), block.nBits))
+    if (!block.CheckProofOfWork())
         return error("ReadBlockFromDisk : Errors in block header");
 
     return true;
@@ -1408,21 +1406,6 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     return bnTarget.GetCompact();
 }
 
-bool CheckProofOfWork(uint256 hash, unsigned int nBits)
-{
-    CBigNum bnTarget;
-    bnTarget.SetCompact(nBits);
-
-    // Check range
-    if (bnTarget <= 0 || bnTarget > Params().ProofOfWorkLimit())
-        return error("CheckProofOfWork() : nBits below minimum work");
-
-    // Check proof of work matches claimed amount
-    if (hash > bnTarget.getuint256())
-        return error("CheckProofOfWork() : hash doesn't match nBits");
-
-    return true;
-}
 
 bool IsInitialBlockDownload()
 {
@@ -2426,7 +2409,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                          REJECT_INVALID, "bad-blk-length");
 
     // Check proof of work matches claimed amount
-    if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits))
+    if (fCheckPOW && !block.CheckProofOfWork(true))
         return state.DoS(50, error("CheckBlock() : proof of work failed"),
                          REJECT_INVALID, "high-hash");
 
@@ -2441,7 +2424,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     // proof of work, then an attacker could put in non-sensical data for the header sig, mine much faster
     // than everyone else, and essentially just burn coins and throw off the difficulty.
     // First transaction must be coinbase, the rest must not be
-    if (block.vtx.empty() || !block.vtx[0].IsCoinBase(fCheckPOW ? &block : NULL))
+    if (block.vtx.empty() || !block.vtx[0].IsCoinBase())
         return state.DoS(100, error("CheckBlock() : first tx is not coinbase"),
                          REJECT_INVALID, "bad-cb-missing");
 
@@ -2470,7 +2453,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         return state.DoS(100, error("CheckBlock() : duplicate transaction"),
                          REJECT_INVALID, "bad-txns-duplicate", true);
 
-    unsigned int nSigOps = 0;
+    unsigned int nSigOps = 1;
     BOOST_FOREACH(const CTransaction& tx, block.vtx)
     {
         nSigOps += GetSigOpCount(tx);

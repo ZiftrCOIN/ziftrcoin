@@ -3,6 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "bignum.h"
+#include "chainparams.h"
 #include "core.h"
 
 #include "util.h"
@@ -138,10 +140,10 @@ double CTransaction::ComputePriority(double dPriorityInputs, unsigned int nTxSiz
 }
 
 
-bool CTransaction::IsCoinBase(const CBlockHeader * pBlockHeader) const
+bool CTransaction::IsCoinBase() const
 {
     // Must have at least one null input because the height needs to be put into it
-    if (vin.size() == 0) 
+    if (vin.size() == 0)
         return false;
 
     BOOST_FOREACH(const CTxIn& input, vin) {
@@ -150,21 +152,24 @@ bool CTransaction::IsCoinBase(const CBlockHeader * pBlockHeader) const
     }
 
     // There must be at least one pay-to-pubkey output
-    if (vout.size() != 1)
+    if (vout.size() == 0)
         return false;
 
-    const CScript& firstScriptPubKey = vout[0].scriptPubKey;
+    std::vector<unsigned char> firstPubKey;
+    if (!ExtractPubKey(vout[0].scriptPubKey, firstPubKey))
+        return false;
 
-    if (pBlockHeader != NULL) {
-        if (!firstScriptPubKey.VerifyHeaderSig(pBlockHeader))
+    for (unsigned int i = 1; i < vout.size(); i++) {
+        std::vector<unsigned char> pubKey;
+        if (!ExtractPubKey(vout[i].scriptPubKey, pubKey))
             return false;
-    } else {
-        if (!firstScriptPubKey.IsPayToPubKey())
+
+        if (pubKey != firstPubKey)
             return false;
     }
-    
-    return true;
 
+    return true;
+    
     // for (unsigned int i = 1; i < vout.size(); i++) {
     //     if (firstScriptPubKey != vout[i].scriptPubKey)
     //         return false;
@@ -288,6 +293,24 @@ uint64_t CTxOutCompressor::DecompressAmount(uint64_t x)
     return n;
 }
 
+bool CBlockHeader::CheckProofOfWork() const
+{
+    uint256 powHash = GetHash();
+
+    CBigNum bnTarget;
+    bnTarget.SetCompact(nBits);
+
+    // Check range
+    if (bnTarget <= 0 || bnTarget > Params().ProofOfWorkLimit())
+        return error("CBlockHeader::CheckProofOfWork() : nBits below minimum work");
+
+    // Check proof of work matches claimed amount
+    if (powHash > bnTarget.getuint256())
+        return error("CBlockHeader::CheckProofOfWork() : powHash doesn't match nBits");
+
+    return true;
+}
+
 uint256 CBlockHeader::GetHash(bool fIncludeSignature) const
 {
     if (fIncludeSignature)
@@ -304,6 +327,23 @@ bool CBlockHeader::GetHeaderSig(std::vector<unsigned char>& vchSig) const
         return error("GetHeaderSig() : Header signature is empty");
 
     DEREncodeSignature(vchHeaderSigR, vchHeaderSigS, vchSig);
+    return true;
+}
+
+bool CBlock::CheckProofOfWork(bool fVerifyCoinbase) const
+{
+    if (!CBlockHeader::CheckProofOfWork())
+        return false;
+
+    if (!fVerifyCoinbase)
+        return true;
+
+    if (vtx.size() == 0 || !vtx[0].IsCoinBase())
+        return false;
+
+    if (!vtx[0].vout[0].scriptPubKey.VerifyHeaderSig(this))
+        return error("CBlock::CheckProofOfWork() : the header sig did not verify");
+
     return true;
 }
 

@@ -233,7 +233,7 @@ public:
      * 
      * In addition, all inputs (may be multiple) must be null.
      */
-    bool IsCoinBase(const CBlockHeader * pBlockHeader = NULL) const;
+    bool IsCoinBase() const;
 
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {
@@ -389,6 +389,8 @@ public:
         return (nBits == 0);
     }
 
+    bool CheckProofOfWork() const;
+
     /**
      * The header vchHeaderSig is the result of signing everything
      * in the block header except for the signature, as the signature 
@@ -396,7 +398,7 @@ public:
      * the boolean given to differentiate whether the requester wants the
      * hash of the header to include the signature data or not. 
      */
-    uint256 GetHash(bool fIncludeSignature=true) const;
+    uint256 GetHash(bool fIncludeSignature = true) const;
 
     /**
      * Gets the DER encoded header sig. 
@@ -473,6 +475,9 @@ public:
         header.nBits          = nBits;
         return header;
     }
+
+    // If fVerifyCoinbase, then this may be a little slow (ECDSA verification)
+    bool CheckProofOfWork(bool fVerifyCoinbase = false) const;
 
     uint256 BuildMerkleTree() const;
 

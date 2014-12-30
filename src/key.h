@@ -94,15 +94,13 @@ public:
 
     // Comparator implementation.
     friend bool operator==(const CPubKey &a, const CPubKey &b) {
-        return a.vch[0] == b.vch[0] &&
-               memcmp(a.vch, b.vch, a.size()) == 0;
+        return a.vch[0] == b.vch[0] && memcmp(a.vch, b.vch, a.size()) == 0;
     }
     friend bool operator!=(const CPubKey &a, const CPubKey &b) {
         return !(a == b);
     }
     friend bool operator<(const CPubKey &a, const CPubKey &b) {
-        return a.vch[0] < b.vch[0] ||
-               (a.vch[0] == b.vch[0] && memcmp(a.vch, b.vch, a.size()) < 0);
+        return a.vch[0] < b.vch[0] || (a.vch[0] == b.vch[0] && memcmp(a.vch, b.vch, a.size()) < 0);
     }
 
     // Implement serialization, as if this was a byte vector.
