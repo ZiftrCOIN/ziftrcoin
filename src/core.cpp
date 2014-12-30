@@ -150,15 +150,10 @@ bool CTransaction::IsCoinBase(const CBlockHeader * pBlockHeader) const
     }
 
     // There must be at least one pay-to-pubkey output
-    if (vout.size() == 0)
+    if (vout.size() != 1)
         return false;
 
     const CScript& firstScriptPubKey = vout[0].scriptPubKey;
-
-    for (unsigned int i = 1; i < vout.size(); i++) {
-        if (firstScriptPubKey != vout[i].scriptPubKey)
-            return false;
-    }
 
     if (pBlockHeader != NULL) {
         if (!firstScriptPubKey.VerifyHeaderSig(pBlockHeader))
@@ -169,6 +164,11 @@ bool CTransaction::IsCoinBase(const CBlockHeader * pBlockHeader) const
     }
     
     return true;
+
+    // for (unsigned int i = 1; i < vout.size(); i++) {
+    //     if (firstScriptPubKey != vout[i].scriptPubKey)
+    //         return false;
+    // }
 
     // New param: CCoinsViewCache& view
 
