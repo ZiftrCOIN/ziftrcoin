@@ -670,7 +670,7 @@ bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs)
 // TODO should the number of txouts in the coinbase be included into the sigops count? Probably
 unsigned int GetSigOpCount(const CTransaction& tx)
 {
-    unsigned int nSigOps = 0;
+    unsigned int nSigOps = tx.IsCoinBase() ? 1 : 0;
     BOOST_FOREACH(const CTxIn& txin, tx.vin)
     {
         nSigOps += txin.scriptSig.GetSigOpCount();
@@ -2453,7 +2453,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         return state.DoS(100, error("CheckBlock() : duplicate transaction"),
                          REJECT_INVALID, "bad-txns-duplicate", true);
 
-    unsigned int nSigOps = 1;
+    unsigned int nSigOps = 0;
     BOOST_FOREACH(const CTransaction& tx, block.vtx)
     {
         nSigOps += GetSigOpCount(tx);
