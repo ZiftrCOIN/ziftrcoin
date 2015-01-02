@@ -502,26 +502,31 @@ unsigned int static DoSignatureHashes(CBlock* pblock, const CKey& signer, unsign
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
     uint256 hashToSign = pblock->GetHash(false);
 
-    std::vector<unsigned char> vchSig;
+    std::vector<unsigned char> vchSig1;
+    std::vector<unsigned char> vchSig2;
     for (unsigned int i = 0; i < nTries; i++) 
     {
-        signer.Sign(hashToSign, vchSig);
-        DERDecodeSignature(pblock->vchHeaderSigR, pblock->vchHeaderSigS, vchSig);
-        uint256 hashBlockHeader = pblock->GetHash();
+        signer.Sign2(hashToSign, vchSig1, vchSig2);
 
-        if (hashBlockHeader <= hashTarget) {
-            // CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
-            // ssBlock << *pblock;
-            // LogPrintf("block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
-            // LogPrintf("hashBlockHeader: %s\n", hashBlockHeader.ToString());
-            // LogPrintf("hashToSign: %s\n", hashToSign.ToString());
-            // LogPrintf("vchSig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
-            // CPubKey pubKey = signer.GetPubKey();
-            // LogPrintf("pubKey: %s\n", HexStr(pubKey.begin(), pubKey.end()));
-            return i;
+        for (unsigned int j = 0; j < 2; j++)
+        {
+            DERDecodeSignature(pblock->vchHeaderSigR, pblock->vchHeaderSigS, j ? vchSig1 : vchSig2);
+            uint256 hashBlockHeader = pblock->GetHash();
+            if (hashBlockHeader <= hashTarget) {
+                // CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+                // ssBlock << *pblock;
+                // LogPrintf("block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
+                // LogPrintf("hashBlockHeader: %s\n", hashBlockHeader.ToString());
+                // LogPrintf("hashToSign: %s\n", hashToSign.ToString());
+                // LogPrintf("vchSig1: %s\n", HexStr(vchSig1.begin(), vchSig1.end()));
+                // LogPrintf("vchSig2: %s\n", HexStr(vchSig2.begin(), vchSig2.end()));
+                // CPubKey pubKey = signer.GetPubKey();
+                // LogPrintf("pubKey: %s\n", HexStr(pubKey.begin(), pubKey.end()));
+                return 2*i + j;
+            }
         }
     }
-    return nTries;
+    return 2*nTries;
 }
 
 CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reserveKey)
@@ -578,8 +583,11 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
                 throw std::runtime_error("BitcoinMiner() : Could not get new public key");
 
             uint256 hashSigned = pblock->GetHash(false);
-
+            
             LogPrintf("header sig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
+            LogPrintf("vchSig:%s \n", HexStr(vchSig.begin(), vchSig.end()));
+            LogPrintf("R:%s \n", HexStr(&pblock->vchHeaderSigR[0], &pblock->vchHeaderSigR[32]));
+            LogPrintf("S:%s \n", HexStr(&pblock->vchHeaderSigS[0], &pblock->vchHeaderSigS[32]));
             LogPrintf("pub key: %s\n", HexStr(pubKey.begin(), pubKey.end()));
             LogPrintf("hash to sign: %s\n", hashSigned.GetHex());
 
@@ -712,8 +720,8 @@ void static BitcoinMiner(CWallet *pwallet)
                     nSashCounter = 0;
                 }
 
-                unsigned int nTries = 100;
-                unsigned int nNumFailedAttempts = DoSignatureHashes(pblock, signKey, nTries);
+                unsigned int nTries = 200; // Must be even
+                unsigned int nNumFailedAttempts = DoSignatureHashes(pblock, signKey, nTries/2);
                 nSashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
 
                 if (nNumFailedAttempts < nTries) {

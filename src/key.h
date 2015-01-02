@@ -255,6 +255,8 @@ public:
     // Create a DER-serialized signature.
     bool Sign(const uint256 &hash, std::vector<unsigned char>& vchSig) const;
 
+    bool Sign2(const uint256 &hash, std::vector<unsigned char>& vchSig1, std::vector<unsigned char>& vchSig2) const;
+
     // Create a compact signature (65 bytes), which allows reconstructing the used public key.
     // The format is one header byte, followed by two times 32 bytes for the serialized r and s values.
     // The header byte: 0x1B = first key with even y, 0x1C = first key with odd y,

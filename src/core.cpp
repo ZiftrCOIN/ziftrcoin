@@ -322,7 +322,7 @@ uint256 CBlockHeader::GetHash(bool fIncludeSignature) const
 bool CBlockHeader::GetHeaderSig(std::vector<unsigned char>& vchSig) const
 {
     unsigned char zeroes[32];
-    memset(zeroes, 0, sizeof(zeroes[0])*ARRAYLEN(zeroes));
+    memset(zeroes, 0, 32);
     if (memcmp(vchHeaderSigR, zeroes, sizeof(zeroes)) == 0 || memcmp(vchHeaderSigS, zeroes, sizeof(zeroes)) == 0)
         return error("GetHeaderSig() : Header signature is empty");
 

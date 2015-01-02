@@ -386,7 +386,7 @@ bool DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], const st
 
     const unsigned int nLenS = vchSig[5+nLenR];
     if (nLenS == 33) {
-        memcpy(&sigS[0], &vchSig[5+nLenR+1], nLenS-1);
+        memcpy(&sigS[0], &vchSig[6+nLenR+1], nLenS-1);
     } else {
         memcpy(&sigS[32-nLenS], &vchSig[6+nLenR], nLenS);
     }    

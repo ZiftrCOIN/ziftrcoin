@@ -199,7 +199,7 @@ public:
         return o2i_ECPublicKey(&pkey, &pbegin, pubkey.size());
     }
 
-    bool Sign(const uint256 &hash, std::vector<unsigned char>& vchSig) {
+    bool Sign(const uint256 &hash, std::vector<unsigned char>& vchSig) const {
         vchSig.clear();
         ECDSA_SIG *sig = ECDSA_do_sign((unsigned char*)&hash, sizeof(hash), pkey);
         if (sig == NULL)
@@ -223,6 +223,44 @@ public:
         nSize = i2d_ECDSA_SIG(sig, &pos);
         ECDSA_SIG_free(sig);
         vchSig.resize(nSize); // Shrink to fit actual size
+        return true;
+    }
+
+    bool Sign2(const uint256 &hash, std::vector<unsigned char>& vchSig1, std::vector<unsigned char>& vchSig2) const {
+        // Do the actual signing
+        vchSig1.clear();
+        vchSig2.clear();
+        ECDSA_SIG *sig1 = ECDSA_do_sign((unsigned char*)&hash, sizeof(hash), pkey);
+        if (sig1 == NULL)
+            return false;
+        
+        // Copy over r value
+        ECDSA_SIG *sig2 = ECDSA_SIG_new();
+        if (BN_copy(sig2->r, sig1->r) == NULL)
+            return false;
+
+        // sig1->s = (group order - sig2->s)
+        BN_CTX *ctx = BN_CTX_new();
+        BN_CTX_start(ctx);
+        const EC_GROUP *group = EC_KEY_get0_group(pkey);
+        BIGNUM *order = BN_CTX_get(ctx);
+        EC_GROUP_get_order(group, order, ctx);
+        BN_sub(sig2->s, order, sig1->s);
+        BN_CTX_end(ctx);
+        BN_CTX_free(ctx);
+
+        // Encode
+        unsigned int nSize = ECDSA_size(pkey);
+        vchSig1.resize(nSize); // Make sure it is big enough
+        vchSig2.resize(nSize); // Make sure it is big enough
+        unsigned char *pos1 = &vchSig1[0];
+        unsigned char *pos2 = &vchSig2[0];
+        unsigned int nSize1 = i2d_ECDSA_SIG(sig1, &pos1);
+        unsigned int nSize2 = i2d_ECDSA_SIG(sig2, &pos2);
+        ECDSA_SIG_free(sig1);
+        ECDSA_SIG_free(sig2);
+        vchSig1.resize(nSize1); // Shrink to fit actual size
+        vchSig2.resize(nSize2); // Shrink to fit actual size
         return true;
     }
 
@@ -400,6 +438,14 @@ bool CKey::Sign(const uint256 &hash, std::vector<unsigned char>& vchSig) const {
     CECKey key;
     key.SetSecretBytes(vch);
     return key.Sign(hash, vchSig);
+}
+
+bool CKey::Sign2(const uint256 &hash, std::vector<unsigned char>& vchSig1, std::vector<unsigned char>& vchSig2) const {
+    if (!fValid)
+        return false;
+    CECKey key;
+    key.SetSecretBytes(vch);
+    return key.Sign2(hash, vchSig1, vchSig2);
 }
 
 bool CKey::SignCompact(const uint256 &hash, std::vector<unsigned char>& vchSig) const {
