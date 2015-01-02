@@ -1644,7 +1644,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, CCoinsViewCach
             // If prev is coinbase, check that it's matured
             // TODO this is useful
             if (coins.IsCoinBase()) {
-                if (nSpendHeight - coins.nHeight < COINBASE_MATURITY)
+                if (nSpendHeight - coins.nHeight < COINBASE_MATURITY && coins.vout[prevout.n].nValue != 0)
                     return state.Invalid(
                         error("CheckInputs() : tried to spend coinbase at depth %d", nSpendHeight - coins.nHeight),
                         REJECT_INVALID, "bad-txns-premature-spend-of-coinbase");

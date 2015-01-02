@@ -160,6 +160,9 @@ bool CTransaction::IsCoinBase() const
         return false;
 
     for (unsigned int i = 1; i < vout.size(); i++) {
+        if (vout[i].nValue == 0)
+            continue;
+
         std::vector<unsigned char> pubKey;
         if (!ExtractPubKey(vout[i].scriptPubKey, pubKey))
             return false;

@@ -151,6 +151,11 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
     txNew.vout.resize(1);
     txNew.vout[0].scriptPubKey = scriptPubKeyIn;
 
+    // Testing the rule that this can be spent before maturity
+    // txNew.vout[1].scriptPubKey = CScript() << OP_TRUE;
+    // txNew.vout[1].nValue = 0;
+
+
     // Add our coinbase tx as first transaction
     pblock->vtx.push_back(txNew);
     pblocktemplate->vTxFees.push_back(-1); // updated at end
@@ -583,7 +588,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
                 throw std::runtime_error("BitcoinMiner() : Could not get new public key");
 
             uint256 hashSigned = pblock->GetHash(false);
-            
+
             LogPrintf("header sig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
             LogPrintf("vchSig:%s \n", HexStr(vchSig.begin(), vchSig.end()));
             LogPrintf("R:%s \n", HexStr(&pblock->vchHeaderSigR[0], &pblock->vchHeaderSigR[32]));
