@@ -135,6 +135,7 @@ Value importprivkey(const Array& params, bool fHelp)
 
 Value importwallet(const Array& params, bool fHelp)
 {
+    // fJustPrint = !fJustPrint;
     if (fHelp || params.size() != 1)
         throw runtime_error(
             "importwallet \"filename\"\n"

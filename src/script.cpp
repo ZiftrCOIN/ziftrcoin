@@ -1581,7 +1581,7 @@ bool Solver(const CKeyStore& keystore, const CScript& scriptPubKey, uint256 hash
         {
             return false;
         }
-        else
+        else 
         {
             CPubKey vch;
             keystore.GetPubKey(keyID, vch);
@@ -1644,7 +1644,7 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType)
             return false;
     }
 
-    return whichType != TX_NONSTANDARD;
+    return whichType != TX_NONSTANDARD && whichType != TX_DELAYEDPUBKEY;
 }
 
 

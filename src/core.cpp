@@ -139,7 +139,6 @@ double CTransaction::ComputePriority(double dPriorityInputs, unsigned int nTxSiz
     return dPriorityInputs / nTxSize;
 }
 
-
 bool CTransaction::IsCoinBase() const
 {
     // Must have at least one null input because the height needs to be put into it

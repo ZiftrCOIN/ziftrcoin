@@ -23,6 +23,9 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+// define __STDC_FORMAT_MACROS
+// include <inttypes.h>
+
 using namespace std;
 using namespace boost;
 
@@ -74,12 +77,55 @@ const string strMessageMagic = "ZiftrCOIN Signed Message:\n";
 
 // Internal stuff
 namespace {
+    // To keep track of the first time a block was seen at a specific height (for the tiebreaker)
+    map<int, int64_t> mapFirstTimeSeen;
+
     struct CBlockIndexWorkComparator
     {
         bool operator()(CBlockIndex *pa, CBlockIndex *pb) {
             // First sort by most total work, ...
             if (pa->nChainWork > pb->nChainWork) return false;
             if (pa->nChainWork < pb->nChainWork) return true;
+
+            // In case there is some weird edge case where two chains have same work but different height
+            if (pa->nHeight > pb->nHeight) return false;
+            if (pa->nHeight < pb->nHeight) return true;
+
+            // Mature coins spent as a tie breaker only works for newly received blocks and forks of length 1
+            int nHeight = pa->nHeight;
+
+            // Debug
+            // LogPrintf("mapFirstTimeSeen[nHeight] = %llu \n", (long long)mapFirstTimeSeen[nHeight]);
+            // LogPrintf("pa->nTimeReceived = %llu \n", (long long)pa->nTimeReceived);
+            // LogPrintf("pb->nTimeReceived = %llu \n", (long long)pb->nTimeReceived);
+            // if (pa->pprev != NULL)
+            //     LogPrintf("pa->pprev->GetBlockHash(): %s\n", pa->pprev->GetBlockHash().ToString());
+            // if (pb->pprev != NULL)
+            //     LogPrintf("pb->pprev->GetBlockHash(): %s\n", pb->pprev->GetBlockHash().ToString());
+
+            if (mapFirstTimeSeen[nHeight] != 0 &&
+                pa->nTimeReceived != 0 && pb->nTimeReceived != 0 &&
+                pa->pprev != NULL && pb->pprev != NULL &&
+                pa->pprev->GetBlockHash() == pb->pprev->GetBlockHash())
+            {
+                int64_t npaTimeFromFirstSeen = pa->nTimeReceived - mapFirstTimeSeen[nHeight];
+                int64_t npbTimeFromFirstSeen = pb->nTimeReceived - mapFirstTimeSeen[nHeight];
+
+                // Debug
+                // LogPrintf("npaTimeFromFirstSeen = %llu \n", (long long)npaTimeFromFirstSeen);
+                // LogPrintf("npbTimeFromFirstSeen = %llu \n", (long long)npbTimeFromFirstSeen);
+
+                if ((npaTimeFromFirstSeen < MATURE_COINS_TIEBREAKER_TIME_LIMIT) &&
+                    (npbTimeFromFirstSeen < MATURE_COINS_TIEBREAKER_TIME_LIMIT))
+                {
+                    // Debug
+                    // LogPrintf("pa->nMatureCoinsSpent = %llu \n", (long long)pa->nMatureCoinsSpent);
+                    // LogPrintf("pb->nMatureCoinsSpent = %llu \n", (long long)pb->nMatureCoinsSpent);
+
+                    if (pa->nMatureCoinsSpent > pb->nMatureCoinsSpent) return false;
+                    if (pa->nMatureCoinsSpent < pb->nMatureCoinsSpent) return true;
+                }
+            }
 
             // ... then by earliest time received, ...
             if (pa->nSequenceId < pb->nSequenceId) return false;
@@ -1259,7 +1305,7 @@ int64_t GetBlockValue(int nHeight, int64_t nFees)
     }
     else if (nHeight < (Params().NumIncrBlocks() + Params().NumConstBlocks() + Params().NumDecrBlocks()))
     {
-        double dDecrPerBlock = (double)((MAX_SUBSIDY - MIN_SUBSIDY)/Params().NumDecrBlocks());
+        double dDecrPerBlock = (double)(((MAX_SUBSIDY - MIN_SUBSIDY)/Params().NumDecrBlocks()));
         nBlockReward = MAX_SUBSIDY - ((int64_t) ((nHeight - Params().NumIncrBlocks() - Params().NumConstBlocks() + 1) * dDecrPerBlock));
     } 
     else 
@@ -1642,7 +1688,6 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, CCoinsViewCach
             const CCoins &coins = inputs.GetCoins(prevout.hash);
 
             // If prev is coinbase, check that it's matured
-            // TODO this is useful
             if (coins.IsCoinBase()) {
                 if (nSpendHeight - coins.nHeight < COINBASE_MATURITY && coins.vout[prevout.n].nValue != 0)
                     return state.Invalid(
@@ -1827,6 +1872,61 @@ static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 void ThreadScriptCheck() {
     RenameThread("bitcoin-scriptch");
     scriptcheckqueue.Thread();
+}
+
+// TODO make a CSignToMine class that encapsulates the fast signing
+// being done and invalidates itself as soon as it finds sufficient work
+// to ensure that it cannot be used to sign data twice 
+
+bool CountMatureCoins(const CBlock& block, CBlockIndex* pindex)
+{
+    AssertLockHeld(cs_main);
+    assert(pindex != NULL);
+    CCoinsViewCache view(*pcoinsTip, true);
+
+    // verify that the view's current state corresponds to either the current or previous block
+    // This is sufficient because mature coins as a tie breaker is only for tie breaking the tip
+    // i.e. a block with more mature coins can only undo at most 1 other block. A chain of 2 with more
+    // mature coins in the tip cannot undo another chain of 2. This slightly limits the utility 
+    // of mature coins as a tie breaker, 
+    uint256 hashPrevBlock = pindex->pprev == NULL ? uint256(0) : pindex->pprev->GetBlockHash();
+
+    CBlockIndex* tip     = chainActive.Tip();
+    CBlockIndex* tipprev = tip != NULL ? tip->pprev : NULL;
+    if (!(tip     != NULL && hashPrevBlock == tip->GetBlockHash()) &&
+        !(tipprev != NULL && hashPrevBlock == tipprev->GetBlockHash())) 
+    {
+        return false;
+    }
+
+    assert(block.GetHash() == pindex->GetBlockHash());
+
+    pindex->nMatureCoinsSpent = 0;
+    for (unsigned int i = 1; i < block.vtx.size(); i++)
+    {
+        // Start from first non-coinbase transaction
+        const CTransaction& tx = block.vtx[i];
+
+        unsigned int j = 0;
+        BOOST_FOREACH(const CTxIn& txin, tx.vin)
+        {
+            if (!view.HaveCoins(txin.prevout.hash))
+            {
+                // Possibly spending a vout from the same block - in which case not mature
+                // Just continute checking inputs
+                continue;
+            }
+
+            const CCoins& coins = view.GetCoins(txin.prevout.hash);
+            int nConf = pindex->nHeight - coins.nHeight + 1;
+
+            if (nConf >= TRANSACTION_MATURITY_DEPTH)
+                pindex->nMatureCoinsSpent += coins.vout[txin.prevout.n].nValue;
+        }
+    }
+
+    LogPrintf("Block %s has %llu total mature coins spent. \n", block.GetHash().ToString(), (long long)pindex->nMatureCoinsSpent);
+    return true;
 }
 
 bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)
@@ -2259,6 +2359,7 @@ bool AddToBlockIndex(CBlock& block, CValidationState& state, const CDiskBlockPos
     {
          LOCK(cs_nBlockSequenceId);
          pindexNew->nSequenceId = nBlockSequenceId++;
+         pindexNew->nTimeReceived = GetTimeMillis();
     }
     map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.insert(make_pair(hash, pindexNew)).first;
     pindexNew->phashBlock = &((*mi).first);
@@ -2270,6 +2371,9 @@ bool AddToBlockIndex(CBlock& block, CValidationState& state, const CDiskBlockPos
     }
     pindexNew->nTx = block.vtx.size();
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + pindexNew->GetBlockWork().getuint256();
+    CountMatureCoins(block, pindexNew);
+    if (mapFirstTimeSeen[pindexNew->nHeight] == 0)
+        mapFirstTimeSeen[pindexNew->nHeight] = pindexNew->nTimeReceived;
     pindexNew->nChainTx = (pindexNew->pprev ? pindexNew->pprev->nChainTx : 0) + pindexNew->nTx;
     pindexNew->nFile = pos.nFile;
     pindexNew->nDataPos = pos.nPos;
@@ -2542,6 +2646,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
         // }
 
         // Make sure that the coinbase starts with serialized block height
+        // TODO should this make sure exact same contents?
         CScript expect = CScript() << CScriptNum(nHeight);
         if (block.vtx[0].vin[0].scriptSig.size() < expect.size() ||
             !std::equal(expect.begin(), expect.end(), block.vtx[0].vin[0].scriptSig.begin()))

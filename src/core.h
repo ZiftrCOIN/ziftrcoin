@@ -227,11 +227,17 @@ public:
     double ComputePriority(double dPriorityInputs, unsigned int nTxSize=0) const;
 
     /**
-     * In ziftrCOIN, a coinbase transaction must have the single TxOut
-     * be simple pay-to-pubkey outputs so that the header sig can be verified
-     * before propogating.
-     * 
-     * In addition, all inputs (may be multiple) must be null.
+     * In ziftrCOIN, a coinbase transaction must:
+     *   - have all inputs be null (the first input should have the height in the scriptSig)
+     *   - the first output is pay to pub key (possibly delayed)
+     *   - for any further outputs:
+     *     * if nValue of ouput is zero, then no requirements on scriptPubKey 
+     *       (this makes it so that you can put txs into a block which only are
+     *        valid if they block was solved - as might be useful in a market for
+     *        spending mature coins)
+     *     * else (nValue positive), the output must be a pay to pub key (optionally 
+     *       delayed) and must be paying to the exact same pub key that the first output 
+     *       paid to.
      */
     bool IsCoinBase() const;
 
@@ -348,7 +354,7 @@ public:
     // header
     static const int CURRENT_VERSION=1;
     
-    // Put these first so we don't have any chance of a midstate shortcut (or move to end?)
+    // Put these first so we don't have any chance of a midstate shortcut
     unsigned char vchHeaderSigR[32];
     unsigned char vchHeaderSigS[32];
     int nVersion;

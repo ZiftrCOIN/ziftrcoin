@@ -55,7 +55,7 @@ static const unsigned int BLOCKFILE_CHUNK_SIZE = 0x1000000; // 16 MiB
 /** The pre-allocation chunk size for rev?????.dat files (since 0.8) */
 static const unsigned int UNDOFILE_CHUNK_SIZE = 0x100000; // 1 MiB
 /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
-static const int COINBASE_MATURITY = 10; // TODO change back to a realistic amount after testing
+static const int COINBASE_MATURITY = 120; 
 /** Threshold for nLockTime: below this value it is interpreted as block number, otherwise as UNIX timestamp. */
 static const unsigned int LOCKTIME_THRESHOLD = 1200000000; // Thu, 10 Jan 2008 21:20:00 GMT
 /** Maximum number of script-checking threads allowed */
@@ -69,11 +69,15 @@ static const unsigned int BLOCK_DOWNLOAD_TIMEOUT = 60;
 /** The initial subsidy that can be rewarded in a block, not including fees. */
 static const int64_t MAX_SUBSIDY = 142357686 * SATOSHI;
 /** The minimum subsidy that can be rewarded in a block, not including fees. */
-static const int64_t MIN_SUBSIDY =  19025875 * SATOSHI;
+static const int64_t MIN_SUBSIDY =   5000000 * SATOSHI;
 /** The height difference at which an alert is initiated. */
 static const int FORK_HEIGHT_DIFF_ALERT = 360;
 /** The max seconds in the future that a block will be accepted. */
 static const int MAX_BLOCK_TIME_OFFSET = 2 * 60 * 60;
+/** The minimum number of blocks for coins to be considered mature. */
+static const int TRANSACTION_MATURITY_DEPTH = 120; 
+/** The delay for which blocks with more mature coins spent may possibly override. */
+static const int64_t MATURE_COINS_TIEBREAKER_TIME_LIMIT = 13 * 1000; // (milliseconds) 
 
 #ifdef USE_UPNP
 static const int fHaveUPnP = true;
@@ -714,6 +718,9 @@ public:
     // Byte offset within rev?????.dat where this block's undo data is stored
     unsigned int nUndoPos;
 
+    // (memory only) Total amount of mature coins in the chain up to and including this block
+    int64_t nMatureCoinsSpent;
+
     // (memory only) Total amount of work (expected number of hashes) in the chain up to and including this block
     uint256 nChainWork;
 
@@ -738,6 +745,9 @@ public:
     // (memory only) Sequencial id assigned to distinguish order in which blocks are received.
     uint32_t nSequenceId;
 
+    // (memory only) Used for determining tie breakers
+    int64_t nTimeReceived;
+
     CBlockIndex()
     {
         phashBlock = NULL;
@@ -746,11 +756,13 @@ public:
         nFile = 0;
         nDataPos = 0;
         nUndoPos = 0;
+        nMatureCoinsSpent = 0;
         nChainWork = 0;
         nTx = 0;
         nChainTx = 0;
         nStatus = 0;
         nSequenceId = 0;
+        nTimeReceived = 0;
 
         ClearHeaderSig();
         nVersion       = 0;
@@ -767,11 +779,13 @@ public:
         nFile = 0;
         nDataPos = 0;
         nUndoPos = 0;
+        nMatureCoinsSpent = 0;
         nChainWork = 0;
         nTx = 0;
         nChainTx = 0;
         nStatus = 0;
         nSequenceId = 0;
+        nTimeReceived = 0;
 
         CopyHeaderSigFrom(block.vchHeaderSigR, block.vchHeaderSigS);
         nVersion        = block.nVersion;

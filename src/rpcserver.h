@@ -18,6 +18,9 @@
 #include "json/json_spirit_utils.h"
 #include "json/json_spirit_writer_template.h"
 
+// For testing the chain tie breaking strategy
+//bool fJustPrint = false;
+
 class CBlockIndex;
 
 /* Start RPC threads */

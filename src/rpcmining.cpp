@@ -24,6 +24,7 @@ using namespace std;
 #ifdef ENABLE_WALLET
 // Key used by getwork miners.
 // Allocated in InitRPCMining, free'd in ShutdownRPCMining
+// TODO maybe get rid of this in favor of providing private key in getwork call?
 static CReserveKey* pMiningKey = NULL;
 
 // TODO Allow a way to set an arg to specify the only key that should be used for mining?
@@ -243,7 +244,6 @@ Value gethashespersec(const Array& params, bool fHelp)
     return (int64_t)dSashesPerSec;
 }
 #endif
-
 
 Value getmininginfo(const Array& params, bool fHelp)
 {

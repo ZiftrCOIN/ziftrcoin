@@ -155,7 +155,6 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
     // txNew.vout[1].scriptPubKey = CScript() << OP_TRUE;
     // txNew.vout[1].nValue = 0;
 
-
     // Add our coinbase tx as first transaction
     pblock->vtx.push_back(txNew);
     pblocktemplate->vTxFees.push_back(-1); // updated at end
@@ -213,7 +212,8 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
                     if (!mempool.mapTx.count(txin.prevout.hash))
                     {
                         LogPrintf("ERROR: mempool transaction missing input\n");
-                        if (fDebug) assert("mempool transaction missing input" == 0);
+                        if (fDebug) 
+                            assert("mempool transaction missing input" == 0);
                         fMissingInputs = true;
                         if (porphan)
                             vOrphan.pop_back();
@@ -544,6 +544,39 @@ CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reserveKey)
     return CreateNewBlock(scriptPubKey);
 }
 
+//extern bool fJustPrint;
+
+bool PrintBlockInfo(CBlock* pblock, CReserveKey& reserveKey)
+{
+    uint256 hash = pblock->GetHash();
+
+    LogPrintf("Begin print block info:\n{\n");
+    CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+    ssBlock << *pblock;
+    LogPrintf("  block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
+    LogPrintf("  hashBlockHeader: %s\n", hash.ToString());
+
+    std::vector<unsigned char> vchSig;
+    if (!pblock->GetHeaderSig(vchSig))
+        return error("  BitcoinMiner : could not get the signature of the block header");
+
+    CPubKey pubKey;
+    if (!reserveKey.GetReservedKey(pubKey))
+        throw std::runtime_error("BitcoinMiner() : Could not get new public key");
+
+    uint256 hashSigned = pblock->GetHash(false);
+
+    LogPrintf("  header sig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
+    LogPrintf("  vchSig:%s \n", HexStr(vchSig.begin(), vchSig.end()));
+    LogPrintf("  R:%s \n", HexStr(&pblock->vchHeaderSigR[0], &pblock->vchHeaderSigR[32]));
+    LogPrintf("  S:%s \n", HexStr(&pblock->vchHeaderSigS[0], &pblock->vchHeaderSigS[32]));
+    LogPrintf("  pub key: %s\n", HexStr(pubKey.begin(), pubKey.end()));
+    LogPrintf("  hash to sign: %s\n", hashSigned.GetHex());
+    LogPrintf("}\nEnd print block info");
+
+    return true;
+}
+
 // If work is checked successfully, 
 // keep the reserve key...
 bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
@@ -559,6 +592,12 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
     LogPrintf("BitcoinMiner:\n");
     LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashTarget.GetHex());
     LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
+
+    // if (fJustPrint)
+    // {
+    //     PrintBlockInfo(pblock, reserveKey);
+    //     return false;
+    // }
 
     // Found a solution
     {
@@ -579,23 +618,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
         CValidationState state;
         if (!ProcessBlock(state, NULL, pblock)) 
         {
-            std::vector<unsigned char> vchSig;
-            if (!pblock->GetHeaderSig(vchSig))
-                return error("BitcoinMiner : could not get the signature of the block header");
-
-            CPubKey pubKey;
-            if (!reserveKey.GetReservedKey(pubKey))
-                throw std::runtime_error("BitcoinMiner() : Could not get new public key");
-
-            uint256 hashSigned = pblock->GetHash(false);
-
-            LogPrintf("header sig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
-            LogPrintf("vchSig:%s \n", HexStr(vchSig.begin(), vchSig.end()));
-            LogPrintf("R:%s \n", HexStr(&pblock->vchHeaderSigR[0], &pblock->vchHeaderSigR[32]));
-            LogPrintf("S:%s \n", HexStr(&pblock->vchHeaderSigS[0], &pblock->vchHeaderSigS[32]));
-            LogPrintf("pub key: %s\n", HexStr(pubKey.begin(), pubKey.end()));
-            LogPrintf("hash to sign: %s\n", hashSigned.GetHex());
-
+            PrintBlockInfo(pblock, reserveKey);
             return error("BitcoinMiner : ProcessBlock, block not accepted");
         }
     }
