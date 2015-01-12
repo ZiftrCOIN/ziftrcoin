@@ -168,7 +168,7 @@ public:
         nRPCPort = 10332;
         vAlertPubKey = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");//"0380d4125f5357aac2b98c201ee76c3e26a5ef084a5fcd26e65c9cfff7ad1a026c");
 
-        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 16);
+        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 8);
         nNumIncrBlocks =  5  * 365 * 24 * 60;
         nNumConstBlocks = 5  * 365 * 24 * 60;
         nNumDecrBlocks =  10 * 365 * 24 * 60;
@@ -192,9 +192,9 @@ public:
         genesis.vtx.push_back(txNew);
         
         std::vector<unsigned char> vchSigR;
-        vchSigR = ParseHex("a2db96afbfc6cd95190e075ebc75f7d323c545719754bbc78c90dd8f91029915");
+        vchSigR = ParseHex("9385625782d6423678ccd494328beaacb6cb6f4e13288ffa6cc0e8d1de27b759");
         std::vector<unsigned char> vchSigS;
-        vchSigS = ParseHex("20384aadd6174fbe0cec3c5851f5364fa3ffc2a970311de6f8619464d12cb9a9");
+        vchSigS = ParseHex("65da15f77817f4f50e309102143dd3b152ed6b61bfd6b2bb52785a6e53aeb8dc");
         genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
 
         genesis.hashPrevBlock = 0;
@@ -231,7 +231,7 @@ public:
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         } 
 
-        assert(hashGenesisBlock == uint256("0x0000e1de3f3df38de44508b26c0e47aea341c0e60492bc46ac0a5589d9657608"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
+        assert(hashGenesisBlock == uint256("0x0087968701577340357ce6bb138b083ab881cbbaf739fbf694a9226cfe333777"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
         assert(genesis.hashMerkleRoot == uint256("0xb04109fc6bfaf59fe0d393b471a1837aad5c77bdccb528975f30ac827b040512"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));     
 
         // vSeeds.push_back(CDNSSeedData("bitcoin.sipa.be", "seed.bitcoin.sipa.be"));
@@ -242,19 +242,19 @@ public:
         // vSeeds.push_back(CDNSSeedData("xf2.org", "bitseed.xf2.org"));
 
         // Convert the pnSeeds array into usable address objects.
-        for (unsigned int i = 0; i < ARRAYLEN(pnSeed); i++)
-        {
-            // It'll only connect to one or two seed nodes because once it connects,
-            // it'll get a pile of addresses with newer timestamps.
-            // Seed nodes are given a random 'last seen time' of between one and two
-            // weeks ago.
-            const int64_t nOneWeek = 7*24*60*60;
-            struct in_addr ip;
-            memcpy(&ip, &pnSeed[i], sizeof(ip));
-            CAddress addr(CService(ip, GetDefaultPort()));
-            addr.nTime = GetTime() - GetRand(nOneWeek) - nOneWeek;
-            vFixedSeeds.push_back(addr);
-        }
+        // for (unsigned int i = 0; i < ARRAYLEN(pnSeed); i++)
+        // {
+        //     // It'll only connect to one or two seed nodes because once it connects,
+        //     // it'll get a pile of addresses with newer timestamps.
+        //     // Seed nodes are given a random 'last seen time' of between one and two
+        //     // weeks ago.
+        //     const int64_t nOneWeek = 7*24*60*60;
+        //     struct in_addr ip;
+        //     memcpy(&ip, &pnSeed[i], sizeof(ip));
+        //     CAddress addr(CService(ip, GetDefaultPort()));
+        //     addr.nTime = GetTime() - GetRand(nOneWeek) - nOneWeek;
+        //     vFixedSeeds.push_back(addr);
+        // }
     }
 
     virtual const CBlock& GenesisBlock() const { return genesis; }
@@ -295,9 +295,9 @@ public:
         vAlertPubKey = ParseHex("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");//"02911661822e0b2cd814ed3ff4d23c97cfe7c89ad1eb6ce2ad3181195cfa9e0886");
 
         std::vector<unsigned char> vchSigR;
-        vchSigR = ParseHex("9744af46acb3ef1dd5d0e61ec8d0bea4f9914fa37d4e1ee8873c5fe66e7504fc");
+        vchSigR = ParseHex("de60a309737a4b620b50d32f511cc7226f145d4259f20d1c487f2eb04eb1d584");
         std::vector<unsigned char> vchSigS;
-        vchSigS = ParseHex("31ca0aaa604c7ef238eb4054cfb24ee46e8f762ca2ec6ab8a4c0c2a0456a8d73");
+        vchSigS = ParseHex("435f5599033aac80ee1eadb262dd4e02f60929f9178fe5466d5890d2a7e6f5dc");
         genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
 
         genesis.nTime = 1416422036;
@@ -307,7 +307,7 @@ public:
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         }
 
-        assert(hashGenesisBlock == uint256("0x00005757f7e2796bc0256efe092ae74d86b8319f205ebd4bb590c2eba69d6e13"));
+        assert(hashGenesisBlock == uint256("0x004f7c4cc6429bda20645e58fc04c841c50d85f25375a4a0d84a8192be1d3c20"));
         // Merkle root is the same as parent
 
         vFixedSeeds.clear();

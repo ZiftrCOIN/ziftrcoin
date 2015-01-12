@@ -838,7 +838,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
             if (!txin.prevout.IsNull()) 
                 return state.DoS(10, error("CheckTransaction() : prevout in coinbase is not null"),
                                  REJECT_INVALID, "bad-txns-prevout-null");
-            if (txin.scriptSig.size() < 2 || txin.scriptSig.size() > 100)
+            if (txin.scriptSig.size() < MIN_COINBASE_SCRIPTSIG_SIZE || txin.scriptSig.size() > MAX_COINBASE_SCRIPTSIG_SIZE)
                 return state.DoS(100, error("CheckTransaction() : coinbase script size"),
                                  REJECT_INVALID, "bad-cb-length"); 
         } 
@@ -1316,8 +1316,9 @@ int64_t GetBlockValue(int nHeight, int64_t nFees)
     return nBlockReward + nFees;
 }
 
-static const int64_t MAX_TENTH_PERCENTAGE_CHANGE = 75;
-static const int64_t DIFF_FACTOR_RANGE           = 12;                                  // TODO The number of intervals to include when calculating the hash rate of the network    (blocks) 
+static const int64_t MAX_TENTH_PERCENTAGE_CHANGE = 500;
+static const int64_t DIFF_FACTOR_RANGE           = 8;                                  // TODO The number of intervals to include when calculating the hash rate of the network    (blocks) 
+static const int64_t DIFF_FACTOR_OFFSET          = 2;                                  // TODO The number of intervals to include when calculating the hash rate of the network    (blocks) 
 static const int64_t TARGET_SPACING              = 60;                                  // Target number of seconds per block solve                                                 (seconds/block)
 
 // Return average network hashes per second based on the last 'nLookUp' intervals,
@@ -1331,7 +1332,7 @@ static const int64_t TARGET_SPACING              = 60;                          
 // nHeight = 5
 //      C0      C1      C2      C3      C4      C5      ...
 //                               <- 2 -> <- 1 -> 
-CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval)
+CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval, bool fBeforeGenesis)
 {
     CBlockIndex* pBlockLast = chainActive[nHeight];
     if (pBlockLast == NULL)
@@ -1339,29 +1340,42 @@ CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval)
 
     if (nLookUp <= 0)
         nLookUp = DIFF_FACTOR_RANGE;
-    if (nLookUp > pBlockLast->nHeight)
+    if (!fBeforeGenesis && nLookUp > pBlockLast->nHeight)
         nLookUp = pBlockLast->nHeight;
 
     // If no last block or last block is genesis block
-    if (pBlockLast == NULL || pBlockLast->nHeight == 0)
+    if (pBlockLast == NULL || (!fBeforeGenesis && pBlockLast->pprev == NULL))
         return CBigNum(-1);
 
     CBlockIndex* pBlockFirst = pBlockLast;
+    CBigNum nChainWorkFirst;
+    nChainWorkFirst.setuint256(pBlockLast->nChainWork);
+
     int64_t minTime = pBlockFirst->GetBlockTime();
     int64_t maxTime = minTime;
-    for (int i = 0; i < nLookUp; i++) {
+
+    int i = 0;
+    while (pBlockFirst->pprev != NULL && i < nLookUp)
+    {
+        i++;
         pBlockFirst = pBlockFirst->pprev;
         int64_t nTime = pBlockFirst->GetBlockTime();
         minTime = std::min(nTime, minTime);
         maxTime = std::max(nTime, maxTime);
+        nChainWorkFirst.setuint256(pBlockFirst->nChainWork);
     }
+
+    nChainWorkFirst -= (nLookUp - i) * ((CBigNum(1)<<256) / (Params().ProofOfWorkLimit()+1));
+    minTime -= (nLookUp - i) * TARGET_SPACING;
 
     // In case there's a situation where minTime == maxTime, we don't want a divide by zero exception.
     if (minTime == maxTime)
         return CBigNum(-1);
 
-    CBigNum num;
-    num.setuint256(pBlockLast->nChainWork - pBlockFirst->nChainWork);
+    CBigNum nChainWorkLast;
+    nChainWorkLast.setuint256(pBlockLast->nChainWork);
+
+    CBigNum num = (nChainWorkLast - nChainWorkFirst);
 
     CBigNum den;
     den.setuint64(maxTime - minTime);
@@ -1409,14 +1423,13 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 // Ex.
 // nLookUp = 4
 // nHeight = 8
-//      C0      C1      C2      C3      C4      C5      C6      C7      C8      ...
+//      C0      C1      C2      C3      C4      C5      C6      C7      C8      C9      C10      ...
 //                                       <- 4 -> <- 3 -> <- 2 -> <- 1 ->
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
     unsigned int nProofOfWorkLimit = Params().ProofOfWorkLimit().GetCompact();
 
-    // Genesis block
-    if (pindexLast == NULL || pindexLast->nHeight < 2*DIFF_FACTOR_RANGE)
+    if (pindexLast == NULL || pindexLast->nHeight < DIFF_FACTOR_RANGE + DIFF_FACTOR_OFFSET)
         return nProofOfWorkLimit;
 
     // Special difficulty rule for testnet:
@@ -1425,9 +1438,10 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     if (TestNet() && pblock->nTime > pindexLast->nTime + 2*TARGET_SPACING)
         return nProofOfWorkLimit;
 
-    CBigNum nPrevSashPerInterval = GetNetworkSashPer(DIFF_FACTOR_RANGE, pindexLast->nHeight - DIFF_FACTOR_RANGE, TARGET_SPACING);
-    CBigNum nCurrSashPerInterval = GetNetworkSashPer(DIFF_FACTOR_RANGE, pindexLast->nHeight, TARGET_SPACING);
-    CBigNum nNextSashPerInterval = nCurrSashPerInterval + (DIFF_FACTOR_RANGE/2 + 1) * ((nCurrSashPerInterval-nPrevSashPerInterval)/DIFF_FACTOR_RANGE);
+    CBigNum nPrevSashPerInterval = GetNetworkSashPer(DIFF_FACTOR_RANGE, pindexLast->nHeight - DIFF_FACTOR_RANGE - DIFF_FACTOR_OFFSET, TARGET_SPACING, true);
+    CBigNum nCurrSashPerInterval = GetNetworkSashPer(DIFF_FACTOR_RANGE, pindexLast->nHeight                     - DIFF_FACTOR_OFFSET, TARGET_SPACING, true);
+
+    CBigNum nNextSashPerInterval = nCurrSashPerInterval + (DIFF_FACTOR_RANGE/2 + DIFF_FACTOR_OFFSET + 1) * ((nCurrSashPerInterval-nPrevSashPerInterval)/DIFF_FACTOR_RANGE);
     
     CBigNum nTipNumHashes = ((CBigNum(1) << 256) / (CBigNum().SetCompact(pindexLast->nBits) + 1));
 
@@ -1437,6 +1451,14 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
         nNextSashPerInterval = nMaxChange;
     if (nNextSashPerInterval < nMinChange)
         nNextSashPerInterval = nMinChange;
+
+    ofstream myfile;
+    myfile.open("mininggg.csv", ios::app);
+    myfile << pindexLast->nHeight + 1 << "," 
+           << (nPrevSashPerInterval/TARGET_SPACING).ToString() << "," 
+           << (nCurrSashPerInterval/TARGET_SPACING).ToString() << "," 
+           << (nNextSashPerInterval/TARGET_SPACING).ToString() << "\n";
+    myfile.close();
 
     CBigNum bnTarget = ((CBigNum(1) << 256) / nNextSashPerInterval) - 1;
 
@@ -1907,7 +1929,6 @@ bool CountMatureCoins(const CBlock& block, CBlockIndex* pindex)
         // Start from first non-coinbase transaction
         const CTransaction& tx = block.vtx[i];
 
-        unsigned int j = 0;
         BOOST_FOREACH(const CTxIn& txin, tx.vin)
         {
             if (!view.HaveCoins(txin.prevout.hash))

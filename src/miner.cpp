@@ -13,6 +13,7 @@
 #ifdef ENABLE_WALLET
 #include "wallet.h"
 #endif
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // BitcoinMiner
@@ -386,7 +387,8 @@ void UpdateCoinbaseScriptSig(CBlock* pblock, CBlockIndex* pindexPrev)
 {
     unsigned int nHeight = pindexPrev->nHeight + 1; // Height first in coinbase required
     pblock->vtx[0].vin[0].scriptSig = (CScript() << CScriptNum(nHeight));
-    assert(pblock->vtx[0].vin[0].scriptSig.size() <= 100);
+    unsigned int nScriptSigSize = pblock->vtx[0].vin[0].scriptSig.size();
+    assert(MIN_COINBASE_SCRIPTSIG_SIZE <= nScriptSigSize && nScriptSigSize <= MAX_COINBASE_SCRIPTSIG_SIZE);
 
     pblock->hashMerkleRoot = pblock->BuildMerkleTree();
 }
@@ -494,7 +496,7 @@ int64_t nSPSTimerStart = 0;
 // TODO there are efficiency improvements that can be made here
 // TODO could probably get an ~2x improvement by using (R, S) and (R, -S) for each try, since 
 // both are valid signatures for the same data. https://bitcointalk.org/index.php?topic=8392.msg1245898#msg1245898
-unsigned int static DoSignatureHashes(CBlock* pblock, const CKey& signer, unsigned int nTries)
+unsigned int static DoSignatureHashes(CBlock* pblock, const CKey& signer, unsigned int nTries, unsigned int nDontTry)
 {
     // Only need to calculate this once
     // uint256 hashToSignBuf[2];
@@ -517,7 +519,7 @@ unsigned int static DoSignatureHashes(CBlock* pblock, const CKey& signer, unsign
         {
             DERDecodeSignature(pblock->vchHeaderSigR, pblock->vchHeaderSigS, j ? vchSig1 : vchSig2);
             uint256 hashBlockHeader = pblock->GetHash();
-            if (hashBlockHeader <= hashTarget) {
+            if (hashBlockHeader <= hashTarget && (2*i + j) >= nDontTry) {
                 // CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
                 // ssBlock << *pblock;
                 // LogPrintf("block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
@@ -614,6 +616,8 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
             wallet.mapRequestCount[pblock->GetHash()] = 0;
         }
 
+        CBlockIndex* pblockindex = mapBlockIndex[pblock->hashPrevBlock];
+
         // Process this block the same as if we had received it from another node
         CValidationState state;
         if (!ProcessBlock(state, NULL, pblock)) 
@@ -621,6 +625,11 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
             PrintBlockInfo(pblock, reserveKey);
             return error("BitcoinMiner : ProcessBlock, block not accepted");
         }
+
+        ofstream myfile;
+        myfile.open ("mining.csv", ios::app);
+        myfile << pblockindex->nHeight << "," << pblock->nTime << "\n";
+        myfile.close();
     }
 
     return true;
@@ -684,6 +693,9 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
 // Or should it be in the config file when the daemon is started?
 // Probably just going to get it working with a default wallet key first.
 // 
+
+extern unsigned int nDontTry;
+
 void static BitcoinMiner(CWallet *pwallet)
 {
     LogPrintf("ZiftrCOINMiner started\n");
@@ -748,9 +760,10 @@ void static BitcoinMiner(CWallet *pwallet)
                     nSashCounter = 0;
                 }
 
-                unsigned int nTries = 200; // Must be even
-                unsigned int nNumFailedAttempts = DoSignatureHashes(pblock, signKey, nTries/2);
+                unsigned int nTries = 100; // Must be even
+                unsigned int nNumFailedAttempts = DoSignatureHashes(pblock, signKey, nTries/2, nDontTry);
                 nSashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
+                nSashCounter -= nDontTry;
 
                 if (nNumFailedAttempts < nTries) {
                     // Not all tries were fails, so we found a solution

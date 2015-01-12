@@ -29,6 +29,10 @@
 #include <utility>
 #include <vector>
 
+// TODO delete these
+#include <iostream>
+#include <fstream>
+
 class CBlockIndex;
 class CBloomFilter;
 class CInv;
@@ -78,6 +82,10 @@ static const int MAX_BLOCK_TIME_OFFSET = 2 * 60 * 60;
 static const int TRANSACTION_MATURITY_DEPTH = 120; 
 /** The delay for which blocks with more mature coins spent may possibly override. */
 static const int64_t MATURE_COINS_TIEBREAKER_TIME_LIMIT = 13 * 1000; // (milliseconds) 
+/** The maximum coinbase scriptSig size. */
+static const unsigned int MAX_COINBASE_SCRIPTSIG_SIZE = 250;
+/** The minimum coinbase scriptSig size. */
+static const unsigned int MIN_COINBASE_SCRIPTSIG_SIZE = 2;
 
 #ifdef USE_UPNP
 static const int fHaveUPnP = true;
@@ -176,7 +184,7 @@ std::string GetWarnings(std::string strFor);
 bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
 bool ActivateBestChain(CValidationState &state);
-CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval);
+CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval, bool fBeforeGenesis = false);
 int64_t GetBlockValue(int nHeight, int64_t nFees);
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock);
 
