@@ -167,53 +167,6 @@ bool CTransaction::IsCoinBase() const
     }
 
     return true;
-    
-    // for (unsigned int i = 1; i < vout.size(); i++) {
-    //     if (firstScriptPubKey != vout[i].scriptPubKey)
-    //         return false;
-    // }
-
-    // New param: CCoinsViewCache& view
-
-    // if (vin.size() == 0 || !vin[0].prevout.IsNull())
-    //     return false;
-
-    // if (vout.size() == 0 || !vout[0].IsCoinbaseOutputType())
-    //     return false;
-
-    // for (int i = 0; i < vout.size(); i++) {
-    //     CTxOut out = vout[i];
-
-    //     if (out.scriptPubKey.IsCoinbaseOutputType())
-    //         continue;
-
-    //     // All outputs that aren't coinbase output types must have a 
-    //     // corresponding input which is not null, and with a value that 
-    //     // is not more than its coreresponding inputs value
-
-    //     if (i >= vin.size()) 
-    //         return false;
-
-    //     CTxIn input = vin[i];
-
-    //     if (input.prevout.IsNull())
-    //         return false;
-
-    //     // virtual bool GetCoins(const uint256 &txid, CCoins &coins);
-    //     // Maybe use GetOutputFor?
-    //     CCoins prev;
-    //     if (view.GetCoins(input.prevout.hash, prev))
-    //         return error("IsCoinBase() : Output is either spent or otherwise not available. txid: %s\n", input.prevout.hash.ToString());
-
-    //     if (!prev.IsAvailable(input.prevout.n))
-    //         return false;
-
-    //     if (prev.vout[input.prevout.n].nValue < output.nValue) {
-    //         return false;
-    //     }
-    // }
-    // return true;
-
 }
 
 std::string CTransaction::ToString() const
