@@ -85,7 +85,6 @@ void SHA256Transform(void* pstate, void* pinput, const void* pinit)
 }
 
 // Some explaining would be appreciated
-// See 
 class COrphan
 {
 public:
@@ -151,6 +150,16 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
     txNew.vin[0].prevout.SetNull();
     txNew.vout.resize(1);
     txNew.vout[0].scriptPubKey = scriptPubKeyIn;
+
+    // Testing the rule that multisig outputs can be in the coinbase
+    // std::vector<unsigned char> pubKey(scriptPubKeyIn.begin()+1, scriptPubKeyIn.end()-1);
+    // LogPrintf("pubKey hack: %s \n", HexStr(pubKey.begin(), pubKey.end()));
+    // txNew.vout[1].scriptPubKey 
+    //     << OP_2
+    //     << pubKey
+    //     << ParseHex("037e6d28a34b6fc0f305162a245ac55b81c3dfff7726f65dd80493b04fcebc76e7")
+    //     << OP_2
+    //     << OP_CHECKMULTISIG;
 
     // Testing the rule that this can be spent before maturity
     // txNew.vout[1].scriptPubKey = CScript() << OP_TRUE;
@@ -393,101 +402,15 @@ void UpdateCoinbaseScriptSig(CBlock* pblock, CBlockIndex* pindexPrev)
     pblock->hashMerkleRoot = pblock->BuildMerkleTree();
 }
 
-
-//
-// Calculate the midstate buffer 
-// Format the the pdata and phash1 char*s to have the proper buffers for SHA256 hashing,
-// as outlined in the comment above FormatHashBlocks.
-//
-// void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash1)
-// {
-//     //
-//     // Pre-build hash buffers
-//     //
-//     struct
-//     {
-//         struct unnamed2
-//         {
-//             int nVersion;
-//             uint256 hashPrevBlock;
-//             uint256 hashMerkleRoot;
-//             unsigned int nTime;
-//             unsigned int nBits;
-//             unsigned char vchHeaderSig[72]; // Min 70 bytes, Max 72 bytes, Avg 71 bytes
-//         } block;
-//         unsigned char pchPadding0[64];
-//         uint256 hash1;
-//         unsigned char pchPadding1[64];
-//     } tmp;
-//     memset(&tmp, 0, sizeof(tmp)); // zero out everything
-
-//     tmp.block.nVersion       = pblock->nVersion;
-//     tmp.block.hashPrevBlock  = pblock->hashPrevBlock;
-//     tmp.block.hashMerkleRoot = pblock->hashMerkleRoot;
-//     tmp.block.nTime          = pblock->nTime;
-//     tmp.block.nBits          = pblock->nBits;
-    
-//     int nSizeHeaderSig = pblock->vchHeaderSig.size();
-//     assert(70 <= nSizeHeaderSig && nSizeHeaderSig <= 72);
-    
-
-//     FormatHashBlocks(&tmp.block, sizeof(tmp.block));
-//     FormatHashBlocks(&tmp.hash1, sizeof(tmp.hash1));
-
-//     // Byte swap all the input buffer
-//     // Relies on the nubmer of bytes being a multiple of 4 
-//     for (unsigned int i = 0; i < sizeof(tmp)/4; i++)
-//         ((unsigned int*)&tmp)[i] = ByteReverse(((unsigned int*)&tmp)[i]);
-
-//     // Precalc the first third of the first hash, which stays constant
-//     // because it doesn't include the headerSig
-//     SHA256Transform(pmidstate, &tmp.block, pSHA256InitState);
-//     memcpy(pdata, &tmp.block, 128);
-//     memcpy(phash1, &tmp.hash1, 64);
-// }
-
 #ifdef ENABLE_WALLET
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // Internal miner
 //
+
 double dSashesPerSec = 0.0;
 int64_t nSPSTimerStart = 0;
-
-//
-// ScanHash scans nonces looking for a hash with at least some zero bits.
-// It operates on big endian data.  Caller does the byte reversing.
-// All input buffers are 16-byte aligned.  nNonce is usually preserved
-// between calls, but periodically or if nNonce is 0xffff0000 or above,
-// the block is rebuilt and nNonce starts over at zero.
-//
-// unsigned int static ScanHash_CryptoPP(char* pmidstate, char* pdata, char* phash1, char* phash, unsigned int& nHashesDone)
-// {
-//     unsigned int& nNonce = *(unsigned int*)(pdata + 12);
-//     for (;;)
-//     {
-//         // Crypto++ SHA256
-//         // Hash pdata using pmidstate as the starting state into
-//         // pre-formatted buffer phash1, then hash phash1 into phash
-//         nNonce++;
-//         SHA256Transform(phash1, pdata, pmidstate);
-//         SHA256Transform(phash, phash1, pSHA256InitState);
-
-//         // Return the nonce if the hash has at least some zero bits,
-//         // caller will check if it has enough to reach the target
-//         if (((unsigned short*)phash)[14] == 0)
-//             return nNonce;
-
-//         // If nothing found after trying for a while, return -1
-//         if ((nNonce & 0xffff) == 0)
-//         {
-//             nHashesDone = 0xffff+1;
-//             return (unsigned int) -1;
-//         }
-//         if ((nNonce & 0xfff) == 0)
-//             boost::this_thread::interruption_point();
-//     }
-// }
 
 
 // Returns the number of failed attempts. 
@@ -496,6 +419,7 @@ int64_t nSPSTimerStart = 0;
 // TODO there are efficiency improvements that can be made here
 // TODO could probably get an ~2x improvement by using (R, S) and (R, -S) for each try, since 
 // both are valid signatures for the same data. https://bitcointalk.org/index.php?topic=8392.msg1245898#msg1245898
+// nDontTry should always be zero except for when simulating difficulty retargeting
 unsigned int static DoSignatureHashes(CBlock* pblock, const CKey& signer, unsigned int nTries, unsigned int nDontTry)
 {
     // Only need to calculate this once
@@ -579,8 +503,7 @@ bool PrintBlockInfo(CBlock* pblock, CReserveKey& reserveKey)
     return true;
 }
 
-// If work is checked successfully, 
-// keep the reserve key...
+// If work is checked successfully, then keep the reserve key...
 bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
 {
     uint256 hash = pblock->GetHash();
@@ -616,8 +539,6 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
             wallet.mapRequestCount[pblock->GetHash()] = 0;
         }
 
-        CBlockIndex* pblockindex = mapBlockIndex[pblock->hashPrevBlock];
-
         // Process this block the same as if we had received it from another node
         CValidationState state;
         if (!ProcessBlock(state, NULL, pblock)) 
@@ -626,66 +547,15 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
             return error("BitcoinMiner : ProcessBlock, block not accepted");
         }
 
-        ofstream myfile;
-        myfile.open ("mining.csv", ios::app);
-        myfile << pblockindex->nHeight << "," << pblock->nTime << "\n";
-        myfile.close();
+        // CBlockIndex* pblockindex = mapBlockIndex[pblock->hashPrevBlock];
+        // ofstream myfile;
+        // myfile.open ("mining.csv", ios::app);
+        // myfile << pblockindex->nHeight << "," << pblock->nTime << "\n";
+        // myfile.close();
     }
 
     return true;
 }
-
-// bool CheckWorkTest(CBlock* pblock, CWallet& wallet, CPubKey& pubKey)
-// {
-//     uint256 hash = pblock->GetHash();
-//     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
-
-//     if (hash > hashTarget)
-//         return false;
-
-//     //// debug print
-//     LogPrintf("BitcoinMiner:\n");
-//     LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashTarget.GetHex());
-//     pblock->print();
-//     LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
-
-//     // Found a solution
-//     {
-//         LOCK(cs_main);
-//         if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
-//             return error("BitcoinMiner : generated block is stale");
-
-//         // Need to double check that the coinbase is spendable
-//         std::vector<unsigned char> vchSig;
-//         if (!pblock->GetHeaderSig(vchSig))
-//             return error("BitcoinMiner : could not get the signature of the block header");
-
-//         uint256 hashSigned = pblock->GetHash(false);
-//         if (!pubKey.Verify(hashSigned, vchSig))
-//         {
-//             CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
-//             ssBlock << *pblock;
-//             LogPrintf("block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
-//             LogPrintf("header sig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
-//             LogPrintf("pub key: %s\n", HexStr(pubKey.begin(), pubKey.end()));
-//             LogPrintf("hash to sign: %s\n", hashSigned.GetHex());
-//             return error("BitcoinMiner : could not verify the signature of the block header");
-//         }
-
-//         // Track how many getdata requests this block gets
-//         {
-//             LOCK(wallet.cs_wallet);
-//             wallet.mapRequestCount[pblock->GetHash()] = 0;
-//         }
-
-//         // Process this block the same as if we had received it from another node
-//         CValidationState state;
-//         if (!ProcessBlock(state, NULL, pblock))
-//             return error("BitcoinMiner : ProcessBlock, block not accepted");
-//     }
-
-//     return true;
-// }
 
 // 
 // TODO 
@@ -694,7 +564,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
 // Probably just going to get it working with a default wallet key first.
 // 
 
-extern unsigned int nDontTry;
+// extern unsigned int nDontTry;
 
 void static BitcoinMiner(CWallet *pwallet)
 {
@@ -760,10 +630,11 @@ void static BitcoinMiner(CWallet *pwallet)
                     nSashCounter = 0;
                 }
 
-                unsigned int nTries = 100; // Must be even
-                unsigned int nNumFailedAttempts = DoSignatureHashes(pblock, signKey, nTries/2, nDontTry);
+                unsigned int nTries = 100; // Should be even
+                unsigned int nDontSash = 0; // nDontTry; // For simulating increases/decreases of network hash power
+                unsigned int nNumFailedAttempts = DoSignatureHashes(pblock, signKey, nTries/2, nDontSash);
                 nSashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
-                nSashCounter -= nDontTry;
+                nSashCounter -= nDontSash;
 
                 if (nNumFailedAttempts < nTries) {
                     // Not all tries were fails, so we found a solution

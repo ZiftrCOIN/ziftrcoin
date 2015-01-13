@@ -20,7 +20,7 @@
 
 // For testing the chain tie breaking strategy
 //bool fJustPrint = false;
-unsigned int nDontTry = 0;
+// unsigned int nDontTry = 0;
 
 class CBlockIndex;
 

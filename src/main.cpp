@@ -1316,75 +1316,8 @@ int64_t GetBlockValue(int nHeight, int64_t nFees)
     return nBlockReward + nFees;
 }
 
-static const int64_t MAX_TENTH_PERCENTAGE_CHANGE = 500;
-static const int64_t DIFF_FACTOR_RANGE           = 8;                                  // TODO The number of intervals to include when calculating the hash rate of the network    (blocks) 
-static const int64_t DIFF_FACTOR_OFFSET          = 2;                                  // TODO The number of intervals to include when calculating the hash rate of the network    (blocks) 
-static const int64_t TARGET_SPACING              = 60;                                  // Target number of seconds per block solve                                                 (seconds/block)
-
-// Return average network hashes per second based on the last 'nLookUp' intervals,
-// or from the last DIFF_FACTOR_RANGE intervals if 'nLookUp' is nonpositive.
-//
-// If 'nHeight' is legitimate, i.e. there exists a block at the height give, then it uses that block.
-// If there is not a block at nHeight, then it uses the tip of the currently active chain.
-//
-// Ex.
-// nLookUp = 2
-// nHeight = 5
-//      C0      C1      C2      C3      C4      C5      ...
-//                               <- 2 -> <- 1 -> 
-CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval, bool fBeforeGenesis)
-{
-    CBlockIndex* pBlockLast = chainActive[nHeight];
-    if (pBlockLast == NULL)
-        pBlockLast = chainActive.Tip();
-
-    if (nLookUp <= 0)
-        nLookUp = DIFF_FACTOR_RANGE;
-    if (!fBeforeGenesis && nLookUp > pBlockLast->nHeight)
-        nLookUp = pBlockLast->nHeight;
-
-    // If no last block or last block is genesis block
-    if (pBlockLast == NULL || (!fBeforeGenesis && pBlockLast->pprev == NULL))
-        return CBigNum(-1);
-
-    CBlockIndex* pBlockFirst = pBlockLast;
-    CBigNum nChainWorkFirst;
-    nChainWorkFirst.setuint256(pBlockLast->nChainWork);
-
-    int64_t minTime = pBlockFirst->GetBlockTime();
-    int64_t maxTime = minTime;
-
-    int i = 0;
-    while (pBlockFirst->pprev != NULL && i < nLookUp)
-    {
-        i++;
-        pBlockFirst = pBlockFirst->pprev;
-        int64_t nTime = pBlockFirst->GetBlockTime();
-        minTime = std::min(nTime, minTime);
-        maxTime = std::max(nTime, maxTime);
-        nChainWorkFirst.setuint256(pBlockFirst->nChainWork);
-    }
-
-    nChainWorkFirst -= (nLookUp - i) * ((CBigNum(1)<<256) / (Params().ProofOfWorkLimit()+1));
-    minTime -= (nLookUp - i) * TARGET_SPACING;
-
-    // In case there's a situation where minTime == maxTime, we don't want a divide by zero exception.
-    if (minTime == maxTime)
-        return CBigNum(-1);
-
-    CBigNum nChainWorkLast;
-    nChainWorkLast.setuint256(pBlockLast->nChainWork);
-
-    CBigNum num = (nChainWorkLast - nChainWorkFirst);
-
-    CBigNum den;
-    den.setuint64(maxTime - minTime);
-
-    CBigNum val;
-    val.setuint64(nInterval);
-
-    return (val * num / den);
-}
+static const int64_t RETARGET_INTERVAL = 1;       // Number of blocks between retargets
+static const int64_t TARGET_SPACING    = 60;      // Target number of seconds per block solve (seconds/block)
 
 //
 // minimum amount of work that could possibly be required nTime after
@@ -1395,20 +1328,18 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
     const CBigNum& bnLimit = Params().ProofOfWorkLimit();
     // Testnet has min-difficulty blocks
     // after TARGET_SPACING*2 time between blocks:
-    if (TestNet() && nTime > TARGET_SPACING*2)
+    if (TestNet() && nTime > TARGET_SPACING * 2)
         return bnLimit.GetCompact();
 
     CBigNum bnResult;
     bnResult.SetCompact(nBase);
     while (nTime > 0 && bnResult < bnLimit)
     {
-        // Maximum MAX_TENTH_PERCENTAGE_CHANGE adjustment ...
-        CBigNum nTipNumHashes = ((CBigNum(1) << 256) / (bnResult + 1));
-        CBigNum nMinChange((1000 - MAX_TENTH_PERCENTAGE_CHANGE) * nTipNumHashes / 1000);
-        bnResult = ((CBigNum(1) << 256) / nMinChange) - 1;
-
-        // ... have to take at least this amount of time
-        nTime -= TARGET_SPACING;
+        // Maximum 50% adjustment...
+        bnResult *= (TARGET_SPACING + (TARGET_SPACING/2)) / TARGET_SPACING;
+        
+        // ... in best-case exactly 4-times-normal target time
+        nTime -= TARGET_SPACING * 4;
     }
 
     if (bnResult > bnLimit)
@@ -1420,16 +1351,12 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 
 // TODO make a similar method to track the max block size
 
-// Ex.
-// nLookUp = 4
-// nHeight = 8
-//      C0      C1      C2      C3      C4      C5      C6      C7      C8      C9      C10      ...
-//                                       <- 4 -> <- 3 -> <- 2 -> <- 1 ->
+// TODO change this to a 3 block retarget
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
     unsigned int nProofOfWorkLimit = Params().ProofOfWorkLimit().GetCompact();
 
-    if (pindexLast == NULL || pindexLast->nHeight < DIFF_FACTOR_RANGE + DIFF_FACTOR_OFFSET)
+    if (pindexLast == NULL)
         return nProofOfWorkLimit;
 
     // Special difficulty rule for testnet:
@@ -1438,40 +1365,46 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     if (TestNet() && pblock->nTime > pindexLast->nTime + 2*TARGET_SPACING)
         return nProofOfWorkLimit;
 
-    CBigNum nPrevSashPerInterval = GetNetworkSashPer(DIFF_FACTOR_RANGE, pindexLast->nHeight - DIFF_FACTOR_RANGE - DIFF_FACTOR_OFFSET, TARGET_SPACING, true);
-    CBigNum nCurrSashPerInterval = GetNetworkSashPer(DIFF_FACTOR_RANGE, pindexLast->nHeight                     - DIFF_FACTOR_OFFSET, TARGET_SPACING, true);
+    // This fixes an issue where a 51% attack can change difficulty at will.
+    // Go back the full period unless it's the first retarget after genesis. Code courtesy of Art Forz
+    int nGoBack = RETARGET_INTERVAL;
+    if ((pindexLast->nHeight + 1) == RETARGET_INTERVAL)
+        nGoBack = RETARGET_INTERVAL - 1;
 
-    CBigNum nNextSashPerInterval = nCurrSashPerInterval + (DIFF_FACTOR_RANGE/2 + DIFF_FACTOR_OFFSET + 1) * ((nCurrSashPerInterval-nPrevSashPerInterval)/DIFF_FACTOR_RANGE);
+    // Go back nGoBack blocks
+    const CBlockIndex* pindexFirst = pindexLast;
+    for (int i = 0; pindexFirst && i < nGoBack; i++)
+        pindexFirst = pindexFirst->pprev;
+    assert(pindexFirst);
+
+    // Limit adjustment step
+    int64_t nActualTimespan = pindexLast->GetBlockTime() - pindexFirst->GetBlockTime();
     
-    CBigNum nTipNumHashes = ((CBigNum(1) << 256) / (CBigNum().SetCompact(pindexLast->nBits) + 1));
+    // amplitude filter - thanks to daft27 for this code
+    int64_t nModulatedTimespan = TARGET_SPACING + (nActualTimespan - TARGET_SPACING)/6;
 
-    CBigNum nMaxChange((1000 + MAX_TENTH_PERCENTAGE_CHANGE) * nTipNumHashes / 1000);
-    CBigNum nMinChange((1000 - MAX_TENTH_PERCENTAGE_CHANGE) * nTipNumHashes / 1000);
-    if (nNextSashPerInterval > nMaxChange)
-        nNextSashPerInterval = nMaxChange;
-    if (nNextSashPerInterval < nMinChange)
-        nNextSashPerInterval = nMinChange;
+    // Limit how fast difficulty can increase/decrease (respectively)
+    if (nModulatedTimespan < (TARGET_SPACING - (TARGET_SPACING/4)) ) 
+        nModulatedTimespan = (TARGET_SPACING - (TARGET_SPACING/4));
+    if (nModulatedTimespan > (TARGET_SPACING + (TARGET_SPACING/2)) ) 
+        nModulatedTimespan = (TARGET_SPACING + (TARGET_SPACING/2));
 
-    ofstream myfile;
-    myfile.open("mininggg.csv", ios::app);
-    myfile << pindexLast->nHeight + 1 << "," 
-           << (nPrevSashPerInterval/TARGET_SPACING).ToString() << "," 
-           << (nCurrSashPerInterval/TARGET_SPACING).ToString() << "," 
-           << (nNextSashPerInterval/TARGET_SPACING).ToString() << "\n";
-    myfile.close();
+    // Retarget
+    CBigNum bnNew;
+    bnNew.SetCompact(pindexLast->nBits);
+    bnNew *= nModulatedTimespan;
+    bnNew /= TARGET_SPACING;
 
-    CBigNum bnTarget = ((CBigNum(1) << 256) / nNextSashPerInterval) - 1;
+    if (bnNew > Params().ProofOfWorkLimit())
+        bnNew = Params().ProofOfWorkLimit();
 
-    if (bnTarget > Params().ProofOfWorkLimit())
-        bnTarget = Params().ProofOfWorkLimit();
+    unsigned int nNewBits = bnNew.GetCompact();
 
-    /// debug print - probably don't want to print this every time anymore, since can 
-    // LogPrintf("GetNextWorkRequired RETARGET\n");
-    // LogPrintf("nTargetTimespan = %d    nActualTimespan = %d\n", nTargetTimespan, nActualTimespan);
-    // LogPrintf("Before: %08x  %s\n", pindexLast->nBits, CBigNum().SetCompact(pindexLast->nBits).getuint256().ToString());
-    // LogPrintf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.getuint256().ToString());
+    /// debug print
+    LogPrintf("GetNextWorkRequired() : RETARGET; target: %d, actual: %d, modulated: %d, before: %08x, after: %08x\n",
+        TARGET_SPACING, nActualTimespan, nModulatedTimespan, pindexLast->nBits, nNewBits);
 
-    return bnTarget.GetCompact();
+    return nNewBits;
 }
 
 

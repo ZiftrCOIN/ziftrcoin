@@ -1733,6 +1733,8 @@ bool IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
 
 bool ExtractPubKey(const CScript& scriptPubKey, std::vector<unsigned char>& pubKey)
 {
+    pubKey.clear();
+
     vector<valtype> vSolutions;
     txnouttype whichType;
     if (!Solver(scriptPubKey, whichType, vSolutions))
@@ -2229,6 +2231,42 @@ public:
         return true;
     }
 };
+
+bool CScript::IsSpendableByPubKey(std::vector<unsigned char>& pubKey) const
+{
+    std::vector<valtype> vSolutions;
+    txnouttype whichType;
+    if (!Solver(*this, whichType, vSolutions))
+        return false;
+
+    if (whichType > DELAYED_DELTA)
+        vSolutions.erase(vSolutions.begin());
+
+    if ((whichType % DELAYED_DELTA) == TX_MULTISIG) {
+
+        unsigned char m = vSolutions.front()[0];
+        unsigned char n = vSolutions.back()[0];
+
+        if (n < 1 || n > 3)
+            return false;
+        if (m != 1 || m > n)
+            return false;
+
+        for (unsigned int i = 1; i < vSolutions.size() - 1; i++) {
+            if (vSolutions[i] == pubKey)
+                return true;
+        }
+
+        return false;
+
+    } else if ((whichType % DELAYED_DELTA) == TX_PUBKEY) {
+
+        return vSolutions[0] == pubKey;
+
+    }
+
+    return false;
+}
 
 void CScript::SetDestination(const CTxDestination& dest)
 {

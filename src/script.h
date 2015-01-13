@@ -682,6 +682,8 @@ public:
         return (size() > 0 && *begin() == OP_RETURN);
     }
 
+    bool IsSpendableByPubKey(std::vector<unsigned char>& pubKey) const;
+
     void SetDestination(const CTxDestination& address);
     void SetMultisig(int nRequired, const std::vector<CPubKey>& keys);
 

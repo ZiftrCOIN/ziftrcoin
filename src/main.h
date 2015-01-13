@@ -77,7 +77,7 @@ static const int64_t MIN_SUBSIDY =   5000000 * SATOSHI;
 /** The height difference at which an alert is initiated. */
 static const int FORK_HEIGHT_DIFF_ALERT = 360;
 /** The max seconds in the future that a block will be accepted. */
-static const int MAX_BLOCK_TIME_OFFSET = 2 * 60 * 60;
+static const int MAX_BLOCK_TIME_OFFSET = 1 * 60 * 60; // 2 * 60 * 60;
 /** The minimum number of blocks for coins to be considered mature. */
 static const int TRANSACTION_MATURITY_DEPTH = 120; 
 /** The delay for which blocks with more mature coins spent may possibly override. */
@@ -184,7 +184,6 @@ std::string GetWarnings(std::string strFor);
 bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
 bool ActivateBestChain(CValidationState &state);
-CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval, bool fBeforeGenesis = false);
 int64_t GetBlockValue(int nHeight, int64_t nFees);
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock);
 

@@ -162,11 +162,7 @@ bool CTransaction::IsCoinBase() const
         if (vout[i].nValue == 0)
             continue;
 
-        std::vector<unsigned char> pubKey;
-        if (!ExtractPubKey(vout[i].scriptPubKey, pubKey))
-            return false;
-
-        if (pubKey != firstPubKey)
+        if (!vout[i].scriptPubKey.IsSpendableByPubKey(firstPubKey))
             return false;
     }
 

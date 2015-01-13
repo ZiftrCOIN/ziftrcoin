@@ -95,14 +95,58 @@ void ShutdownRPCMining()
 // }
 
 // CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval) 
+
+
+
+
+
+
+
+
+// Return average network hashes per second based on the last 'nLookUp' intervals.
+//
+// If 'nHeight' is legitimate, i.e. there exists a block at the height give, then it uses that block.
+// If there is not a block at nHeight, then it uses the tip of the currently active chain.
+//
+// Ex.
+// nLookUp = 2
+// nHeight = 5
+//      B0      B1      B2      B3      B4      B5      ...
+//                               <- 2 -> <- 1 -> 
 Value GetNetworkSashPS(int nLookUp, int nHeight) 
 {
-    CBigNum sashpersec = GetNetworkSashPer(nLookUp, nHeight, 1);
+    CBlockIndex* pBlockLast = chainActive[nHeight];
+    if (pBlockLast == NULL)
+        pBlockLast = chainActive.Tip();
 
-    if (sashpersec == CBigNum(-1))
+    if (nLookUp <= 0)
+        nLookUp = 120;
+    if (nLookUp > pBlockLast->nHeight)
+        nLookUp = pBlockLast->nHeight-1; // Don't include genesis block, it might throw off timestamp
+
+    // If no last block or last block is genesis block
+    if (pBlockLast == NULL || pBlockLast->pprev == NULL)
         return 0;
 
-    return sashpersec.getuint256().GetLow64();
+    CBlockIndex* pBlockFirst = pBlockLast;
+    int64_t minTime = pBlockFirst->GetBlockTime();
+    int64_t maxTime = minTime;
+    for (int i = 0; pBlockFirst->pprev != NULL && i < nLookUp; i++)
+    {
+        pBlockFirst = pBlockFirst->pprev;
+        int64_t nTime = pBlockFirst->GetBlockTime();
+        minTime = std::min(nTime, minTime);
+        maxTime = std::max(nTime, maxTime);
+    }
+
+    // In case there's a situation where minTime == maxTime, we don't want a divide by zero exception.
+    if (minTime == maxTime)
+        return 0;
+
+    uint256 workDiff = pBlockLast->nChainWork - pBlockFirst->nChainWork;
+    int64_t timeDiff = maxTime - minTime;
+
+    return (int64_t)(workDiff.getdouble() / timeDiff);
 }
 
 Value getnetworkhashps(const Array& params, bool fHelp)
@@ -123,7 +167,9 @@ Value getnetworkhashps(const Array& params, bool fHelp)
             + HelpExampleRpc("getnetworkhashps", "")
        );
 
-    return GetNetworkSashPS(params.size() > 0 ? params[0].get_int() : 120, params.size() > 1 ? params[1].get_int() : -1);
+    return GetNetworkSashPS(
+        params.size() > 0 ? params[0].get_int() : 120, 
+        params.size() > 1 ? params[1].get_int() : -1);
 }
 
 #ifdef ENABLE_WALLET
