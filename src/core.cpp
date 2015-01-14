@@ -150,22 +150,6 @@ bool CTransaction::IsCoinBase() const
             return false;
     }
 
-    // There must be at least one pay-to-pubkey output
-    if (vout.size() == 0)
-        return false;
-
-    std::vector<unsigned char> firstPubKey;
-    if (!ExtractPubKey(vout[0].scriptPubKey, firstPubKey))
-        return false;
-
-    for (unsigned int i = 1; i < vout.size(); i++) {
-        if (vout[i].nValue == 0)
-            continue;
-
-        if (!vout[i].scriptPubKey.IsSpendableByPubKey(firstPubKey))
-            return false;
-    }
-
     return true;
 }
 
@@ -262,40 +246,35 @@ bool CBlockHeader::CheckProofOfWork() const
     return true;
 }
 
-uint256 CBlockHeader::GetHash(bool fIncludeSignature) const
+uint256 CBlockHeader::GetHash() const
 {
-    if (fIncludeSignature)
-        return Hash(vchHeaderSigR, (const unsigned char *) UEND(nBits));
-    else 
-        return Hash(BEGIN(nVersion), END(nBits));
+    return Hash(BEGIN(nVersion), END(hashMerkleRoot));
 }
 
-bool CBlockHeader::GetHeaderSig(std::vector<unsigned char>& vchSig) const
-{
-    unsigned char zeroes[32];
-    memset(zeroes, 0, 32);
-    if (memcmp(vchHeaderSigR, zeroes, sizeof(zeroes)) == 0 || memcmp(vchHeaderSigS, zeroes, sizeof(zeroes)) == 0)
-        return error("GetHeaderSig() : Header signature is empty");
-
-    DEREncodeSignature(vchHeaderSigR, vchHeaderSigS, vchSig);
-    return true;
-}
-
-bool CBlock::CheckProofOfWork(bool fVerifyCoinbase) const
+bool CBlock::CheckProofOfWork() const
 {
     if (!CBlockHeader::CheckProofOfWork())
         return false;
 
-    if (!fVerifyCoinbase)
-        return true;
+    return (this->nProofOfKnowledge == this->CalculateProofOfKnowledge());
+}
 
-    if (vtx.size() == 0 || !vtx[0].IsCoinBase())
-        return false;
+unsigned int CBlock::CalculateProofOfKnowledge() const 
+{    
+    uint256 hashTxChooser = Hash(BEGIN(nVersion), END(nVersion), BEGIN(nNonce), END(hashMerkleRoot));
+    
+    unsigned int nTxIndex = (*((unsigned int *)(hashTxChooser.end()[-4]))) % vtx.size();
 
-    if (!vtx[0].vout[0].scriptPubKey.VerifyHeaderSig(this))
-        return error("CBlock::CheckProofOfWork() : the header sig did not verify");
+    const CTransaction& txForHashing = vtx[nTxIndex];
 
-    return true;
+    uint256 hashProofOfKnowledge = Hash(
+            BEGIN(nVersion),     END(nVersion), 
+            BEGIN(nNonce),       END(hashMerkleRoot), 
+            BEGIN(txForHashing), END(txForHashing));
+
+    unsigned int nPoK = *((unsigned int *)(hashTxChooser.begin()));
+
+    return nPoK;
 }
 
 uint256 CBlock::BuildMerkleTree() const

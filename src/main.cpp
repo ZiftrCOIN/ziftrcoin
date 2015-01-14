@@ -1201,7 +1201,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos)
         return error("%s : Deserialize or I/O error - %s", __func__, e.what());
     }
 
-    // Check the header
+    // Check the proof
     if (!block.CheckProofOfWork())
         return error("ReadBlockFromDisk : Errors in block header");
 
@@ -2467,7 +2467,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                          REJECT_INVALID, "bad-blk-length");
 
     // Check proof of work matches claimed amount
-    if (fCheckPOW && !block.CheckProofOfWork(true))
+    if (fCheckPOW && !block.CheckProofOfWork())
         return state.DoS(50, error("CheckBlock() : proof of work failed"),
                          REJECT_INVALID, "high-hash");
 
@@ -2477,11 +2477,6 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         return state.Invalid(error("CheckBlock() : block timestamp too far in the future"),
                              REJECT_INVALID, "time-too-new");
 
-    // Part of the proof of work is that the first transaction is a true coinbase with the 
-    // headersig verifying. This is necessary because if a block could be solved without verifying the 
-    // proof of work, then an attacker could put in non-sensical data for the header sig, mine much faster
-    // than everyone else, and essentially just burn coins and throw off the difficulty.
-    // First transaction must be coinbase, the rest must not be
     if (block.vtx.empty() || !block.vtx[0].IsCoinBase())
         return state.DoS(100, error("CheckBlock() : first tx is not coinbase"),
                          REJECT_INVALID, "bad-cb-missing");

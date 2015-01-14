@@ -60,7 +60,8 @@ public:
     bool IsNull() const { return (ptx == NULL && n == (unsigned int) -1); }
 };
 
-/** An input of a transaction.  It contains the location of the previous
+/** 
+ * An input of a transaction.  It contains the location of the previous
  * transaction's output that it claims and a signature that matches the
  * output's public key.
  */
@@ -226,19 +227,6 @@ public:
     // Compute priority, given priority of inputs and (optionally) tx size
     double ComputePriority(double dPriorityInputs, unsigned int nTxSize=0) const;
 
-    /**
-     * In ziftrCOIN, a coinbase transaction must:
-     *   - have all inputs be null (the first input should have the height in the scriptSig)
-     *   - the first output is pay to pub key (possibly delayed)
-     *   - for any further outputs:
-     *     * if nValue of ouput is zero, then no requirements on scriptPubKey 
-     *       (this makes it so that you can put txs into a block which only are
-     *        valid if they block was solved - as might be useful in a market for
-     *        spending mature coins)
-     *     * else (nValue positive), the output must be a pay to pub key (optionally 
-     *       delayed) and must be paying to the exact same pub key that the first output 
-     *       paid to.
-     */
     bool IsCoinBase() const;
 
     friend bool operator==(const CTransaction& a, const CTransaction& b)
@@ -354,14 +342,13 @@ public:
     // header
     static const int CURRENT_VERSION=1;
     
-    // Put these first so we don't have any chance of a midstate shortcut
-    unsigned char vchHeaderSigR[32];
-    unsigned char vchHeaderSigS[32];
     int nVersion;
+    unsigned int nProofOfKnowledge; // To prove knowledge of transaction data
+    unsigned int nNonce;
+    int64_t nTime; 
+    unsigned int nBits;
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
-    unsigned int nTime; // TODO maybe make this a uint64_t ? 
-    unsigned int nBits;
 
     CBlockHeader()
     {
@@ -370,24 +357,25 @@ public:
 
     IMPLEMENT_SERIALIZE
     (
-        READWRITE(FLATDATA(vchHeaderSigR));
-        READWRITE(FLATDATA(vchHeaderSigS));
         READWRITE(this->nVersion);
         nVersion = this->nVersion;
-        READWRITE(hashPrevBlock);
-        READWRITE(hashMerkleRoot);
+        READWRITE(nProofOfKnowledge);
+        READWRITE(nNonce);
         READWRITE(nTime);
         READWRITE(nBits);
+        READWRITE(hashPrevBlock);
+        READWRITE(hashMerkleRoot);
     )
 
     void SetNull()
     {
-        ClearHeaderSig();
         nVersion = CBlockHeader::CURRENT_VERSION;
-        hashPrevBlock = 0;
-        hashMerkleRoot = 0;
+        nProofOfKnowledge = 0;
+        nNonce = 0;
         nTime = 0;
         nBits = 0;
+        hashPrevBlock = 0;
+        hashMerkleRoot = 0;
     }
 
     bool IsNull() const
@@ -397,42 +385,11 @@ public:
 
     bool CheckProofOfWork() const;
 
-    /**
-     * The header vchHeaderSig is the result of signing everything
-     * in the block header except for the signature, as the signature 
-     * can't sign itself. This gets the hash of the block header, using
-     * the boolean given to differentiate whether the requester wants the
-     * hash of the header to include the signature data or not. 
-     */
-    uint256 GetHash(bool fIncludeSignature = true) const;
-
-    /**
-     * Gets the DER encoded header sig. 
-     * This does not include the starting byte size of the signature so that 
-     * it can be used like this:
-     * 
-     * std::vector<unsigned char> vch;
-     * if (!pblock->GetHeaderSig(vch))
-     *     return false; // or error
-     * CScript() << vch; // automatically adds the size of the vector first before pushing data
-     */
-    bool GetHeaderSig(std::vector<unsigned char>& vchSig) const;
-
-    void ClearHeaderSig()
-    {
-        memset(vchHeaderSigR, 0, 32);
-        memset(vchHeaderSigS, 0, 32);
-    }
-
-    void CopyHeaderSigFrom(const unsigned char sigR[32], const unsigned char sigS[32]) 
-    {
-        memcpy(vchHeaderSigR, sigR, sizeof(vchHeaderSigR));
-        memcpy(vchHeaderSigS, sigS, sizeof(vchHeaderSigS));
-    }
+    uint256 GetHash() const;
 
     int64_t GetBlockTime() const
     {
-        return (int64_t)nTime;
+        return nTime;
     }
 };
 
@@ -473,21 +430,23 @@ public:
     CBlockHeader GetBlockHeader() const
     {
         CBlockHeader header;
-        header.CopyHeaderSigFrom(this->vchHeaderSigR, this->vchHeaderSigS);
-        header.nVersion       = nVersion;
-        header.hashPrevBlock  = hashPrevBlock;
-        header.hashMerkleRoot = hashMerkleRoot;
-        header.nTime          = nTime;
-        header.nBits          = nBits;
+        header.nVersion          = nVersion;
+        header.nProofOfKnowledge = nProofOfKnowledge;
+        header.nNonce            = nNonce;
+        header.nTime             = nTime;
+        header.nBits             = nBits;
+        header.hashPrevBlock     = hashPrevBlock;
+        header.hashMerkleRoot    = hashMerkleRoot;
         return header;
     }
 
-    // If fVerifyCoinbase, then this may be a little slow (ECDSA verification)
-    bool CheckProofOfWork(bool fVerifyCoinbase = false) const;
+    bool CheckProofOfWork() const;
+
+    unsigned int CalculateProofOfKnowledge() const;
 
     uint256 BuildMerkleTree() const;
 
-    const uint256 &GetTxHash(unsigned int nIndex) const {
+    const uint256& GetTxHash(unsigned int nIndex) const {
         assert(vMerkleTree.size() > 0); // BuildMerkleTree must have been called first
         assert(nIndex < vtx.size());
         return vMerkleTree[nIndex];

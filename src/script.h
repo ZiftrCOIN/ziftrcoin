@@ -20,7 +20,6 @@
 class CCoins;
 class CKeyStore;
 class CTransaction;
-class CBlockHeader;
 
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
 static const unsigned int MAX_OP_RETURN_RELAY = 80;      // bytes
@@ -666,8 +665,6 @@ public:
 
     bool IsPayToScriptHash() const;
 
-    bool VerifyHeaderSig(const CBlockHeader * pBlockHeader) const;
-
     // Called by IsStandardTx and P2SH VerifyScript (which makes it consensus-critical).
     bool IsPushOnly() const;
 
@@ -681,8 +678,6 @@ public:
     {
         return (size() > 0 && *begin() == OP_RETURN);
     }
-
-    bool IsSpendableByPubKey(std::vector<unsigned char>& pubKey) const;
 
     void SetDestination(const CTxDestination& address);
     void SetMultisig(int nRequired, const std::vector<CPubKey>& keys);
@@ -805,8 +800,6 @@ public:
 
 bool IsCanonicalPubKey(const std::vector<unsigned char> &vchPubKey, unsigned int flags=0);
 bool IsCanonicalSignature(const std::vector<unsigned char> &vchSig, unsigned int flags=0);
-bool DEREncodeSignature(const unsigned char sigR[32], const unsigned char sigS[32], std::vector<unsigned char>& vchSig);
-bool DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], const std::vector<unsigned char>& vchSig);
 
 bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);
 bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::vector<unsigned char> >& vSolutionsRet);
@@ -815,7 +808,6 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType);
 bool IsMine(const CKeyStore& keystore, const CScript& scriptPubKey);
 bool IsMine(const CKeyStore& keystore, const CTxDestination &dest);
 void ExtractAffectedKeys(const CKeyStore &keystore, const CScript& scriptPubKey, std::vector<CKeyID> &vKeys);
-bool ExtractPubKey(const CScript& scriptPubKey, std::vector<unsigned char>& pubKey);
 bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet);
 bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<CTxDestination>& addressRet, int& nRequiredRet);
 bool SignSignature(const CKeyStore& keystore, const CScript& fromPubKey, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);

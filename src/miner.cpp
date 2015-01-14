@@ -472,7 +472,7 @@ CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reserveKey)
 
 //extern bool fJustPrint;
 
-bool PrintBlockInfo(CBlock* pblock, CReserveKey& reserveKey)
+void PrintBlockInfo(CBlock* pblock, CReserveKey& reserveKey)
 {
     uint256 hash = pblock->GetHash();
 
@@ -481,24 +481,6 @@ bool PrintBlockInfo(CBlock* pblock, CReserveKey& reserveKey)
     ssBlock << *pblock;
     LogPrintf("  block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
     LogPrintf("  hashBlockHeader: %s\n", hash.ToString());
-
-    std::vector<unsigned char> vchSig;
-    if (!pblock->GetHeaderSig(vchSig))
-        return error("  BitcoinMiner : could not get the signature of the block header");
-
-    CPubKey pubKey;
-    if (!reserveKey.GetReservedKey(pubKey))
-        throw std::runtime_error("BitcoinMiner() : Could not get new public key");
-
-    uint256 hashSigned = pblock->GetHash(false);
-
-    LogPrintf("  header sig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
-    LogPrintf("  vchSig:%s \n", HexStr(vchSig.begin(), vchSig.end()));
-    LogPrintf("  R:%s \n", HexStr(&pblock->vchHeaderSigR[0], &pblock->vchHeaderSigR[32]));
-    LogPrintf("  S:%s \n", HexStr(&pblock->vchHeaderSigS[0], &pblock->vchHeaderSigS[32]));
-    LogPrintf("  pub key: %s\n", HexStr(pubKey.begin(), pubKey.end()));
-    LogPrintf("  hash to sign: %s\n", hashSigned.GetHex());
-    LogPrintf("}\nEnd print block info");
 
     return true;
 }
@@ -575,13 +557,6 @@ void static BitcoinMiner(CWallet *pwallet)
     // Each thread has its own key and counter
     // Use a reserve key because may not want to keep the key if you don't mine anything
     CReserveKey reserveKey(pwallet);
-
-    // CBitcoinSecret vchSecret;
-    // bool fGood = vchSecret.SetString("Xtvz9noVZtFuTvmpCQxTzm3KM3kfZimsrqYnKM9TowrvTscbXLAS");
-    // if (!fGood)
-    //     throw runtime_error("MineGenesisBlock() : could not decode signing key");
-    // CKey vchSignKey = vchSecret.GetKey();
-    // CPubKey pubKey = vchSignKey.GetPubKey();
 
     try { 
         while (true) {

@@ -311,89 +311,6 @@ bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags) {
     return true;
 }
 
-// Uses strict DER encoding
-bool DEREncodeSignature(const unsigned char sigR[32], const unsigned char sigS[32], std::vector<unsigned char>& vchSig)
-{
-    vchSig.clear();
-
-    // First non-zero element of sigR
-    int i = 0;
-    for (; i < 32; i++) {
-        if (sigR[i] != (unsigned char)0x00)
-            break;
-    }
-
-    // First non-zero element of sigS
-    int j = 0;
-    for (; j < 32; j++) {
-        if (sigS[j] != (unsigned char)0x00)
-            break;
-    }
-
-    if (i == 32 || j == 32)
-        return error("DEREncodeSignature() : all elements of either r/s part of signature were 0x00");
-
-    int extraR = sigR[i] > 0x7F ? 1 : 0;
-    int extraS = sigS[j] > 0x7F ? 1 : 0;
-    int lenR = 32-i + extraR;
-    int lenS = 32-i + extraS;
-    int len = 4 + lenR + lenS;
-
-    // DER encoding of R and S    
-    vchSig.push_back((unsigned char) 0x30);
-    vchSig.push_back((unsigned char) len);
-    
-    vchSig.push_back((unsigned char) 0x02);
-    vchSig.push_back((unsigned char) lenR);
-    if (extraR) vchSig.push_back((unsigned char) 0x00);
-    vchSig.insert(vchSig.end(), &sigR[i], &sigR[32]);
-
-    vchSig.push_back((unsigned char) 0x02);
-    vchSig.push_back((unsigned char) lenS);
-    if (extraS) vchSig.push_back((unsigned char) 0x00);
-    vchSig.insert(vchSig.end(), &sigS[j], &sigS[32]);
-
-    // TODO probably don't need to check this every time, should be a unit test instead
-    if (!IsCanonicalSignature(vchSig, SCRIPT_VERIFY_NOAPPENDSIGHASHTYPE)) {
-        vchSig.clear();
-        return error("DEREncodeSignature() : Signature was encoded but not canonical");
-    }
-
-    return true;
-}
-
-// Will work whether or not the SIGHASH_TYPE is appended
-bool DERDecodeSignature(unsigned char sigR[32], unsigned char sigS[32], const std::vector<unsigned char>& vchSig)
-{
-    int flags = SCRIPT_VERIFY_NOAPPENDSIGHASHTYPE;
-    if (vchSig.size() - vchSig[1] == 3)
-        flags = 0;
-
-    if (!IsCanonicalSignature(vchSig, flags)) {
-        return error("DERDecodeSignature() : vchSig provided is not canonical");
-    }
-    
-    memset(sigR, 0, 32);
-    memset(sigS, 0, 32);
-
-    const unsigned int nLenR = vchSig[3];
-
-    if (nLenR == 33) {
-        memcpy(&sigR[0], &vchSig[4+1], nLenR-1);
-    } else {
-        memcpy(&sigR[32-nLenR], &vchSig[4], nLenR);
-    }
-
-    const unsigned int nLenS = vchSig[5+nLenR];
-    if (nLenS == 33) {
-        memcpy(&sigS[0], &vchSig[6+nLenR+1], nLenS-1);
-    } else {
-        memcpy(&sigS[32-nLenS], &vchSig[6+nLenR], nLenS);
-    }    
-
-    return true;
-}
-
 bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType)
 {
     CScript::const_iterator pc = script.begin();
@@ -1731,22 +1648,6 @@ bool IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
     return false;
 }
 
-bool ExtractPubKey(const CScript& scriptPubKey, std::vector<unsigned char>& pubKey)
-{
-    pubKey.clear();
-
-    vector<valtype> vSolutions;
-    txnouttype whichType;
-    if (!Solver(scriptPubKey, whichType, vSolutions))
-        return false;
-
-    if ((whichType % DELAYED_DELTA) != TX_PUBKEY)
-        return false;
-
-    pubKey = vSolutions[whichType > DELAYED_DELTA ? 1 : 0];
-    return true;
-}
-
 // TODO should the delay be encoded in the address? - Probably not, just put in ziftrcoin: URIs like ziftrcoin:Zx...y?delay=12345
 bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
 {
@@ -2137,30 +2038,6 @@ bool CScript::IsPayToScriptHash() const
     // return typeRet == TX_DELAYEDSCRIPTHASH;
 }
 
-// Expensive
-bool CScript::VerifyHeaderSig(const CBlockHeader * pBlockHeader) const
-{
-    if (pBlockHeader == NULL)
-        return false;
-
-    vector<unsigned char> vchSig;
-    if (!pBlockHeader->GetHeaderSig(vchSig))
-        return false;
-
-    vector<unsigned char> vchPubKey;
-    if (!ExtractPubKey(*this, vchPubKey))
-        return false;
-
-    uint256 sighash = pBlockHeader->GetHash(false);
-
-    ////// debug print
-    // LogPrintf("vchSig: %s\n", HexStr(vchSig.begin(), vchSig.end()));
-    // LogPrintf("pubkey: %s\n", HexStr(vchPubKey.begin(), vchPubKey.end()));
-    // LogPrintf("sighash: %s\n", sighash.ToString());
-
-    return IsCanonicalPubKey(vchPubKey, SCRIPT_VERIFY_STRICTENC) && CheckRawSig(vchSig, vchPubKey, sighash, SCRIPT_VERIFY_NOCACHE);
-}
-
 // TODO if add OP_VERSION op code, then make sure this recognizes it as a push
 bool CScript::IsPushOnly() const
 {
@@ -2231,42 +2108,6 @@ public:
         return true;
     }
 };
-
-bool CScript::IsSpendableByPubKey(std::vector<unsigned char>& pubKey) const
-{
-    std::vector<valtype> vSolutions;
-    txnouttype whichType;
-    if (!Solver(*this, whichType, vSolutions))
-        return false;
-
-    if (whichType > DELAYED_DELTA)
-        vSolutions.erase(vSolutions.begin());
-
-    if ((whichType % DELAYED_DELTA) == TX_MULTISIG) {
-
-        unsigned char m = vSolutions.front()[0];
-        unsigned char n = vSolutions.back()[0];
-
-        if (n < 1 || n > 3)
-            return false;
-        if (m != 1 || m > n)
-            return false;
-
-        for (unsigned int i = 1; i < vSolutions.size() - 1; i++) {
-            if (vSolutions[i] == pubKey)
-                return true;
-        }
-
-        return false;
-
-    } else if ((whichType % DELAYED_DELTA) == TX_PUBKEY) {
-
-        return vSolutions[0] == pubKey;
-
-    }
-
-    return false;
-}
 
 void CScript::SetDestination(const CTxDestination& dest)
 {

@@ -321,7 +321,7 @@ inline bool AllowFree(double dPriority)
 
 // Check whether all inputs of this transaction are valid (no double spends, scripts & sigs, amounts)
 // This does not modify the UTXO set. If pvChecks is not NULL, script checks are pushed onto it
-// instead of being performed inline. If (and only if) tx is a coinbase, the pvchHeaderSig must not be null.
+// instead of being performed inline.
 bool CheckInputs(const CTransaction& tx, CValidationState &state, CCoinsViewCache &view, bool fScriptChecks = true,
                  unsigned int flags = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC,
                  std::vector<CScriptCheck>* pvChecks = NULL);
@@ -741,13 +741,13 @@ public:
     // Verification status of this block. See enum BlockStatus
     unsigned int nStatus;
 
-    // block header
-    unsigned char vchHeaderSigR[32];
-    unsigned char vchHeaderSigS[32];
+    // block header (no need to store hashPrevBlock)
     int nVersion;
-    uint256 hashMerkleRoot;
-    unsigned int nTime;
+    unsigned int nProofOfKnowledge;
+    unsigned int nNonce;
+    int64_t nTime;
     unsigned int nBits;
+    uint256 hashMerkleRoot;
 
     // (memory only) Sequencial id assigned to distinguish order in which blocks are received.
     uint32_t nSequenceId;
@@ -771,11 +771,12 @@ public:
         nSequenceId = 0;
         nTimeReceived = 0;
 
-        ClearHeaderSig();
-        nVersion       = 0;
-        hashMerkleRoot = 0;
-        nTime          = 0;
-        nBits          = 0;
+        nVersion          = 0;
+        nProofOfKnowledge = 0;
+        nNonce            = 0;
+        nTime             = 0;
+        nBits             = 0;
+        hashMerkleRoot    = 0;
     }
 
     CBlockIndex(CBlockHeader& block)
@@ -794,23 +795,12 @@ public:
         nSequenceId = 0;
         nTimeReceived = 0;
 
-        CopyHeaderSigFrom(block.vchHeaderSigR, block.vchHeaderSigS);
-        nVersion        = block.nVersion;
-        hashMerkleRoot  = block.hashMerkleRoot;
-        nTime           = block.nTime;
-        nBits           = block.nBits;
-    }
-
-    void ClearHeaderSig()
-    {
-        memset(vchHeaderSigR, 0, 32);
-        memset(vchHeaderSigS, 0, 32);
-    }
-
-    void CopyHeaderSigFrom(const unsigned char sigR[32], const unsigned char sigS[32]) 
-    {
-        memcpy(vchHeaderSigR, sigR, sizeof(vchHeaderSigR));
-        memcpy(vchHeaderSigS, sigS, sizeof(vchHeaderSigS));
+        nVersion          = block.nVersion;
+        nProofOfKnowledge = block.nProofOfKnowledge;
+        nNonce            = block.nNonce;
+        nTime             = block.nTime;
+        nBits             = block.nBits;
+        hashMerkleRoot    = block.hashMerkleRoot;
     }
 
     CDiskBlockPos GetBlockPos() const {
@@ -834,13 +824,14 @@ public:
     CBlockHeader GetBlockHeader() const
     {
         CBlockHeader block;
-        block.CopyHeaderSigFrom(vchHeaderSigR, vchHeaderSigS);
-        block.nVersion       = nVersion;
+        block.nVersion          = nVersion;
+        block.nProofOfKnowledge = nProofOfKnowledge;
+        block.nNonce            = nNonce;
+        block.nTime             = nTime;
+        block.nBits             = nBits;
         if (pprev)
             block.hashPrevBlock = pprev->GetBlockHash();
-        block.hashMerkleRoot = hashMerkleRoot;
-        block.nTime          = nTime;
-        block.nBits          = nBits;
+        block.hashMerkleRoot    = hashMerkleRoot;
         return block;
     }
 
@@ -939,20 +930,20 @@ public:
             READWRITE(VARINT(nUndoPos));
 
         // block header
-        READWRITE(FLATDATA(vchHeaderSigR));
-        READWRITE(FLATDATA(vchHeaderSigS));
         READWRITE(this->nVersion);
-        READWRITE(hashPrev);
-        READWRITE(hashMerkleRoot);
-        READWRITE(nTime);
-        READWRITE(nBits);
+        READWRITE(this->nProofOfKnowledge);
+        READWRITE(this->nNonce);
+        READWRITE(this->nTime);
+        READWRITE(this->nBits);
+        READWRITE(this->hashPrev);
+        READWRITE(this->hashMerkleRoot);
     )
 
-    uint256 GetBlockHash(bool fIncludeSignature=true) const
+    uint256 GetBlockHash() const
     {
         CBlockHeader header = this->GetBlockHeader();
         header.hashPrevBlock = hashPrev;
-        return header.GetHash(fIncludeSignature);
+        return header.GetHash();
     }
 
 
