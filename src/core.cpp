@@ -235,6 +235,16 @@ bool CBlockHeader::CheckProofOfWork() const
     CBigNum bnTarget;
     bnTarget.SetCompact(nBits);
 
+    // CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+    // ssBlock << *this;
+    // std::string strHex = HexStr(ssBlock.begin(), ssBlock.end());
+    // LogPrintf("block: %s\n", strHex);
+    // LogPrintf("powHash: %s\n", powHash.ToString());
+    // LogPrintf("_time_: %llu\n", nTime);
+
+    // if (nTime != 1421277610315LL)
+    //     throw std::exception();
+
     // Check range
     if (bnTarget <= 0 || bnTarget > Params().ProofOfWorkLimit())
         return error("CBlockHeader::CheckProofOfWork() : nBits below minimum work");
@@ -247,8 +257,8 @@ bool CBlockHeader::CheckProofOfWork() const
 }
 
 uint256 CBlockHeader::GetHash() const
-{
-    return Hash(BEGIN(nVersion), END(hashMerkleRoot));
+{   
+    return HashZ(BEGIN(nVersion), END(hashMerkleRoot), this->nProofOfKnowledge);
 }
 
 bool CBlock::CheckProofOfWork() const
@@ -259,20 +269,65 @@ bool CBlock::CheckProofOfWork() const
     return (this->nProofOfKnowledge == this->CalculateProofOfKnowledge());
 }
 
-unsigned int CBlock::CalculateProofOfKnowledge() const 
-{    
-    uint256 hashTxChooser = Hash(BEGIN(nVersion), END(nVersion), BEGIN(nNonce), END(hashMerkleRoot));
+unsigned int CBlock::CalculateProofOfKnowledge(MapTxSerialized * mapTxSerialized) const
+{
+    static const uint256 INT_MASK_256("0xFFFFFFFF");
+
+    assert(vtx.size() > 0);
     
-    unsigned int nTxIndex = (*((unsigned int *)(hashTxChooser.end()[-4]))) % vtx.size();
+    uint256 hashTxChooser = Hash(BEGIN(nVersion), END(nVersion), BEGIN(nNonce), END(hashMerkleRoot));
 
-    const CTransaction& txForHashing = vtx[nTxIndex];
+    unsigned int nDeterRand1 = CBigNum((hashTxChooser >>  0) & INT_MASK_256).getuint();
+    unsigned int nDeterRand2 = CBigNum((hashTxChooser >> 32) & INT_MASK_256).getuint();
+    unsigned int nDeterRand3 = CBigNum((hashTxChooser >> 64) & INT_MASK_256).getuint();
+    
+    unsigned int nTxIndex =  nDeterRand1 % vtx.size();
 
-    uint256 hashProofOfKnowledge = Hash(
-            BEGIN(nVersion),     END(nVersion), 
-            BEGIN(nNonce),       END(hashMerkleRoot), 
-            BEGIN(txForHashing), END(txForHashing));
+    std::vector<unsigned char> vTxData;
+    bool fInMap = false;
+    if (mapTxSerialized != NULL)
+    {
+        MapTxSerialized::const_iterator it = mapTxSerialized->find(std::make_pair(this->hashMerkleRoot, nTxIndex));
+        fInMap = (it != mapTxSerialized->end());
+        if (fInMap)
+        {
+            vTxData = (it->second);
+        }
+    }
+    
+    if (mapTxSerialized == NULL || !fInMap)
+    {
+        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+        ss << vtx[nTxIndex];
+        vTxData.insert(vTxData.end(), ss.begin(), ss.end());
 
-    unsigned int nPoK = *((unsigned int *)(hashTxChooser.begin()));
+        if (mapTxSerialized != NULL)
+        {
+            mapTxSerialized->insert(std::make_pair(std::make_pair(this->hashMerkleRoot, nTxIndex), vTxData));
+        }
+    }
+    
+    assert((vTxData.end() - vTxData.begin()) >= 4);
+    
+    unsigned int nDeterRandIndex = nDeterRand2 % (vTxData.size() - 3);
+    unsigned int nRandTxData = *((unsigned int *)(&(vTxData.begin()[nDeterRandIndex])));
+
+    unsigned int nPoK = nRandTxData ^ nDeterRand3;
+
+    // printf("hashTxChooser: %s\n", hashTxChooser.ToString().c_str());
+    // printf("nDeterRand1: %u\n", nDeterRand1);
+    // printf("nDeterRand2: %u\n", nDeterRand2);
+    // printf("vtx size: %lu\n", vtx.size());
+    // printf("nTxIndex: %u\n", nTxIndex);
+    // printf("tx: %s\n", HexStr(vTxData.begin(), vTxData.end()).c_str());
+    // printf("tx length: %ld\n", (vTxData.end() - vTxData.begin()));
+    // printf("nDeterRandIndex: %u\n", nDeterRandIndex);
+    // printf("nRandTxData: %u\n", nRandTxData);
+    // printf("nPoK: %u\n", nPoK);
+    // std::vector<unsigned char> vTxDataSample(&(vTxData.begin()[nDeterRandIndex]), &(vTxData.begin()[nDeterRandIndex+4]));
+    // printf("vTxDataSample: %s\n", HexStr(vTxDataSample.begin(), vTxDataSample.end()).c_str());
+    // std::vector<unsigned char> data(BEGIN(nVersion), END(hashMerkleRoot));
+    // printf("blockheader: %s\n", HexStr(data.begin(), data.end()).c_str());
 
     return nPoK;
 }
@@ -329,16 +384,15 @@ uint256 CBlock::CheckMerkleBranch(uint256 hash, const std::vector<uint256>& vMer
 
 void CBlock::print() const
 {
-    std::vector<unsigned char> vchSig;
-    this->GetHeaderSig(vchSig);
-    LogPrintf("CBlock(hash=%s, ver=%d, vchHeaderSig=%s, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, vtx=%u)\n",
+    LogPrintf("CBlock(hash=%s, ver=%d, pok=%u, nonce=%u, nTime=%llu, nBits=%08x, hashPrevBlock=%s, hashMerkleRoot=%s, vtx.size()=%u)\n",
         GetHash().ToString(),
         nVersion,
-        HexStr(vchSig.begin(), vchSig.end()),
+        nProofOfKnowledge,
+        nNonce,
+        nTime,
+        nBits,
         hashPrevBlock.ToString(),
         hashMerkleRoot.ToString(),
-        nTime, 
-        nBits, 
         vtx.size());
     for (unsigned int i = 0; i < vtx.size(); i++)
     {

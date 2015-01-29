@@ -1316,8 +1316,9 @@ int64_t GetBlockValue(int nHeight, int64_t nFees)
     return nBlockReward + nFees;
 }
 
-static const int64_t RETARGET_INTERVAL = 1;       // Number of blocks between retargets
-static const int64_t TARGET_SPACING    = 60;      // Target number of seconds per block solve (seconds/block)
+static const int64_t RETARGET_INTERVAL  = 4;                                        // Number of intervals between retargets    (blocks)
+static const int64_t TARGET_SPACING     = 60;                                       // Target number of seconds per block solve (seconds/block)
+static const int64_t TARGET_TIMESPAN    = RETARGET_INTERVAL * TARGET_SPACING;       // Target number of seconds per block solve (seconds)
 
 //
 // minimum amount of work that could possibly be required nTime after
@@ -1335,11 +1336,11 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
     bnResult.SetCompact(nBase);
     while (nTime > 0 && bnResult < bnLimit)
     {
-        // Maximum 50% adjustment...
-        bnResult *= (TARGET_SPACING + (TARGET_SPACING/2)) / TARGET_SPACING;
+        // Maximum adjustment...
+        bnResult *= (TARGET_TIMESPAN + (TARGET_TIMESPAN/2)) / TARGET_TIMESPAN;
         
-        // ... in best-case exactly 4-times-normal target time
-        nTime -= TARGET_SPACING * 4;
+        // ... in best-case time
+        nTime -= (TARGET_TIMESPAN + (TARGET_TIMESPAN/2));
     }
 
     if (bnResult > bnLimit)
@@ -1350,50 +1351,64 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 
 
 // TODO make a similar method to track the max block size
+// TODO add the amount into the data that is copied into the scriptSig when signing -- good for hardware wallets
 
-// TODO change this to a 3 block retarget
+
+//
+// Fixed to prevent agains time warp attack
+//
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
     unsigned int nProofOfWorkLimit = Params().ProofOfWorkLimit().GetCompact();
 
-    if (pindexLast == NULL)
+    if (pindexLast == NULL || pindexLast->nHeight == 0)
         return nProofOfWorkLimit;
 
-    // Special difficulty rule for testnet:
-    // If the new block's timestamp is more than 2*TARGET_SPACING minutes
-    // then allow mining of a min-difficulty block.
-    if (TestNet() && pblock->nTime > pindexLast->nTime + 2*TARGET_SPACING)
-        return nProofOfWorkLimit;
+    // Only change once per interval
+    if (pindexLast->nHeight % RETARGET_INTERVAL != 0)
+    {
+        if (TestNet())
+        {
+            // Special difficulty rule for testnet:
+            // If the new block's timestamp is more than 2 * TARGET_SPACING in the future,
+            // then allow mining of a min-difficulty block.
+            if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + TARGET_SPACING*2)
+            {
+                return nProofOfWorkLimit;
+            }
+            else
+            {
+                // Return the last non-special-min-difficulty-rules-block
+                const CBlockIndex* pindex = pindexLast;
+                while (pindex->pprev && pindex->nHeight % RETARGET_INTERVAL != 1 && pindex->nBits == nProofOfWorkLimit)
+                    pindex = pindex->pprev;
+                return pindex->nBits;
+            }
+        }
+        return pindexLast->nBits;
+    }
 
-    // This fixes an issue where a 51% attack can change difficulty at will.
-    // Go back the full period unless it's the first retarget after genesis. Code courtesy of Art Forz
-    int nGoBack = RETARGET_INTERVAL;
-    if ((pindexLast->nHeight + 1) == RETARGET_INTERVAL)
-        nGoBack = RETARGET_INTERVAL - 1;
-
-    // Go back nGoBack blocks
+    // Go back one RETARGET_INTERVAL block range
     const CBlockIndex* pindexFirst = pindexLast;
-    for (int i = 0; pindexFirst && i < nGoBack; i++)
+    for (int i = 0; pindexFirst && i < RETARGET_INTERVAL; i++)
         pindexFirst = pindexFirst->pprev;
     assert(pindexFirst);
 
-    // Limit adjustment step
-    int64_t nActualTimespan = pindexLast->GetBlockTime() - pindexFirst->GetBlockTime();
-    
-    // amplitude filter - thanks to daft27 for this code
-    int64_t nModulatedTimespan = TARGET_SPACING + (nActualTimespan - TARGET_SPACING)/6;
+    LogPrintf("first height: %i\n", pindexFirst->nHeight);
+    LogPrintf("last  height: %i\n", pindexLast->nHeight);
 
     // Limit how fast difficulty can increase/decrease (respectively)
-    if (nModulatedTimespan < (TARGET_SPACING - (TARGET_SPACING/4)) ) 
-        nModulatedTimespan = (TARGET_SPACING - (TARGET_SPACING/4));
-    if (nModulatedTimespan > (TARGET_SPACING + (TARGET_SPACING/2)) ) 
-        nModulatedTimespan = (TARGET_SPACING + (TARGET_SPACING/2));
+    int64_t nActualTimespan = pindexLast->GetBlockTime() - pindexFirst->GetBlockTime();
+    if (nActualTimespan < (TARGET_TIMESPAN - (TARGET_TIMESPAN/4))) 
+        nActualTimespan = (TARGET_TIMESPAN - (TARGET_TIMESPAN/4));
+    if (nActualTimespan > (TARGET_TIMESPAN + (TARGET_TIMESPAN/2)))
+        nActualTimespan = (TARGET_TIMESPAN + (TARGET_TIMESPAN/2));
 
     // Retarget
     CBigNum bnNew;
     bnNew.SetCompact(pindexLast->nBits);
-    bnNew *= nModulatedTimespan;
-    bnNew /= TARGET_SPACING;
+    bnNew *= nActualTimespan;
+    bnNew /= TARGET_TIMESPAN;
 
     if (bnNew > Params().ProofOfWorkLimit())
         bnNew = Params().ProofOfWorkLimit();
@@ -1401,8 +1416,8 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     unsigned int nNewBits = bnNew.GetCompact();
 
     /// debug print
-    LogPrintf("GetNextWorkRequired() : RETARGET; target: %d, actual: %d, modulated: %d, before: %08x, after: %08x\n",
-        TARGET_SPACING, nActualTimespan, nModulatedTimespan, pindexLast->nBits, nNewBits);
+    LogPrintf("GetNextWorkRequired() : RETARGET; target: %d, actual: %d, before: %08x, after: %08x\n",
+        TARGET_TIMESPAN, nActualTimespan, pindexLast->nBits, nNewBits);
 
     return nNewBits;
 }
@@ -2304,11 +2319,13 @@ bool AddToBlockIndex(CBlock& block, CValidationState& state, const CDiskBlockPos
 {
     // Check for duplicate
     uint256 hash = block.GetHash();
+
     if (mapBlockIndex.count(hash))
         return state.Invalid(error("AddToBlockIndex() : %s already exists", hash.ToString()), 0, "duplicate");
 
     // Construct new block index object
     CBlockIndex* pindexNew = new CBlockIndex(block);
+
     assert(pindexNew);
     {
          LOCK(cs_nBlockSequenceId);
@@ -2325,7 +2342,9 @@ bool AddToBlockIndex(CBlock& block, CValidationState& state, const CDiskBlockPos
     }
     pindexNew->nTx = block.vtx.size();
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + pindexNew->GetBlockWork().getuint256();
+
     CountMatureCoins(block, pindexNew);
+
     if (mapFirstTimeSeen[pindexNew->nHeight] == 0)
         mapFirstTimeSeen[pindexNew->nHeight] = pindexNew->nTimeReceived;
     pindexNew->nChainTx = (pindexNew->pprev ? pindexNew->pprev->nChainTx : 0) + pindexNew->nTx;
@@ -2472,7 +2491,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                          REJECT_INVALID, "high-hash");
 
     // Check timestamp
-    // TODO this is unnecessary - no need for nTime hacks with Sign to Mine
+    // TODO change get adjusted time
     if (block.GetBlockTime() > GetAdjustedTime() + MAX_BLOCK_TIME_OFFSET)
         return state.Invalid(error("CheckBlock() : block timestamp too far in the future"),
                              REJECT_INVALID, "time-too-new");

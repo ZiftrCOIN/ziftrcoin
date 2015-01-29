@@ -29,6 +29,7 @@ BITCOIN_CORE_H = \
   alert.h \
   allocators.h \
   base58.h bignum.h \
+  blake.c \
   bloom.h \
   chainparams.h \
   checkpoints.h \
@@ -40,8 +41,11 @@ BITCOIN_CORE_H = \
   core.h \
   crypter.h \
   db.h \
+  groestl.c \
   hash.h \
   init.h \
+  jh.c \
+  keccak.c \
   key.h \
   keystore.h \
   leveldbwrapper.h \
@@ -58,6 +62,13 @@ BITCOIN_CORE_H = \
   rpcserver.h \
   script.h \
   serialize.h \
+  skein.c \
+  sph_blake.h \
+  sph_groestl.h \
+  sph_jh.h \
+  sph_keccak.h \
+  sph_skein.h \
+  sph_types.h \
   sync.h \
   threadsafety.h \
   tinyformat.h \

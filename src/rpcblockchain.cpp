@@ -58,19 +58,20 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex)
     result.push_back(Pair("confirmations", (int)txGen.GetDepthInMainChain()));
     result.push_back(Pair("size", (int)::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION)));
     result.push_back(Pair("height", blockindex->nHeight));
-    result.push_back(Pair("headerSigR", HexStr(&block.vchHeaderSigR[0], &block.vchHeaderSigR[sizeof(block.vchHeaderSigR)])));
-    result.push_back(Pair("headerSigS", HexStr(&block.vchHeaderSigS[0], &block.vchHeaderSigS[sizeof(block.vchHeaderSigS)])));
+    
     result.push_back(Pair("version", block.nVersion));
+    result.push_back(Pair("pok", (uint64_t)block.nProofOfKnowledge));
+    result.push_back(Pair("nonce", (uint64_t)block.nNonce));
+    result.push_back(Pair("time", block.GetBlockTime()));
+    result.push_back(Pair("bits", HexBits(block.nBits)));
     result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
     Array txs;
     BOOST_FOREACH(const CTransaction&tx, block.vtx)
         txs.push_back(tx.GetHash().GetHex());
     result.push_back(Pair("tx", txs));
-    result.push_back(Pair("time", block.GetBlockTime()));
-    result.push_back(Pair("bits", HexBits(block.nBits)));
     result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
     result.push_back(Pair("chainwork", blockindex->nChainWork.GetHex()));
-
+    
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
     CBlockIndex *pnext = chainActive.Next(blockindex);
@@ -245,9 +246,9 @@ Value getblock(const Array& params, bool fHelp)
             "  \"confirmations\" : n,   (numeric) The number of confirmations\n"
             "  \"size\" : n,            (numeric) The block size\n"
             "  \"height\" : n,          (numeric) The block height or index\n"
-            "  \"headerSigR\" : n,      (string) The R portion of the header signature\n"
-            "  \"headerSigS\" : n,      (string) The S portion of the header signature\n"
             "  \"version\" : n,         (numeric) The block version\n"
+            "  \"pok\" : n,             (numeric) The proof of knowledge of transaction data\n"
+            "  \"nonce\" : n,           (numeric) The block nonce\n"
             "  \"merkleroot\" : \"xxxx\", (string) The merkle root\n"
             "  \"tx\" : [               (array of string) The transaction ids\n"
             "     \"transactionid\"     (string) The transaction id\n"

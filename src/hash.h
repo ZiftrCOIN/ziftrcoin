@@ -9,11 +9,50 @@
 #include "serialize.h"
 #include "uint256.h"
 #include "version.h"
+#include "util.h"
+
+#include "sph_blake.h"
+#include "sph_groestl.h"
+#include "sph_jh.h"
+#include "sph_keccak.h"
+#include "sph_skein.h"
 
 #include <vector>
 
 #include <openssl/ripemd.h>
 #include <openssl/sha.h>
+
+#ifdef GLOBALDEFINED
+#define GLOBAL
+#else
+#define GLOBAL extern
+#endif
+
+GLOBAL sph_blake512_context    z_blake;
+GLOBAL sph_groestl512_context  z_groestl;
+GLOBAL sph_jh512_context       z_jh;
+GLOBAL sph_keccak512_context   z_keccak;
+GLOBAL sph_skein512_context    z_skein;
+
+#define fillz() do { \
+    sph_blake512_init(&z_blake); \
+    sph_groestl512_init(&z_groestl); \
+    sph_jh512_init(&z_jh); \
+    sph_keccak512_init(&z_keccak); \
+    sph_skein512_init(&z_skein); \
+} while (0)
+
+#define ZBLAKE   (memcpy(&ctx_blake,    &z_blake,    sizeof(z_blake)))
+#define ZGROESTL (memcpy(&ctx_groestl,  &z_groestl,  sizeof(z_groestl)))
+#define ZJH      (memcpy(&ctx_jh,       &z_jh,       sizeof(z_jh)))
+#define ZKECCAK  (memcpy(&ctx_keccak,   &z_keccak,   sizeof(z_keccak)))
+#define ZSKEIN   (memcpy(&ctx_skein,    &z_skein,    sizeof(z_skein)))
+
+static const int BLAKE   = 0;
+static const int GROESTL = 1;
+static const int JH      = 2;
+static const int KECCAK  = 3;
+static const int SKEIN   = 4;
 
 template<typename T1>
 inline uint256 Hash(const T1 pbegin, const T1 pend)
@@ -135,5 +174,195 @@ typedef struct
 int HMAC_SHA512_Init(HMAC_SHA512_CTX *pctx, const void *pkey, size_t len);
 int HMAC_SHA512_Update(HMAC_SHA512_CTX *pctx, const void *pdata, size_t len);
 int HMAC_SHA512_Final(unsigned char *pmd, HMAC_SHA512_CTX *pctx);
+
+/* ----------- ziftrCOIN Hash ------------------------------------------------ */
+template<typename T1>
+inline uint256 HashZ(const T1 pbegin, const T1 pend, unsigned int nOrderIn)
+{
+    static unsigned char pblank[1];
+    pblank[0] = 0;
+
+    // Pre-computed table of permutations
+    static const int arrOrder[][5] = 
+    {
+        {0, 1, 2, 3, 4},
+        {0, 1, 2, 4, 3},
+        {0, 1, 3, 2, 4},
+        {0, 1, 3, 4, 2},
+        {0, 1, 4, 2, 3},
+        {0, 1, 4, 3, 2},
+        {0, 2, 1, 3, 4},
+        {0, 2, 1, 4, 3},
+        {0, 2, 3, 1, 4},
+        {0, 2, 3, 4, 1},
+        {0, 2, 4, 1, 3},
+        {0, 2, 4, 3, 1},
+        {0, 3, 1, 2, 4},
+        {0, 3, 1, 4, 2},
+        {0, 3, 2, 1, 4},
+        {0, 3, 2, 4, 1},
+        {0, 3, 4, 1, 2},
+        {0, 3, 4, 2, 1},
+        {0, 4, 1, 2, 3},
+        {0, 4, 1, 3, 2},
+        {0, 4, 2, 1, 3},
+        {0, 4, 2, 3, 1},
+        {0, 4, 3, 1, 2},
+        {0, 4, 3, 2, 1},
+        {1, 0, 2, 3, 4},
+        {1, 0, 2, 4, 3},
+        {1, 0, 3, 2, 4},
+        {1, 0, 3, 4, 2},
+        {1, 0, 4, 2, 3},
+        {1, 0, 4, 3, 2},
+        {1, 2, 0, 3, 4},
+        {1, 2, 0, 4, 3},
+        {1, 2, 3, 0, 4},
+        {1, 2, 3, 4, 0},
+        {1, 2, 4, 0, 3},
+        {1, 2, 4, 3, 0},
+        {1, 3, 0, 2, 4},
+        {1, 3, 0, 4, 2},
+        {1, 3, 2, 0, 4},
+        {1, 3, 2, 4, 0},
+        {1, 3, 4, 0, 2},
+        {1, 3, 4, 2, 0},
+        {1, 4, 0, 2, 3},
+        {1, 4, 0, 3, 2},
+        {1, 4, 2, 0, 3},
+        {1, 4, 2, 3, 0},
+        {1, 4, 3, 0, 2},
+        {1, 4, 3, 2, 0},
+        {2, 0, 1, 3, 4},
+        {2, 0, 1, 4, 3},
+        {2, 0, 3, 1, 4},
+        {2, 0, 3, 4, 1},
+        {2, 0, 4, 1, 3},
+        {2, 0, 4, 3, 1},
+        {2, 1, 0, 3, 4},
+        {2, 1, 0, 4, 3},
+        {2, 1, 3, 0, 4},
+        {2, 1, 3, 4, 0},
+        {2, 1, 4, 0, 3},
+        {2, 1, 4, 3, 0},
+        {2, 3, 0, 1, 4},
+        {2, 3, 0, 4, 1},
+        {2, 3, 1, 0, 4},
+        {2, 3, 1, 4, 0},
+        {2, 3, 4, 0, 1},
+        {2, 3, 4, 1, 0},
+        {2, 4, 0, 1, 3},
+        {2, 4, 0, 3, 1},
+        {2, 4, 1, 0, 3},
+        {2, 4, 1, 3, 0},
+        {2, 4, 3, 0, 1},
+        {2, 4, 3, 1, 0},
+        {3, 0, 1, 2, 4},
+        {3, 0, 1, 4, 2},
+        {3, 0, 2, 1, 4},
+        {3, 0, 2, 4, 1},
+        {3, 0, 4, 1, 2},
+        {3, 0, 4, 2, 1},
+        {3, 1, 0, 2, 4},
+        {3, 1, 0, 4, 2},
+        {3, 1, 2, 0, 4},
+        {3, 1, 2, 4, 0},
+        {3, 1, 4, 0, 2},
+        {3, 1, 4, 2, 0},
+        {3, 2, 0, 1, 4},
+        {3, 2, 0, 4, 1},
+        {3, 2, 1, 0, 4},
+        {3, 2, 1, 4, 0},
+        {3, 2, 4, 0, 1},
+        {3, 2, 4, 1, 0},
+        {3, 4, 0, 1, 2},
+        {3, 4, 0, 2, 1},
+        {3, 4, 1, 0, 2},
+        {3, 4, 1, 2, 0},
+        {3, 4, 2, 0, 1},
+        {3, 4, 2, 1, 0},
+        {4, 0, 1, 2, 3},
+        {4, 0, 1, 3, 2},
+        {4, 0, 2, 1, 3},
+        {4, 0, 2, 3, 1},
+        {4, 0, 3, 1, 2},
+        {4, 0, 3, 2, 1},
+        {4, 1, 0, 2, 3},
+        {4, 1, 0, 3, 2},
+        {4, 1, 2, 0, 3},
+        {4, 1, 2, 3, 0},
+        {4, 1, 3, 0, 2},
+        {4, 1, 3, 2, 0},
+        {4, 2, 0, 1, 3},
+        {4, 2, 0, 3, 1},
+        {4, 2, 1, 0, 3},
+        {4, 2, 1, 3, 0},
+        {4, 2, 3, 0, 1},
+        {4, 2, 3, 1, 0},
+        {4, 3, 0, 1, 2},
+        {4, 3, 0, 2, 1},
+        {4, 3, 1, 0, 2},
+        {4, 3, 1, 2, 0},
+        {4, 3, 2, 0, 1},
+        {4, 3, 2, 1, 0}
+    };
+
+    unsigned int nOrder = nOrderIn % ARRAYLEN(arrOrder);
+
+    uint512 hash[5];
+
+    sph_blake512_context   ctx_blake;
+    sph_groestl512_context ctx_groestl;
+    sph_jh512_context      ctx_jh;
+    sph_keccak512_context  ctx_keccak;
+    sph_skein512_context   ctx_skein;
+
+    const void * pStart = (pbegin == pend ? pblank : static_cast<const void*>(&pbegin[0]));
+    size_t nSize        = (pend - pbegin) * sizeof(pbegin[0]);
+    void * pPutResult   = static_cast<void*>(&hash[0]);
+
+    for (unsigned int i = 0; i < 5; i++)
+    {
+        switch (arrOrder[nOrder][i]) 
+        {
+        case BLAKE:
+            sph_blake512_init(&ctx_blake);
+            sph_blake512 (&ctx_blake, pStart, nSize);
+            sph_blake512_close(&ctx_blake, pPutResult);
+            break;
+        case GROESTL: 
+            sph_groestl512_init(&ctx_groestl);
+            sph_groestl512 (&ctx_groestl, pStart, nSize);
+            sph_groestl512_close(&ctx_groestl, pPutResult);
+            break;
+        case JH: 
+            sph_jh512_init(&ctx_jh);
+            sph_jh512 (&ctx_jh, pStart, nSize);
+            sph_jh512_close(&ctx_jh, pPutResult);
+            break;
+        case KECCAK:
+            sph_keccak512_init(&ctx_keccak);
+            sph_keccak512 (&ctx_keccak, pStart, nSize);
+            sph_keccak512_close(&ctx_keccak, pPutResult);
+            break;
+        case SKEIN:
+            sph_skein512_init(&ctx_skein);
+            sph_skein512 (&ctx_skein, pStart, nSize);
+            sph_skein512_close(&ctx_skein, pPutResult);
+            break;
+        default:
+            break;
+        }
+
+        if (i < 4)
+        {
+            pStart     = static_cast<const void*>(&hash[i]);
+            nSize      = 64;
+            pPutResult = static_cast<void*>(&hash[i+1]);
+        }
+    }
+
+    return hash[4].trim256();
+}
 
 #endif

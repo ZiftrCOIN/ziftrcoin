@@ -94,10 +94,6 @@ void ShutdownRPCMining()
 //     return (int64_t)(workDiff.getdouble() / timeDiff);
 // }
 
-// CBigNum GetNetworkSashPer(int nLookUp, int nHeight, uint64_t nInterval) 
-
-
-
 
 
 
@@ -113,7 +109,7 @@ void ShutdownRPCMining()
 // nHeight = 5
 //      B0      B1      B2      B3      B4      B5      ...
 //                               <- 2 -> <- 1 -> 
-Value GetNetworkSashPS(int nLookUp, int nHeight) 
+Value GetNetworkHashPS(int nLookUp, int nHeight) 
 {
     CBlockIndex* pBlockLast = chainActive[nHeight];
     if (pBlockLast == NULL)
@@ -167,7 +163,7 @@ Value getnetworkhashps(const Array& params, bool fHelp)
             + HelpExampleRpc("getnetworkhashps", "")
        );
 
-    return GetNetworkSashPS(
+    return GetNetworkHashPS(
         params.size() > 0 ? params[0].get_int() : 120, 
         params.size() > 1 ? params[1].get_int() : -1);
 }
@@ -285,9 +281,9 @@ Value gethashespersec(const Array& params, bool fHelp)
             + HelpExampleRpc("gethashespersec", "")
         );
 
-    if (GetTimeMillis() - nSPSTimerStart > 8000)
+    if (GetTimeMillis() - nHPSTimerStart > 8000)
         return (int64_t)0;
-    return (int64_t)dSashesPerSec;
+    return (int64_t)dHashesPerSec;
 }
 #endif
 
@@ -409,7 +405,8 @@ Value getwork(const Array& params, bool fHelp)
 
         // Update nTime
         UpdateTime(*pblock, pindexPrev);
-        pblock->ClearHeaderSig();
+        pblock->nProofOfKnowledge = 0;
+        pblock->nNonce = 0;
 
         // Update coinbase script sig
         UpdateCoinbaseScriptSig(pblock, pindexPrev);
@@ -421,8 +418,8 @@ Value getwork(const Array& params, bool fHelp)
 
         Object result;
         CBlockHeader header = pblock->GetBlockHeader();
-        result.push_back(Pair("data", HexStr(BEGIN(header.vchHeaderSigR), END(header.nBits))));
-        result.push_back(Pair("target",   HexStr(BEGIN(hashTarget), END(hashTarget))));
+        result.push_back(Pair("data", HexStr(BEGIN(header.nVersion), END(header.hashMerkleRoot))));
+        result.push_back(Pair("target", HexStr(BEGIN(hashTarget), END(hashTarget))));
         return result;
     }
     else
@@ -447,7 +444,8 @@ Value getwork(const Array& params, bool fHelp)
         // been changed while mining, everything else is saved
         // Don't think we need to copy the coinbase scripsig anymore, since no extraNonce
         // UpdateCoinbaseScriptSig(pblock, pindexPrev);
-        pblock->CopyHeaderSigFrom(pdata->vchHeaderSigR, pdata->vchHeaderSigS);
+        pblock->nProofOfKnowledge = pdata->nProofOfKnowledge;
+        pblock->nNonce = pdata->nNonce;
         pblock->nTime = pdata->nTime;
         pblock->hashMerkleRoot = pblock->BuildMerkleTree();
 
@@ -576,7 +574,8 @@ Value getblocktemplate(const Array& params, bool fHelp)
 
     // Update nTime
     UpdateTime(*pblock, pindexPrev);
-    pblock->ClearHeaderSig();
+    pblock->nProofOfKnowledge = 0;
+    pblock->nNonce = 0;
 
     Array transactions;
     map<uint256, int64_t> setTxIndex;

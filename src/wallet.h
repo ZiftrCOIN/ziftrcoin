@@ -457,8 +457,8 @@ public:
     mapValue_t mapValue;
     std::vector<std::pair<std::string, std::string> > vOrderForm;
     unsigned int fTimeReceivedIsTxTime;
-    unsigned int nTimeReceived;  // time received by this node
-    unsigned int nTimeSmart;
+    int64_t nTimeReceived;  // time received by this node
+    int64_t nTimeSmart;
     char fFromMe;
     std::string strFromAccount;
     int64_t nOrderPos;  // position in ordered transaction list

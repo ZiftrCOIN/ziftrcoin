@@ -13,6 +13,9 @@
 
 #include <stdint.h>
 
+// Given merkle root and index into vtx, give the raw transaction data for faster lookups while mining
+typedef std::map< std::pair<uint256, int>, std::vector<unsigned char> > MapTxSerialized;
+
 class CTransaction;
 
 /** An outpoint - a combination of a transaction hash and an index n into its vout */
@@ -345,7 +348,7 @@ public:
     int nVersion;
     unsigned int nProofOfKnowledge; // To prove knowledge of transaction data
     unsigned int nNonce;
-    int64_t nTime; 
+    unsigned int nTime; 
     unsigned int nBits;
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
@@ -389,7 +392,7 @@ public:
 
     int64_t GetBlockTime() const
     {
-        return nTime;
+        return (int64_t)nTime;
     }
 };
 
@@ -442,7 +445,7 @@ public:
 
     bool CheckProofOfWork() const;
 
-    unsigned int CalculateProofOfKnowledge() const;
+    unsigned int CalculateProofOfKnowledge(MapTxSerialized * mapTxSerialized = NULL) const;
 
     uint256 BuildMerkleTree() const;
 

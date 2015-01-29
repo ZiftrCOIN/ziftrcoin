@@ -13,6 +13,7 @@
 #include "compat.h"
 #include "serialize.h"
 #include "tinyformat.h"
+#include "uint256.h"
 
 #include <cstdio>
 #include <exception>

@@ -30,7 +30,7 @@ void SHA256Transform(void* pstate, void* pinput, const void* pinit);
 /** Do mining precalculation */
 //void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash1);
 
-extern double dSashesPerSec;
-extern int64_t nSPSTimerStart;
+extern double dHashesPerSec;
+extern int64_t nHPSTimerStart;
 
 #endif // BITCOIN_MINER_H

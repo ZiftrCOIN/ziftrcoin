@@ -745,7 +745,7 @@ public:
     int nVersion;
     unsigned int nProofOfKnowledge;
     unsigned int nNonce;
-    int64_t nTime;
+    unsigned int nTime;
     unsigned int nBits;
     uint256 hashMerkleRoot;
 
@@ -860,7 +860,7 @@ public:
         return header.CheckProofOfWork();
     }
 
-    enum { nMedianTimeSpan=11 }; // TODO new rule that requires time to be more strict since no need for nTime hacks with sign to mine?
+    enum { nMedianTimeSpan=11 };
 
     int64_t GetMedianTimePast() const
     {

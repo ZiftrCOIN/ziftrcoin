@@ -109,43 +109,24 @@ static int whichGenesisMine = 0;
 
 static void MineGenesisBlock(CBlock& genesis, CBigNum& bnProofOfWorkLimit, const string& pref) {
 
-    CBitcoinSecret vchSecret;
-    bool fGood = vchSecret.SetString("Xtvz9noVZtFuTvmpCQxTzm3KM3kfZimsrqYnKM9TowrvTscbXLAS");
-    if (!fGood)
-        throw runtime_error("MineGenesisBlock() : could not decode signing key");
-    CKey signer = vchSecret.GetKey();
-
     uint256 proofOfWorkLimit = bnProofOfWorkLimit.getuint256();
-    std::vector<unsigned char> vchSig;
-    uint256 hashToSign = genesis.GetHash(false);
-    uint256 hashGenesisBlock = 0;
-
-    unsigned int counter = 0;
+    genesis.nNonce = 0;
+    uint256 hashGenesisBlock;
 
     do {
-        if (!signer.Sign(hashToSign, vchSig)) {
-            std::cout << "couldn't sign...\n";
-        }
-
-        if (!DERDecodeSignature(genesis.vchHeaderSigR, genesis.vchHeaderSigS, vchSig)) {
-            std::cout << "DER decode failed\n";
-        }
+        genesis.nNonce++;
+        genesis.nProofOfKnowledge = genesis.CalculateProofOfKnowledge();
         hashGenesisBlock = genesis.GetHash();
-
-        counter++;
-        if ((counter % 10000) == 0)
-        {
-            std::cout << "vchSig: " << HexStr(vchSig.begin(), vchSig.end()) << "\n";
-            std::cout << "hashGenesisBlock: " << hashGenesisBlock.GetHex() << "\n\n";
-        }
-
     } while (hashGenesisBlock > proofOfWorkLimit);
     
-    printf("%s vchHeaderSigR: %s\n", pref.c_str(), HexStr(&genesis.vchHeaderSigR[0], &genesis.vchHeaderSigR[32]).c_str());
-    printf("%s vchHeaderSigS: %s\n", pref.c_str(), HexStr(&genesis.vchHeaderSigS[0], &genesis.vchHeaderSigS[32]).c_str());
-    printf("%s hash signed: %s\n", pref.c_str(), hashToSign.ToString().c_str());
-    printf("%s hashGenesisBlock: %s\n", pref.c_str(), hashGenesisBlock.ToString().c_str());
+    printf("%s pok: %u\n", pref.c_str(), genesis.nProofOfKnowledge);
+    printf("%s nonce: %u\n", pref.c_str(), genesis.nNonce);
+    printf("%s time: %llu\n", pref.c_str(), (long long)genesis.nTime);
+    printf("%s hash: %s\n", pref.c_str(), genesis.GetHash().ToString().c_str());
     printf("%s merkleRoot: %s\n", pref.c_str(), genesis.hashMerkleRoot.ToString().c_str());
+    CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+    ssBlock << genesis;
+    printf("%s block: \n%s\n", pref.c_str(), HexStr(ssBlock.begin(), ssBlock.end()).c_str());
 }
 
 class CMainParams : public CChainParams {
@@ -168,7 +149,7 @@ public:
         nRPCPort = 10332;
         vAlertPubKey = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");//"0380d4125f5357aac2b98c201ee76c3e26a5ef084a5fcd26e65c9cfff7ad1a026c");
 
-        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 8);
+        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 20);
         nNumIncrBlocks =  5  * 365 * 24 * 60;
         nNumConstBlocks = 5  * 365 * 24 * 60;
         nNumDecrBlocks =  10 * 365 * 24 * 60;
@@ -188,50 +169,30 @@ public:
             txNew.vout[i].scriptPubKey << ParseHex("037e6d28a34b6fc0f305162a245ac55b81c3dfff7726f65dd80493b04fcebc76e7") << OP_CHECKSIG;
             txNew.vout[i].nValue = (i > 0 ? 25000000 * COIN : 350000000 * COIN);
         }
-
         genesis.vtx.push_back(txNew);
+
         
-        std::vector<unsigned char> vchSigR;
-        vchSigR = ParseHex("9385625782d6423678ccd494328beaacb6cb6f4e13288ffa6cc0e8d1de27b759");
-        std::vector<unsigned char> vchSigS;
-        vchSigS = ParseHex("65da15f77817f4f50e309102143dd3b152ed6b61bfd6b2bb52785a6e53aeb8dc");
-        genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
+        genesis.nVersion          = 1;
+        genesis.nNonce            = 13817;
+        genesis.nTime             = 1422465309;
+        genesis.nBits             = bnProofOfWorkLimit.GetCompact();
+        genesis.hashPrevBlock     = 0;
+        genesis.hashMerkleRoot    = genesis.BuildMerkleTree();
+        genesis.nProofOfKnowledge = genesis.CalculateProofOfKnowledge();
 
-        genesis.hashPrevBlock = 0;
-        genesis.hashMerkleRoot = genesis.BuildMerkleTree();
-        genesis.nVersion = 1;
-        genesis.nTime    = 1416422035;
-        genesis.nBits    = bnProofOfWorkLimit.GetCompact();
-        hashGenesisBlock = genesis.GetHash();
+        hashGenesisBlock          = genesis.GetHash();
 
-        //
-        // DEBUG
-        //
-        // std::vector<unsigned char> vchHeaderSig;
-        // uint256 h2sign = genesis.GetHash(false);
-        // DEREncodeSignature(genesis.vchHeaderSigR, genesis.vchHeaderSigS, vchHeaderSig);
-        // std::cout << "header sig: " << HexStr(vchHeaderSig.begin(), vchHeaderSig.end()) << "\n";
-        // std::cout << "header signed hash: " << h2sign.ToString() << "\n";
-        // std::cout << "header final hash: " << genesis.GetHash().ToString() << "\n";
-
-        // CPubKey pubKey = key.GetPubKey();
-        // std::cout << "pubKey: " << HexStr(pubKey.begin(), pubKey.end()) << "\n";
-
-        // vchHeaderSig.clear();
-        // key.Sign(h2sign, vchHeaderSig);
-        // std::cout << "resigned value: " << HexStr(vchHeaderSig.begin(), vchHeaderSig.end()) << "\n";
-
-        // unsigned char dummyR[32];
-        // unsigned char dummyS[32];
-        // DERDecodeSignature(dummyR, dummyS, vchHeaderSig);
-        // std::cout << "dummyR: " << HexStr(&dummyR[0], &dummyR[32]) << "\n";
-        // std::cout << "dummyS: " << HexStr(&dummyS[0], &dummyS[32]) << "\n";
+        // CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+        // ssBlock << *((CBlockHeader*)&genesis);
+        // std::string strHex = HexStr(ssBlock.begin(), ssBlock.end());
+        // printf("block: %s\n", strHex.c_str());
+        // printf("hashGenesisBlock: %s\n", hashGenesisBlock.ToString().c_str());
 
         if (whichGenesisMine == 1) {
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         } 
 
-        assert(hashGenesisBlock == uint256("0x0087968701577340357ce6bb138b083ab881cbbaf739fbf694a9226cfe333777"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
+        assert(hashGenesisBlock == uint256("0x00000de128e9a759e9f0b7c4df71636661a8eaf1478d303c2a811ac6aa16fb40"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
         assert(genesis.hashMerkleRoot == uint256("0xb04109fc6bfaf59fe0d393b471a1837aad5c77bdccb528975f30ac827b040512"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));     
 
         // vSeeds.push_back(CDNSSeedData("bitcoin.sipa.be", "seed.bitcoin.sipa.be"));
@@ -294,20 +255,17 @@ public:
         strDataDir = "testnet";
         vAlertPubKey = ParseHex("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");//"02911661822e0b2cd814ed3ff4d23c97cfe7c89ad1eb6ce2ad3181195cfa9e0886");
 
-        std::vector<unsigned char> vchSigR;
-        vchSigR = ParseHex("de60a309737a4b620b50d32f511cc7226f145d4259f20d1c487f2eb04eb1d584");
-        std::vector<unsigned char> vchSigS;
-        vchSigS = ParseHex("435f5599033aac80ee1eadb262dd4e02f60929f9178fe5466d5890d2a7e6f5dc");
-        genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
-
-        genesis.nTime = 1416422036;
+        genesis.nTime             = 1422465442;
+        genesis.nNonce            = 1390595;
+        genesis.nProofOfKnowledge = genesis.CalculateProofOfKnowledge();
+        
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine == 2) {
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         }
 
-        assert(hashGenesisBlock == uint256("0x004f7c4cc6429bda20645e58fc04c841c50d85f25375a4a0d84a8192be1d3c20"));
+        assert(hashGenesisBlock == uint256("0x00000aa0fc4547bc1e87d98b0e712a663de21c5e8b20e8a4def9c3ba53d9ad24"));
         // Merkle root is the same as parent
 
         vFixedSeeds.clear();
@@ -337,21 +295,18 @@ public:
 
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 1);
 
-        std::vector<unsigned char> vchSigR;
-        vchSigR = ParseHex("a280dec219d2f9d186961fe1cdf1cc5e5b52cc1324f76c68a46e6ae8b386d8b4");
-        std::vector<unsigned char> vchSigS;
-        vchSigS = ParseHex("6d7a6425c0883b3ec63f6bca61a66c69352a6384cce6aab42bf79fec4ef96c72");
-        genesis.CopyHeaderSigFrom(&vchSigR[0], &vchSigS[0]);
+        genesis.nBits             = bnProofOfWorkLimit.GetCompact();
+        genesis.nTime             = 1422466124;
+        genesis.nNonce            = 1;
+        genesis.nProofOfKnowledge = genesis.CalculateProofOfKnowledge();
 
-        genesis.nTime = 1416422037;
-        genesis.nBits = 0x207fffff;
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine == 3) {
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         }
         
-        assert(hashGenesisBlock == uint256("0x05aec2210110e765c26c65c50078b9f6f797676b8dc498a31de4442c1b011e58"));
+        assert(hashGenesisBlock == uint256("0x0484b8f2bf8588f732f3da9431621543ae55ff601b372b981aae2de4c9e46ab4"));
         // Merkle root is the same as parent
 
         vSeeds.clear();  // Regtest mode doesn't have any DNS seeds.

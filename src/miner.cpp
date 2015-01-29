@@ -409,55 +409,31 @@ void UpdateCoinbaseScriptSig(CBlock* pblock, CBlockIndex* pindexPrev)
 // Internal miner
 //
 
-double dSashesPerSec = 0.0;
-int64_t nSPSTimerStart = 0;
+double dHashesPerSec = 0.0;
+int64_t nHPSTimerStart = 0;
 
 
 // Returns the number of failed attempts. 
-// If ret == nTries, then all failed.
-// Else, there were ret+1 sashes (signature-hashes) done and the last one succeeded
-// TODO there are efficiency improvements that can be made here
-// TODO could probably get an ~2x improvement by using (R, S) and (R, -S) for each try, since 
-// both are valid signatures for the same data. https://bitcointalk.org/index.php?topic=8392.msg1245898#msg1245898
-// nDontTry should always be zero except for when simulating difficulty retargeting
-unsigned int static DoSignatureHashes(CBlock* pblock, const CKey& signer, unsigned int nTries, unsigned int nDontTry)
+// If ret == nTry, then all failed.
+// Else, there were ret+1 trials done and the last one succeeded
+//
+// (nDontTry should always be zero except for when simulating difficulty retargeting)
+//
+unsigned int static ScanHash(CBlock *pblock, unsigned int nTry, unsigned int nDontTry, MapTxSerialized * mapTxSerialized) 
 {
-    // Only need to calculate this once
-    // uint256 hashToSignBuf[2];
-    // uint256& hashToSign = *alignup<16>(hashToSignBuf);
-
-    // The hash that makes the header hash low enough
-    // uint256 hashTargetBuf[2];
-    // uint256& hashTarget = *alignup<16>(hashTargetBuf);
-
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
-    uint256 hashToSign = pblock->GetHash(false);
-
-    std::vector<unsigned char> vchSig1;
-    std::vector<unsigned char> vchSig2;
-    for (unsigned int i = 0; i < nTries; i++) 
+    uint256 hashBlockHeader;
+    for (unsigned int i = 0; i < nTry; i++) 
     {
-        signer.Sign2(hashToSign, vchSig1, vchSig2);
+        pblock->nNonce++;
+        pblock->nProofOfKnowledge = pblock->CalculateProofOfKnowledge(mapTxSerialized);
+        hashBlockHeader = pblock->GetHash();
 
-        for (unsigned int j = 0; j < 2; j++)
-        {
-            DERDecodeSignature(pblock->vchHeaderSigR, pblock->vchHeaderSigS, j ? vchSig1 : vchSig2);
-            uint256 hashBlockHeader = pblock->GetHash();
-            if (hashBlockHeader <= hashTarget && (2*i + j) >= nDontTry) {
-                // CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
-                // ssBlock << *pblock;
-                // LogPrintf("block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
-                // LogPrintf("hashBlockHeader: %s\n", hashBlockHeader.ToString());
-                // LogPrintf("hashToSign: %s\n", hashToSign.ToString());
-                // LogPrintf("vchSig1: %s\n", HexStr(vchSig1.begin(), vchSig1.end()));
-                // LogPrintf("vchSig2: %s\n", HexStr(vchSig2.begin(), vchSig2.end()));
-                // CPubKey pubKey = signer.GetPubKey();
-                // LogPrintf("pubKey: %s\n", HexStr(pubKey.begin(), pubKey.end()));
-                return 2*i + j;
-            }
-        }
+        if (hashBlockHeader <= hashTarget && i >= nDontTry)
+            return i;
     }
-    return 2*nTries;
+
+    return nTry;
 }
 
 CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reserveKey)
@@ -472,19 +448,6 @@ CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reserveKey)
 
 //extern bool fJustPrint;
 
-void PrintBlockInfo(CBlock* pblock, CReserveKey& reserveKey)
-{
-    uint256 hash = pblock->GetHash();
-
-    LogPrintf("Begin print block info:\n{\n");
-    CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
-    ssBlock << *pblock;
-    LogPrintf("  block: %s\n", HexStr(ssBlock.begin(), ssBlock.end()));
-    LogPrintf("  hashBlockHeader: %s\n", hash.ToString());
-
-    return true;
-}
-
 // If work is checked successfully, then keep the reserve key...
 bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
 {
@@ -492,19 +455,16 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
     if (hash > hashTarget)
-        return false;
+        return error("BitcoinMiner : solved block did not have enought work");
+
+    if (pblock->CalculateProofOfKnowledge() != pblock->nProofOfKnowledge)
+        return error("BitcoinMiner : solved block did not have consistent PoK");
 
     //// debug print
     //pblock->print();
     LogPrintf("BitcoinMiner:\n");
     LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashTarget.GetHex());
     LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
-
-    // if (fJustPrint)
-    // {
-    //     PrintBlockInfo(pblock, reserveKey);
-    //     return false;
-    // }
 
     // Found a solution
     {
@@ -518,33 +478,20 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
         // Track how many getdata requests this block gets
         {
             LOCK(wallet.cs_wallet);
-            wallet.mapRequestCount[pblock->GetHash()] = 0;
+            wallet.mapRequestCount[hash] = 0;
         }
 
         // Process this block the same as if we had received it from another node
         CValidationState state;
-        if (!ProcessBlock(state, NULL, pblock)) 
+        if (!ProcessBlock(state, NULL, pblock))
         {
-            PrintBlockInfo(pblock, reserveKey);
+            pblock->print();
             return error("BitcoinMiner : ProcessBlock, block not accepted");
         }
-
-        // CBlockIndex* pblockindex = mapBlockIndex[pblock->hashPrevBlock];
-        // ofstream myfile;
-        // myfile.open ("mining.csv", ios::app);
-        // myfile << pblockindex->nHeight << "," << pblock->nTime << "\n";
-        // myfile.close();
     }
 
     return true;
 }
-
-// 
-// TODO 
-// Maybe add an RPC argument to SetGenerate to allow the use of a given private key for mining?
-// Or should it be in the config file when the daemon is started?
-// Probably just going to get it working with a default wallet key first.
-// 
 
 // extern unsigned int nDontTry;
 
@@ -571,45 +518,37 @@ void static BitcoinMiner(CWallet *pwallet)
             unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
             CBlockIndex* pindexPrev = chainActive.Tip();
 
-            // CScript scriptPubKey = CScript() << pubKey << OP_CHECKSIG;
-            // auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(scriptPubKey));
-
             // Automatically delete old block template after each round
             auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reserveKey));
-            if (!pblocktemplate.get())
+            if (!pblocktemplate.get()) {
+                LogPrintf("Error in BitcoinMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
                 return;
+            }
 
             CBlock *pblock = &pblocktemplate->block;
             UpdateCoinbaseScriptSig(pblock, pindexPrev);
+            MapTxSerialized mapTxSerialized;
 
             LogPrintf("Running BitcoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
                    ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
-
-            CPubKey pubKey;
-            if (!reserveKey.GetReservedKey(pubKey))
-                throw std::runtime_error("BitcoinMiner() : Could not get new public key");
-
-            CKey signKey;
-            if (!pwallet->GetKey(pubKey.GetID(), signKey))
-                throw std::runtime_error("BitcoinMiner() : Could not get new private key");
 
             int64_t nStart = GetTime();
             while (true)
             {
                 // Meter hashes/sec
-                static int64_t nSashCounter;
-                static int64_t nLastLogTime;
+                static int64_t nHashCounter = 0;
+                static int64_t nLastLogTime = 0;
 
-                if (nSPSTimerStart == 0) {
-                    nSPSTimerStart = GetTimeMillis();
-                    nSashCounter = 0;
+                if (nHPSTimerStart == 0) {
+                    nHPSTimerStart = GetTimeMillis();
+                    nHashCounter = 0;
                 }
 
-                unsigned int nTries = 100; // Should be even
-                unsigned int nDontSash = 0; // nDontTry; // For simulating increases/decreases of network hash power
-                unsigned int nNumFailedAttempts = DoSignatureHashes(pblock, signKey, nTries/2, nDontSash);
-                nSashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
-                nSashCounter -= nDontSash;
+                unsigned int nTries = 10000; 
+                unsigned int nDontHash = 0; // nDontTry; // For simulating increases/decreases of network hash power
+                unsigned int nNumFailedAttempts = ScanHash(pblock, nTries, nDontHash, &mapTxSerialized);
+                nHashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
+                nHashCounter -= nDontHash;
 
                 if (nNumFailedAttempts < nTries) {
                     // Not all tries were fails, so we found a solution
@@ -625,17 +564,17 @@ void static BitcoinMiner(CWallet *pwallet)
                     break;
                 }
 
-                if (GetTimeMillis() - nSPSTimerStart > 4000) {
+                if (GetTimeMillis() - nHPSTimerStart > 4000) {
                     static CCriticalSection cs; 
                     {
                         LOCK(cs);
-                        if (GetTimeMillis() - nSPSTimerStart > 4000) {
-                            dSashesPerSec = 1000.0 * nSashCounter / (GetTimeMillis() - nSPSTimerStart);
-                            nSPSTimerStart = GetTimeMillis();
-                            nSashCounter = 0;
+                        if (GetTimeMillis() - nHPSTimerStart > 4000) {
+                            dHashesPerSec = 1000.0 * nHashCounter / (GetTimeMillis() - nHPSTimerStart);
+                            nHPSTimerStart = GetTimeMillis();
+                            nHashCounter = 0;
                             if (GetTime() - nLastLogTime > 30 * 60) {
                                 nLastLogTime = GetTime();
-                                LogPrintf("hashmeter %6.0f sash/s\n", dSashesPerSec);
+                                LogPrintf("hashmeter %6.0f hash/s\n", dHashesPerSec);
                             }
                         }
                     }
