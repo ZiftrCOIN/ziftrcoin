@@ -56,7 +56,10 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex)
     CMerkleTx txGen(block.vtx[0]);
     txGen.SetMerkleBranch(&block);
     result.push_back(Pair("confirmations", (int)txGen.GetDepthInMainChain()));
-    result.push_back(Pair("size", (int)::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION)));
+    result.push_back(Pair("size", (int)blockindex->nSize));
+    result.push_back(Pair("chainsize", blockindex->nChainSize));
+    if (chainActive.Contains(blockindex))
+        result.push_back(Pair("maxsize", (int)chainActive.MaxBlockSize(blockindex->nHeight)));
     result.push_back(Pair("height", blockindex->nHeight));
     
     result.push_back(Pair("version", block.nVersion));

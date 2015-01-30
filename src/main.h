@@ -37,8 +37,10 @@ class CBlockIndex;
 class CBloomFilter;
 class CInv;
 
-/** The maximum allowed size for a serialized block, in bytes (network rule) */
-static const unsigned int MAX_BLOCK_SIZE = 1000000;
+/** The smallest maximum allowed size for a serialized block, in bytes (network rule) */
+static const unsigned int MIN_MAX_BLOCK_SIZE = 1000000;
+/** Number of blocks between max block size recalculations. 1 block per minute for 30 days*/
+static const int MAX_BLOCK_SIZE_RECALC_PERIOD = 60 * 24 * 30;
 /** Default for -blockmaxsize and -blockminsize, which control the range of sizes the mining code will create **/
 static const unsigned int DEFAULT_BLOCK_MAX_SIZE = 750000;
 static const unsigned int DEFAULT_BLOCK_MIN_SIZE = 0;
@@ -46,8 +48,6 @@ static const unsigned int DEFAULT_BLOCK_MIN_SIZE = 0;
 static const unsigned int DEFAULT_BLOCK_PRIORITY_SIZE = 50000;
 /** The maximum size for transactions we're willing to relay/mine */
 static const unsigned int MAX_STANDARD_TX_SIZE = 100000;
-/** The maximum allowed number of signature check operations in a block (network rule) */
-static const unsigned int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50;
 /** Default for -maxorphantx, maximum number of orphan transactions kept in memory */
 static const unsigned int DEFAULT_MAX_ORPHAN_TRANSACTIONS = 100;
 /** Default for -maxorphanblocks, maximum number of orphan blocks kept in memory */
@@ -77,7 +77,7 @@ static const int64_t MIN_SUBSIDY =   5000000 * SATOSHI;
 /** The height difference at which an alert is initiated. */
 static const int FORK_HEIGHT_DIFF_ALERT = 360;
 /** The max seconds in the future that a block will be accepted. */
-static const int MAX_BLOCK_TIME_OFFSET = 1 * 60 * 60; // 2 * 60 * 60;
+static const int MAX_BLOCK_TIME_OFFSET = 1 * 60 * 60;
 /** The minimum number of blocks for coins to be considered mature. */
 static const int TRANSACTION_MATURITY_DEPTH = 120; 
 /** The delay for which blocks with more mature coins spent may possibly override. */
@@ -312,11 +312,17 @@ unsigned int GetSigOpCount(const CTransaction& tx);
 unsigned int GetP2SHSigOpCount(const CTransaction& tx, CCoinsViewCache& mapInputs);
 
 
+// TODO maybe this should change with mature coins spent as a tie breaker?
 inline bool AllowFree(double dPriority)
 {
     // Large (in bytes) low-priority (new, small-coin) transactions
     // need a fee.
     return dPriority > COIN * 144 / 250;
+}
+
+inline unsigned int MaxBlockSizeToSigOps(unsigned int nMaxBlockSize)
+{
+    return nMaxBlockSize / 50;
 }
 
 // Check whether all inputs of this transaction are valid (no double spends, scripts & sigs, amounts)
@@ -619,7 +625,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
 bool AddToBlockIndex(CBlock& block, CValidationState& state, const CDiskBlockPos& pos);
 
 // Context-independent validity checks
-bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
+bool CheckBlock(const CBlock& block, CValidationState& state, unsigned int nMaxBlockSize, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
 
 // Store block on disk
 // if dbp is provided, the file is known to already reside on disk
@@ -682,7 +688,7 @@ public:
 
 enum BlockStatus {
     BLOCK_VALID_UNKNOWN      =    0,
-    BLOCK_VALID_HEADER       =    1, // parsed, version ok, hash satisfies claimed PoW, 1 <= vtx count <= max, timestamp not in future
+    BLOCK_VALID_HEADER       =    1, // parsed, version ok, hash satisfies claimed PoW, 1 <= vtx count <= max, timestamp not too far in future
     BLOCK_VALID_TREE         =    2, // parent found, difficulty matches, timestamp >= median previous, checkpoint
     BLOCK_VALID_TRANSACTIONS =    3, // only first tx is coinbase, 2 <= coinbase input script length <= 100, transactions valid, no duplicate txids, sigops, size, merkle root
     BLOCK_VALID_CHAIN        =    4, // outputs do not overspend inputs, no double spends, coinbase output ok, immature coinbase spends, BIP30
@@ -715,6 +721,13 @@ public:
 
     // height of the entry in the chain. The genesis block has height 0
     int nHeight;
+
+    // Number of bytes in this serialized block
+    // Note: in a potential headers-first mode, this number cannot be relied upon
+    unsigned int nSize;
+
+    // (memory only) Number of bytes in all blocks up to and including this serialized block
+    uint64_t nChainSize;
 
     // Which # file this block is stored in (blk?????.dat)
     int nFile;
@@ -760,6 +773,8 @@ public:
         phashBlock = NULL;
         pprev = NULL;
         nHeight = 0;
+        nSize = 0;
+        nChainSize = 0;
         nFile = 0;
         nDataPos = 0;
         nUndoPos = 0;
@@ -784,6 +799,8 @@ public:
         phashBlock = NULL;
         pprev = NULL;
         nHeight = 0;
+        nSize = 0;
+        nChainSize = 0;
         nFile = 0;
         nDataPos = 0;
         nUndoPos = 0;
@@ -920,6 +937,7 @@ public:
             READWRITE(VARINT(nVersion));
 
         READWRITE(VARINT(nHeight));
+        READWRITE(VARINT(nSize));
         READWRITE(VARINT(nStatus));
         READWRITE(VARINT(nTx));
         if (nStatus & (BLOCK_HAVE_DATA | BLOCK_HAVE_UNDO))
@@ -1030,8 +1048,14 @@ public:
 class CChain {
 private:
     std::vector<CBlockIndex*> vChain;
+    std::map<int, unsigned int> mapBlockSizeLimits;
 
 public:
+
+    CChain() {
+        mapBlockSizeLimits[0] = MIN_MAX_BLOCK_SIZE;
+    }
+
     /** Returns the index entry for the genesis block of this chain, or NULL if none. */
     CBlockIndex *Genesis() const {
         return vChain.size() > 0 ? vChain[0] : NULL;
@@ -1071,6 +1095,28 @@ public:
     /** Return the maximal height in the chain. Is equal to chain.Tip() ? chain.Tip()->nHeight : -1. */
     int Height() const {
         return vChain.size() - 1;
+    }
+
+    unsigned int MaxBlockSize(int nHeight) {
+        int nLastSizeRetarget = nHeight - (nHeight % MAX_BLOCK_SIZE_RECALC_PERIOD);
+        std::map<int, unsigned int>::const_iterator it = mapBlockSizeLimits.find(nLastSizeRetarget);
+        assert(it != mapBlockSizeLimits.end());
+        return it->second;
+    }
+
+    unsigned int TipMaxBlockSize() {
+        // +1 because you always have to know what the block size is up to 1 more 
+        // than the height of the current chain
+        // Assumes max block size can only go up
+        return this->MaxBlockSize(this->Height()+1);
+    }
+
+    unsigned int MaxBlockSigOps(int nHeight) {
+        return MaxBlockSizeToSigOps(MaxBlockSize(nHeight));
+    }
+
+    unsigned int TipMaxBlockSigOps() {
+        return MaxBlockSizeToSigOps(TipMaxBlockSize());
     }
 
     /** Set/initialize a chain with a given tip. Returns the forking point. */

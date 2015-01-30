@@ -393,15 +393,76 @@ void UnregisterNodeSignals(CNodeSignals& nodeSignals)
 // CChain implementation
 //
 
-CBlockIndex *CChain::SetTip(CBlockIndex *pindex) {
+// TODO test sorting of arrays of this size to make sure it isn't painfully slow
+CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
     if (pindex == NULL) {
+        mapBlockSizeLimits.clear();
+        mapBlockSizeLimits[0] = MIN_MAX_BLOCK_SIZE;
         vChain.clear();
         return NULL;
     }
+
     vChain.resize(pindex->nHeight + 1);
     while (pindex && vChain[pindex->nHeight] != pindex) {
         vChain[pindex->nHeight] = pindex;
         pindex = pindex->pprev;
+    }
+
+    // Only bother calculating block size limits for the active chain
+    if (this == &chainActive)
+    {
+        // Remove block size limits when a block is disconnected
+        for (std::map<int, unsigned int>::iterator it; it != mapBlockSizeLimits.end();)
+        {
+            if (it->first > 1 + pindex->nHeight)
+            {
+                mapBlockSizeLimits.erase(it++);
+            }
+            else
+            {
+                it++;
+            }
+        }
+
+        // Update the block size limit dynamically
+        if (pindex->nHeight != 0 && (pindex->nHeight+1) % MAX_BLOCK_SIZE_RECALC_PERIOD == 0) 
+        {
+            int nFirstHeight = pindex->nHeight - (pindex->nHeight % MAX_BLOCK_SIZE_RECALC_PERIOD);
+            CBlockIndex * pindexBegin = (*this)[nFirstHeight];
+
+            unsigned int nPrevLimit   = this->MaxBlockSize(pindex->nHeight);
+            unsigned int nAverageSize = (unsigned int)((pindex->nChainSize - pindexBegin->nChainSize - pindexBegin->nSize) / MAX_BLOCK_SIZE_RECALC_PERIOD);
+            unsigned int nNewLimit    = nPrevLimit;
+
+            // If currently averaging more than 2/3 of the block size limit
+            if (3 * nAverageSize > 2 * nPrevLimit)
+            {
+                // Calculat the median size of the blocks in the last period
+                unsigned int * arrBlockSizes = new unsigned int[MAX_BLOCK_SIZE_RECALC_PERIOD];
+                for (unsigned int i = 0; i < MAX_BLOCK_SIZE_RECALC_PERIOD; i++)
+                {
+                    arrBlockSizes[i] = ((*this)[nFirstHeight+i])->nSize;
+                }
+
+                unsigned int * pbegin = &arrBlockSizes[0];
+                unsigned int * pend   = &arrBlockSizes[MAX_BLOCK_SIZE_RECALC_PERIOD];
+                std::sort(pbegin, pend);
+                unsigned int nMedianSize = arrBlockSizes[(pend - pbegin)/2];
+
+                // Only set new size limit if median is greater than 1/2 of the block size limit
+                if (nMedianSize * 2 > nPrevLimit)
+                {
+                    nNewLimit = 4 * std::min(nAverageSize, nMedianSize);
+                }
+
+                delete arrBlockSizes;
+                arrBlockSizes = NULL;
+            }
+
+            nNewLimit = std::max(nNewLimit, nPrevLimit);
+            nNewLimit = std::max(nNewLimit, MIN_MAX_BLOCK_SIZE);
+            mapBlockSizeLimits[pindex->nHeight+1] = nNewLimit;
+        }
     }
     return pindex;
 }
@@ -807,7 +868,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
         return state.DoS(10, error("CheckTransaction() : vout empty"),
                          REJECT_INVALID, "bad-txns-vout-empty");
     // Size limits
-    if (::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION) > MAX_BLOCK_SIZE)
+    if (::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION) > MIN_MAX_BLOCK_SIZE)
         return state.DoS(100, error("CheckTransaction() : size limits failed"),
                          REJECT_INVALID, "bad-txns-oversize");
 
@@ -1902,7 +1963,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
 {
     AssertLockHeld(cs_main);
     // Check it again in case a previous version let a bad block in, was already checked first time in ProcessBlock()
-    if (!CheckBlock(block, state, !fJustCheck, !fJustCheck))
+    if (!CheckBlock(block, state, chainActive.MaxBlockSize(pindex->nHeight), !fJustCheck, !fJustCheck))
         return false;
 
     // verify that the view's current state corresponds to the previous block
@@ -1964,13 +2025,14 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));
     std::vector<std::pair<uint256, CDiskTxPos> > vPos;
     vPos.reserve(block.vtx.size());
+    unsigned int nMaxSigOps = chainActive.MaxBlockSigOps(pindex->nHeight);
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];
 
         nInputs += tx.vin.size();
         nSigOps += GetSigOpCount(tx);
-        if (nSigOps > MAX_BLOCK_SIGOPS)
+        if (nSigOps > nMaxSigOps)
             return state.DoS(100, error("ConnectBlock() : too many sigops"),
                              REJECT_INVALID, "bad-blk-sigops");
 
@@ -1987,7 +2049,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
             // this is to prevent a "rogue miner" from creating
             // an incredibly-expensive-to-validate block.
             nSigOps += GetP2SHSigOpCount(tx, view);
-            if (nSigOps > MAX_BLOCK_SIGOPS)
+            if (nSigOps > nMaxSigOps)
                 return state.DoS(100, error("ConnectBlock() : too many sigops"),
                                  REJECT_INVALID, "bad-blk-sigops");
 
@@ -2028,7 +2090,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
         return true;
 
     // Write undo information to disk
-    if ((pindex->GetUndoPos().IsNull() || (pindex->nStatus & BLOCK_VALID_MASK) < BLOCK_VALID_SCRIPTS) && block.GetHash() != Params().HashGenesisBlock())
+    if (((pindex->GetUndoPos().IsNull() || (pindex->nStatus & BLOCK_VALID_MASK) < BLOCK_VALID_SCRIPTS)) && block.GetHash() != Params().HashGenesisBlock())
     {
         if (pindex->GetUndoPos().IsNull()) {
             CDiskBlockPos pos;
@@ -2090,9 +2152,9 @@ void static UpdateTip(CBlockIndex *pindexNew) {
     chainActive.SetTip(pindexNew);
 
     // Update best block in wallet (so we can detect restored wallets)
-    // TODO search for and update all instances of 20160 (two weeks) and 144 (one day)
+    // TODO search for and update all instances of 2016 (two weeks) and 144 (one day)
     bool fIsInitialDownload = IsInitialBlockDownload();
-    if ((chainActive.Height() % 20160) == 0 || (!fIsInitialDownload && (chainActive.Height() % 144) == 0))
+    if ((chainActive.Height() % 2016) == 0 || (!fIsInitialDownload && (chainActive.Height() % 144) == 0))
         g_signals.SetBestChain(chainActive.GetLocator());
 
     // New best block
@@ -2340,6 +2402,8 @@ bool AddToBlockIndex(CBlock& block, CValidationState& state, const CDiskBlockPos
         pindexNew->pprev = (*miPrev).second;
         pindexNew->nHeight = pindexNew->pprev->nHeight + 1;
     }
+    pindexNew->nSize = (int)::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION);
+    pindexNew->nChainSize = (pindexNew->pprev ? pindexNew->pprev->nChainSize : 0) + pindexNew->nSize;
     pindexNew->nTx = block.vtx.size();
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + pindexNew->GetBlockWork().getuint256();
 
@@ -2475,20 +2539,24 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
     return true;
 }
 
-bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bool fCheckMerkleRoot)
+bool CheckBlock(const CBlock& block, CValidationState& state, unsigned int nMaxBlockSize, bool fCheckPOW, bool fCheckMerkleRoot)
 {
     // These are checks that are independent of context
     // that can be verified before saving an orphan block.
 
     // Size limits
-    if (block.vtx.empty() || block.vtx.size() > MAX_BLOCK_SIZE || ::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION) > MAX_BLOCK_SIZE)
+    if (block.vtx.empty())
+        return state.DoS(100, error("CheckBlock() : block cannot be empty"),
+                        REJECT_INVALID, "bad-blk-empty");
+
+    if (block.vtx.size() > nMaxBlockSize || ::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION) > nMaxBlockSize)
         return state.DoS(100, error("CheckBlock() : size limits failed"),
-                         REJECT_INVALID, "bad-blk-length");
+                        REJECT_INVALID, "bad-blk-length");
 
     // Check proof of work matches claimed amount
     if (fCheckPOW && !block.CheckProofOfWork())
         return state.DoS(50, error("CheckBlock() : proof of work failed"),
-                         REJECT_INVALID, "high-hash");
+                        REJECT_INVALID, "high-hash");
 
     // Check timestamp
     // TODO change get adjusted time
@@ -2498,12 +2566,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
 
     if (block.vtx.empty() || !block.vtx[0].IsCoinBase())
         return state.DoS(100, error("CheckBlock() : first tx is not coinbase"),
-                         REJECT_INVALID, "bad-cb-missing");
+                        REJECT_INVALID, "bad-cb-missing");
 
     for (unsigned int i = 1; i < block.vtx.size(); i++)
         if (block.vtx[i].IsCoinBase())
             return state.DoS(100, error("CheckBlock() : more than one coinbase"),
-                             REJECT_INVALID, "bad-cb-multiple");
+                            REJECT_INVALID, "bad-cb-multiple");
 
     // Check transactions
     BOOST_FOREACH(const CTransaction& tx, block.vtx)
@@ -2523,21 +2591,21 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     }
     if (uniqueTx.size() != block.vtx.size())
         return state.DoS(100, error("CheckBlock() : duplicate transaction"),
-                         REJECT_INVALID, "bad-txns-duplicate", true);
+                        REJECT_INVALID, "bad-txns-duplicate", true);
 
     unsigned int nSigOps = 0;
     BOOST_FOREACH(const CTransaction& tx, block.vtx)
     {
         nSigOps += GetSigOpCount(tx);
     }
-    if (nSigOps > MAX_BLOCK_SIGOPS)
+    if (nSigOps > MaxBlockSizeToSigOps(nMaxBlockSize))
         return state.DoS(100, error("CheckBlock() : out-of-bounds SigOpCount"),
-                         REJECT_INVALID, "bad-blk-sigops", true);
+                        REJECT_INVALID, "bad-blk-sigops", true);
 
     // Check merkle root
     if (fCheckMerkleRoot && block.hashMerkleRoot != block.vMerkleTree.back())
         return state.DoS(100, error("CheckBlock() : hashMerkleRoot mismatch"),
-                         REJECT_INVALID, "bad-txnmrklroot", true);
+                        REJECT_INVALID, "bad-txnmrklroot", true);
 
     return true;
 }
@@ -2704,7 +2772,7 @@ bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBl
         return state.Invalid(error("ProcessBlock() : already have block (orphan) %s", hash.ToString()), 0, "duplicate");
 
     // Preliminary checks
-    if (!CheckBlock(*pblock, state))
+    if (!CheckBlock(*pblock, state, chainActive.TipMaxBlockSize()))
         return error("ProcessBlock() : CheckBlock FAILED");
 
     CBlockIndex* pcheckpoint = Checkpoints::GetLastCheckpoint(mapBlockIndex);
@@ -2915,7 +2983,7 @@ uint256 CPartialMerkleTree::ExtractMatches(std::vector<uint256> &vMatch) {
     if (nTransactions == 0)
         return 0;
     // check for excessively high numbers of transactions
-    if (nTransactions > MAX_BLOCK_SIZE / 60) // 60 is the lower bound for the size of a serialized CTransaction
+    if (nTransactions > chainActive.TipMaxBlockSize() / 60) // 60 is the lower bound for the size of a serialized CTransaction
         return 0;
     // there can never be more hashes provided than one for every txid
     if (vHash.size() > nTransactions)
@@ -3025,7 +3093,7 @@ bool static LoadBlockIndexDB()
 
     boost::this_thread::interruption_point();
 
-    // Calculate nChainWork
+    // Calculate nChainWork, nChainSize, nChainTx
     vector<pair<int, CBlockIndex*> > vSortedByHeight;
     vSortedByHeight.reserve(mapBlockIndex.size());
     BOOST_FOREACH(const PAIRTYPE(uint256, CBlockIndex*)& item, mapBlockIndex)
@@ -3037,6 +3105,7 @@ bool static LoadBlockIndexDB()
     BOOST_FOREACH(const PAIRTYPE(int, CBlockIndex*)& item, vSortedByHeight)
     {
         CBlockIndex* pindex = item.second;
+        pindex->nChainSize = (pindex->pprev ? pindex->pprev->nChainSize : 0) + pindex->nSize;
         pindex->nChainWork = (pindex->pprev ? pindex->pprev->nChainWork : 0) + pindex->GetBlockWork().getuint256();
         pindex->nChainTx = (pindex->pprev ? pindex->pprev->nChainTx : 0) + pindex->nTx;
         if ((pindex->nStatus & BLOCK_VALID_MASK) >= BLOCK_VALID_TRANSACTIONS && !(pindex->nStatus & BLOCK_FAILED_MASK))
@@ -3101,7 +3170,7 @@ bool VerifyDB(int nCheckLevel, int nCheckDepth)
         if (!ReadBlockFromDisk(block, pindex))
             return error("VerifyDB() : *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
-        if (nCheckLevel >= 1 && !CheckBlock(block, state))
+        if (nCheckLevel >= 1 && !CheckBlock(block, state, chainActive.MaxBlockSize(pindex->nHeight)))
             return error("VerifyDB() : *** found bad block at %d, hash=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 2: verify undo validity
         if (nCheckLevel >= 2 && pindex) {
@@ -3274,7 +3343,8 @@ bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos *dbp)
 
     int nLoaded = 0;
     try {
-        CBufferedFile blkdat(fileIn, 2*MAX_BLOCK_SIZE, MAX_BLOCK_SIZE+8, SER_DISK, CLIENT_VERSION);
+        unsigned int nMaxBlockSize = chainActive.TipMaxBlockSize();
+        CBufferedFile blkdat(fileIn, 2*nMaxBlockSize, nMaxBlockSize+8, SER_DISK, CLIENT_VERSION);
         uint64_t nStartByte = 0;
         if (dbp) {
             // (try to) skip already indexed part
@@ -3302,7 +3372,7 @@ bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos *dbp)
                     continue;
                 // read size
                 blkdat >> nSize;
-                if (nSize < 80 || nSize > MAX_BLOCK_SIZE)
+                if (nSize < 80 || nSize > nMaxBlockSize)
                     continue;
             } catch (std::exception &e) {
                 // no valid block header found; don't complain
