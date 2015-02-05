@@ -232,6 +232,16 @@ public:
 
     bool IsCoinBase() const;
 
+    // bool LockTimeInEffect() const 
+    // {
+    //     BOOST_FOREACH(const CTxIn& txin, vin)
+    //     {
+    //         if (!txin.IsFinal())
+    //             return true;
+    //     }
+    //     return false;
+    // }
+
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {
         return (a.nVersion  == b.nVersion &&
@@ -445,7 +455,7 @@ public:
 
     bool CheckProofOfWork() const;
 
-    unsigned int CalculateProofOfKnowledge(MapTxSerialized * mapTxSerialized = NULL) const;
+    unsigned int CalculateProofOfKnowledge(MapTxSerialized * pmapTxSerialized = NULL) const;
 
     uint256 BuildMerkleTree() const;
 

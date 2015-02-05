@@ -183,7 +183,9 @@ public:
     // check whether we are allowed to upgrade (or already support) to the named feature
     bool CanSupportFeature(enum WalletFeature wf) { AssertLockHeld(cs_wallet); return nWalletMaxVersion >= wf; }
 
-    void AvailableCoins(std::vector<COutput>& vCoins, bool fOnlyConfirmed=true, const CCoinControl *coinControl = NULL) const;
+    // If nLockTimeEval == NULL, then include all coins without checking lock time
+    // Otherwise, evaluate to make sure coins are spendable at lock time given
+    void AvailableCoins(std::vector<COutput>& vCoins, bool fCheckForDelayScripts=true, bool fOnlyConfirmed=true, const CCoinControl *coinControl = NULL) const;
     bool SelectCoinsMinConf(int64_t nTargetValue, int nConfMine, int nConfTheirs, std::vector<COutput> vCoins, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
 
     bool IsSpent(const uint256& hash, unsigned int n) const;

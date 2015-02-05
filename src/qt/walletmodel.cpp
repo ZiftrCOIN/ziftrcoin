@@ -56,7 +56,8 @@ qint64 WalletModel::getBalance(const CCoinControl *coinControl) const
     {
         qint64 nBalance = 0;
         std::vector<COutput> vCoins;
-        wallet->AvailableCoins(vCoins, true, coinControl);
+        // TODO do we want to show delayed coins?
+        wallet->AvailableCoins(vCoins, false, true, coinControl);
         BOOST_FOREACH(const COutput& out, vCoins)
             nBalance += out.tx->vout[out.i].nValue;
 

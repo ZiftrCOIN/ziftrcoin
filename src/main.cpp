@@ -403,66 +403,75 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
     }
 
     vChain.resize(pindex->nHeight + 1);
-    while (pindex && vChain[pindex->nHeight] != pindex) {
-        vChain[pindex->nHeight] = pindex;
-        pindex = pindex->pprev;
+    CBlockIndex* pIndexCopy = pindex;
+    while (pIndexCopy && vChain[pIndexCopy->nHeight] != pIndexCopy) {
+        vChain[pIndexCopy->nHeight] = pIndexCopy;
+        pIndexCopy = pIndexCopy->pprev;
     }
 
     // Only bother calculating block size limits for the active chain
     if (this == &chainActive)
     {
         // Remove block size limits when a block is disconnected
-        for (std::map<int, unsigned int>::iterator it; it != mapBlockSizeLimits.end();)
+        for (std::map<int, unsigned int>::iterator it = mapBlockSizeLimits.begin(); it != mapBlockSizeLimits.end();)
         {
             if (it->first > 1 + pindex->nHeight)
-            {
                 mapBlockSizeLimits.erase(it++);
-            }
             else
-            {
                 it++;
-            }
         }
 
         // Update the block size limit dynamically
-        if (pindex->nHeight != 0 && (pindex->nHeight+1) % MAX_BLOCK_SIZE_RECALC_PERIOD == 0) 
+        CBlockIndex* pStartIndex = (*this)[std::min(pindex->nHeight, MAX_BLOCK_SIZE_RECALC_PERIOD - 1)];
+        while (true)
         {
-            int nFirstHeight = pindex->nHeight - (pindex->nHeight % MAX_BLOCK_SIZE_RECALC_PERIOD);
-            CBlockIndex * pindexBegin = (*this)[nFirstHeight];
-
-            unsigned int nPrevLimit   = this->MaxBlockSize(pindex->nHeight);
-            unsigned int nAverageSize = (unsigned int)((pindex->nChainSize - pindexBegin->nChainSize - pindexBegin->nSize) / MAX_BLOCK_SIZE_RECALC_PERIOD);
-            unsigned int nNewLimit    = nPrevLimit;
-
-            // If currently averaging more than 2/3 of the block size limit
-            if (3 * nAverageSize > 2 * nPrevLimit)
+            if (pStartIndex != NULL && ((pStartIndex->nHeight + 1) % MAX_BLOCK_SIZE_RECALC_PERIOD) == 0 && mapBlockSizeLimits[pStartIndex->nHeight + 1] == 0)
             {
-                // Calculat the median size of the blocks in the last period
-                unsigned int * arrBlockSizes = new unsigned int[MAX_BLOCK_SIZE_RECALC_PERIOD];
-                for (unsigned int i = 0; i < MAX_BLOCK_SIZE_RECALC_PERIOD; i++)
+                int nFirstHeight = pStartIndex->nHeight - (pStartIndex->nHeight % MAX_BLOCK_SIZE_RECALC_PERIOD);
+                CBlockIndex * pindexBegin = (*this)[nFirstHeight];
+
+                unsigned int nPrevLimit   = this->MaxBlockSize(pStartIndex->nHeight);
+                unsigned int nAverageSize = (unsigned int)((pStartIndex->nChainSize - pindexBegin->nChainSize + pindexBegin->nSize) / MAX_BLOCK_SIZE_RECALC_PERIOD);
+                unsigned int nNewLimit    = nPrevLimit;
+
+                // If currently averaging more than 2/3 of the block size limit
+                if (3 * nAverageSize > 2 * nPrevLimit)
                 {
-                    arrBlockSizes[i] = ((*this)[nFirstHeight+i])->nSize;
+                    // Calculat the median size of the blocks in the last period
+                    unsigned int * arrBlockSizes = new unsigned int[MAX_BLOCK_SIZE_RECALC_PERIOD];
+                    for (unsigned int i = 0; i < MAX_BLOCK_SIZE_RECALC_PERIOD; i++)
+                    {
+                        arrBlockSizes[i] = ((*this)[nFirstHeight+i])->nSize;
+                    }
+
+                    unsigned int * pbegin = &arrBlockSizes[0];
+                    unsigned int * pend   = &arrBlockSizes[MAX_BLOCK_SIZE_RECALC_PERIOD];
+                    std::sort(pbegin, pend);
+                    unsigned int nMedianSize = arrBlockSizes[(pend - pbegin)/2];
+
+                    // Only set new size limit if median is greater than 1/2 of the block size limit
+                    if (nMedianSize * 2 > nPrevLimit)
+                    {
+                        nNewLimit = 11 * nPrevLimit / 10;
+                        LogPrintf("CChain::SetTip() : New Block Size Limit: %u\n", nNewLimit);
+                    }
+
+                    delete[] arrBlockSizes;
+                    arrBlockSizes = NULL;
                 }
 
-                unsigned int * pbegin = &arrBlockSizes[0];
-                unsigned int * pend   = &arrBlockSizes[MAX_BLOCK_SIZE_RECALC_PERIOD];
-                std::sort(pbegin, pend);
-                unsigned int nMedianSize = arrBlockSizes[(pend - pbegin)/2];
+                nNewLimit = std::max(nNewLimit, nPrevLimit);
+                nNewLimit = std::max(nNewLimit, MIN_MAX_BLOCK_SIZE);
 
-                // Only set new size limit if median is greater than 1/2 of the block size limit
-                if (nMedianSize * 2 > nPrevLimit)
-                {
-                    nNewLimit = 4 * std::min(nAverageSize, nMedianSize);
-                }
-
-                delete arrBlockSizes;
-                arrBlockSizes = NULL;
+                mapBlockSizeLimits[pStartIndex->nHeight+1] = nNewLimit;
             }
 
-            nNewLimit = std::max(nNewLimit, nPrevLimit);
-            nNewLimit = std::max(nNewLimit, MIN_MAX_BLOCK_SIZE);
-            mapBlockSizeLimits[pindex->nHeight+1] = nNewLimit;
+            CBlockIndex* pindexNext = (*this)[std::min(pStartIndex->nHeight + MAX_BLOCK_SIZE_RECALC_PERIOD, pindex->nHeight)];
+            if (pindexNext == pStartIndex)
+                break;
+            pStartIndex = pindexNext;
         }
+
     }
     return pindex;
 }
@@ -612,28 +621,6 @@ bool IsStandardTx(const CTransaction& tx, string& reason)
         return false;
     }
 
-    // Treat non-final transactions as non-standard to prevent a specific type
-    // of double-spend attack, as well as DoS attacks. (if the transaction
-    // can't be mined, the attacker isn't expending resources broadcasting it)
-    // Basically we don't want to propagate transactions that can't included in
-    // the next block.
-    //
-    // However, IsFinalTx() is confusing... Without arguments, it uses
-    // chainActive.Height() to evaluate nLockTime; when a block is accepted, chainActive.Height()
-    // is set to the value of nHeight in the block. However, when IsFinalTx()
-    // is called within CBlock::AcceptBlock(), the height of the block *being*
-    // evaluated is what is used. Thus if we want to know if a transaction can
-    // be part of the *next* block, we need to call IsFinalTx() with one more
-    // than chainActive.Height().
-    //
-    // Timestamps on the other hand don't get any special treatment, because we
-    // can't know what timestamp the next block will have, and there aren't
-    // timestamp applications where it matters.
-    if (!IsFinalTx(tx, chainActive.Height() + 1)) {
-        reason = "non-final";
-        return false;
-    }
-
     // Extremely large transactions with lots of inputs can cost the network
     // almost as much to process as they cost the sender in fees, because
     // computing signature hashes is O(ninputs*txsize). Limiting transactions
@@ -774,7 +761,6 @@ bool AreInputsStandard(const CTransaction& tx, CCoinsViewCache& mapInputs)
     return true;
 }
 
-// TODO should the number of txouts in the coinbase be included into the sigops count? Probably
 unsigned int GetSigOpCount(const CTransaction& tx)
 {
     unsigned int nSigOps = tx.IsCoinBase() ? 1 : 0;
@@ -867,6 +853,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
     if (tx.vout.empty())
         return state.DoS(10, error("CheckTransaction() : vout empty"),
                          REJECT_INVALID, "bad-txns-vout-empty");
+    
     // Size limits
     if (::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION) > MIN_MAX_BLOCK_SIZE)
         return state.DoS(100, error("CheckTransaction() : size limits failed"),
@@ -968,11 +955,26 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         return state.DoS(100, error("AcceptToMemoryPool: : coinbase as individual tx"),
                          REJECT_INVALID, "coinbase");
 
+    // TODO uncomment me
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
-    string reason;
-    if (Params().NetworkID() == CChainParams::MAIN && !IsStandardTx(tx, reason))
-        return state.DoS(0, error("AcceptToMemoryPool : nonstandard transaction: %s", reason),
-                         REJECT_NONSTANDARD, reason);
+    // string reason;
+    // if (Params().NetworkID() == CChainParams::MAIN && !IsStandardTx(tx, reason))
+    //     return state.DoS(0, error("AcceptToMemoryPool : nonstandard transaction: %s", reason),
+    //                      REJECT_NONSTANDARD, reason);
+
+    // Basically we don't want to propagate transactions that can't included in
+    // the next block.
+    //
+    // However, IsFinalTx() is confusing... Without arguments, it uses
+    // chainActive.Height() to evaluate nLockTime; when a block is accepted, chainActive.Height()
+    // is set to the value of nHeight in the block. However, when IsFinalTx()
+    // is called within CBlock::AcceptBlock(), the height of the block *being*
+    // evaluated is what is used. Thus if we want to know if a transaction can
+    // be part of the *next* block, we need to call IsFinalTx() with one more
+    // than chainActive.Height(). 
+    if (!IsFinalTx(tx, chainActive.Height() + 1))
+        return state.DoS(0, error("AcceptToMemoryPool : non-final transaction"),
+                         REJECT_NONSTANDARD, "non-final");
 
     // is it already in the memory pool?
     uint256 hash = tx.GetHash();
@@ -1410,11 +1412,6 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
     return bnResult.GetCompact();
 }
 
-
-// TODO make a similar method to track the max block size
-// TODO add the amount into the data that is copied into the scriptSig when signing -- good for hardware wallets
-
-
 //
 // Fixed to prevent agains time warp attack
 //
@@ -1572,7 +1569,6 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     // or a chain that is entirely longer than ours and invalid (note that this should be detected by both)
     // We define it this way because it allows us to only store the highest fork tip (+ base) which meets
     // the 7-block condition and from this always have the most-likely-to-cause-warning fork
-    // TODO do any of the constants here need to be changed?
     if (pfork && (!pindexBestForkTip || (pindexBestForkTip && pindexNewForkTip->nHeight > pindexBestForkTip->nHeight)) &&
             pindexNewForkTip->nChainWork - pfork->nChainWork > (pfork->GetBlockWork() * 7).getuint256() &&
             chainActive.Height() - pindexNewForkTip->nHeight < FORK_HEIGHT_DIFF_ALERT)
@@ -1905,10 +1901,6 @@ void ThreadScriptCheck() {
     scriptcheckqueue.Thread();
 }
 
-// TODO make a CSignToMine class that encapsulates the fast signing
-// being done and invalidates itself as soon as it finds sufficient work
-// to ensure that it cannot be used to sign data twice 
-
 bool CountMatureCoins(const CBlock& block, CBlockIndex* pindex)
 {
     AssertLockHeld(cs_main);
@@ -1997,7 +1989,8 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     //                        (pindex->nHeight==91880 && pindex->GetBlockHash() == uint256("0x00000000000743f190a18c5577a3c2d2a1f610ae9601ac046a38084ccb7cd721")));
     // if (fEnforceBIP30) {
     // }
-    // TODO make sure that no two transactions with the same TxId can exist
+    
+    // Make sure that no two transactions with the same TxId can exist
     for (unsigned int i = 0; i < block.vtx.size(); i++) {
         uint256 hash = block.GetTxHash(i);
         if (view.HaveCoins(hash)) // && !view.GetCoins(hash).IsPruned()
@@ -2009,9 +2002,9 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     // int64_t nBIP16SwitchTime = 1333238400;
     // bool fStrictPayToScriptHash = (pindex->nTime >= nBIP16SwitchTime);
  
-    // TODO Probably could get rid of the SCRIPT_VERIFY_P2SH flag entirely, since 
+    // Probably could get rid of the SCRIPT_VERIFY_P2SH flag entirely, since 
     // we will have P2SH from block 0, but will leave it in for now
-    // But maybe it is useful for turning on and off verification?
+    // Actually, it is useful for turning on and off verification?
     unsigned int flags = SCRIPT_VERIFY_NOCACHE | SCRIPT_VERIFY_P2SH;
 
     CBlockUndo blockundo;
@@ -2152,9 +2145,8 @@ void static UpdateTip(CBlockIndex *pindexNew) {
     chainActive.SetTip(pindexNew);
 
     // Update best block in wallet (so we can detect restored wallets)
-    // TODO search for and update all instances of 2016 (two weeks) and 144 (one day)
     bool fIsInitialDownload = IsInitialBlockDownload();
-    if ((chainActive.Height() % 2016) == 0 || (!fIsInitialDownload && (chainActive.Height() % 144) == 0))
+    if ((chainActive.Height() % 2016) == 0 || (!fIsInitialDownload && (chainActive.Height() % 1440) == 0))
         g_signals.SetBestChain(chainActive.GetLocator());
 
     // New best block
@@ -2559,7 +2551,6 @@ bool CheckBlock(const CBlock& block, CValidationState& state, unsigned int nMaxB
                         REJECT_INVALID, "high-hash");
 
     // Check timestamp
-    // TODO change get adjusted time
     if (block.GetBlockTime() > GetAdjustedTime() + MAX_BLOCK_TIME_OFFSET)
         return state.Invalid(error("CheckBlock() : block timestamp too far in the future"),
                              REJECT_INVALID, "time-too-new");
@@ -2634,7 +2625,6 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
                                 REJECT_INVALID, "bad-diffbits");
 
         // Check timestamp against prev
-        // TODO change this to have new acceptance rules for being in the future
         if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
             return state.Invalid(error("AcceptBlock() : block's timestamp is too old"),
                                 REJECT_INVALID, "time-too-old");
@@ -2682,7 +2672,6 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
         // }
 
         // Make sure that the coinbase starts with serialized block height
-        // TODO should this make sure exact same contents?
         CScript expect = CScript() << CScriptNum(nHeight);
         if (block.vtx[0].vin[0].scriptSig.size() < expect.size() ||
             !std::equal(expect.begin(), expect.end(), block.vtx[0].vin[0].scriptSig.begin()))

@@ -111,6 +111,11 @@ public:
         return m_value;
     }
 
+    int64_t getint64() const 
+    {
+        return m_value;
+    }
+
     std::vector<unsigned char> getvch() const
     {
         return serialize(m_value);
@@ -344,7 +349,7 @@ enum opcodetype
     OP_SHA256 = 0xa8,
     OP_HASH160 = 0xa9,
     OP_HASH256 = 0xaa,
-    OP_CODESEPARATOR = 0xab, // TODO delete this?
+    OP_CODESEPARATOR = 0xab,
     OP_CHECKSIG = 0xac,
     OP_CHECKSIGVERIFY = 0xad,
     OP_CHECKMULTISIG = 0xae,
@@ -665,6 +670,11 @@ public:
 
     bool IsPayToScriptHash() const;
 
+    bool IsSpendableAtLockTime(unsigned int nLockTime = 0) const;
+
+    // Gets the OP_CLTV delay of an output, returns true if there is a delay
+    bool GetDelay(int64_t& nDelay) const;
+
     // Called by IsStandardTx and P2SH VerifyScript (which makes it consensus-critical).
     bool IsPushOnly() const;
 
@@ -743,7 +753,7 @@ private:
     // this can potentially be extended together with a new nVersion for
     // transactions, in which case this value becomes dependent on nVersion
     // and nHeight of the enclosing transaction.
-    static const unsigned int nSpecialScripts = 6;
+    static const unsigned int nSpecialScripts = 7;
 
     CScript &script;
 protected:

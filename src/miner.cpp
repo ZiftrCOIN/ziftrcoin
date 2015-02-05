@@ -364,6 +364,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
                     }
                 }
             }
+
         }
 
         nLastBlockTx = nBlockTx;
@@ -392,8 +393,6 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
     return pblocktemplate.release();
 }
 
-// TODO allow up to like 100 null coinbases inputs.
-// Make the first one be the heght, the second have the coinbase flags, etc
 void UpdateCoinbaseScriptSig(CBlock* pblock, CBlockIndex* pindexPrev)
 {
     unsigned int nHeight = pindexPrev->nHeight + 1; // Height first in coinbase required
@@ -425,6 +424,7 @@ unsigned int static ScanHash(CBlock *pblock, unsigned int nTry, unsigned int nDo
 {
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
     uint256 hashBlockHeader;
+
     for (unsigned int i = 0; i < nTry; i++) 
     {
         pblock->nNonce++;
@@ -434,6 +434,8 @@ unsigned int static ScanHash(CBlock *pblock, unsigned int nTry, unsigned int nDo
         if (hashBlockHeader <= hashTarget && i >= nDontTry)
             return i;
     }
+
+    // LogPrintf("pok time: %llu, pow time: %llu, ratio: %d\n", (long long) nTimePoK, (long long)nTimePoW, ((double)nTimePoK) / ((double)nTimePoW));
 
     return nTry;
 }
@@ -487,7 +489,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
         CValidationState state;
         if (!ProcessBlock(state, NULL, pblock))
         {
-            pblock->print();
+            //pblock->print();
             return error("BitcoinMiner : ProcessBlock, block not accepted");
         }
     }
@@ -546,7 +548,7 @@ void static BitcoinMiner(CWallet *pwallet)
                     nHashCounter = 0;
                 }
 
-                unsigned int nTries = 10000; 
+                unsigned int nTries = 1000; 
                 unsigned int nDontHash = 0; // nDontTry; // For simulating increases/decreases of network hash power
                 unsigned int nNumFailedAttempts = ScanHash(pblock, nTries, nDontHash, &mapTxSerialized);
                 nHashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;

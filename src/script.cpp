@@ -1045,8 +1045,6 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                     return false;
             }
 
-
-
             // Size limits
             if (stack.size() + altstack.size() > 1000)
                 return false;
@@ -1181,6 +1179,7 @@ uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsig
     }
 
     // Wrapper to serialize only the necessary parts of the transaction being signed
+    // TODO add the amount into the data that is copied into the scriptSig when signing -- good for hardware wallets
     CTransactionSignatureSerializer txTmp(txTo, scriptCode, nIn, nHashType);
 
     // Serialize and hash
@@ -1353,7 +1352,7 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
                 if ((typeRet % DELAYED_DELTA) == TX_MULTISIG)
                 {
                     // Additional checks for TX_MULTISIG:
-                    unsigned char m = vSolutionsRet.front()[0];
+                    unsigned char m = vSolutionsRet[typeRet > DELAYED_DELTA ? 1 : 0][0];
                     unsigned char n = vSolutionsRet.back()[0];
                     if (m < 1 || n < 1 || m > n || vSolutionsRet.size()-2 != n)
                         return false;
@@ -1648,7 +1647,7 @@ bool IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
     return false;
 }
 
-// TODO should the delay be encoded in the address? - Probably not, just put in ziftrcoin: URIs like ziftrcoin:Zx...y?delay=12345
+// Should the delay be encoded in the address? - Probably not, just put in ziftrcoin: URIs like ziftrcoin:Zx...y?delay=12345
 bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
 {
     vector<valtype> vSolutions;
@@ -1797,6 +1796,33 @@ bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransa
     assert(nIn < txTo.vin.size());
     CTxIn& txin = txTo.vin[nIn];
 
+    int64_t nDelay;
+    if (fromPubKey.GetDelay(nDelay))
+    {
+        // Need to put nSequence to less than max value to put txn lock time into effect
+        if (txTo.vin[nIn].nSequence != 0)
+            txTo.vin[nIn].nSequence--;
+
+        // Need to set the lock time to be large enough. This may mean the signed transaction
+        // is not broadcastable at the time
+        unsigned int nOldLockTime = txTo.nLockTime;
+
+        if (nDelay > (int64_t)std::numeric_limits<unsigned int>::max())
+            txTo.nLockTime = std::numeric_limits<unsigned int>::max();
+        else if (nDelay < (int64_t)std::numeric_limits<unsigned int>::min())
+            txTo.nLockTime =  std::numeric_limits<unsigned int>::min();
+        else
+            txTo.nLockTime = (unsigned int)nDelay;
+
+        // Note, by defaul this will use nLockTime times over nLockTime heights
+        // TODO is there any way to avoid this?
+        // Only a problem if spending from two delayed outputs, 1 of each kind
+        if ((txTo.nLockTime <  LOCKTIME_THRESHOLD && nOldLockTime >=  LOCKTIME_THRESHOLD) || 
+            (txTo.nLockTime >= LOCKTIME_THRESHOLD && nOldLockTime <   LOCKTIME_THRESHOLD))
+            LogPrintf("SignSignature() : Warning! nLockTime may not be valid. There was a mismatch of delay types in inputs. ");
+        txTo.nLockTime = std::max(txTo.nLockTime, nOldLockTime);
+    }
+
     // Leave out the signature from the hash, since a signature can't sign itself.
     // The checksig op will also drop the signatures from its hash.
     uint256 hash = SignatureHash(fromPubKey, txTo, nIn, nHashType);
@@ -1820,7 +1846,9 @@ bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransa
                 && (subType % DELAYED_DELTA) != TX_SCRIPTHASH;
         // Append serialized subscript whether or not it is completely signed:
         txin.scriptSig << static_cast<valtype>(subscript);
-        if (!fSolved) return false;
+        
+        if (!fSolved) 
+            return false;
     }
 
     // Test solution
@@ -2017,10 +2045,6 @@ unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
     return subscript.GetSigOpCount();
 }
 
-// TODO add a method CScript::IsDelayed to determine if a scriptPubKey can only 
-// be spent at some later point due to OP_CLTV. 
-// Maybe return an int for the delay value, -1 for no delay?
-
 bool CScript::IsPayToScriptHash() const
 {
     // Extra-fast test for simple pay-to-script-hash CScripts:
@@ -2038,7 +2062,51 @@ bool CScript::IsPayToScriptHash() const
     // return typeRet == TX_DELAYEDSCRIPTHASH;
 }
 
-// TODO if add OP_VERSION op code, then make sure this recognizes it as a push
+// To test if a CTxOut is spendable after a certain block number:
+// if (txout.scriptPubKey.isSpendableAtLockTime(chainActive.Tip()->nHeight+1) ||
+//     txout.scriptPubKey.isSpendableAtLockTime(chainActive.Tip()->GetMedianTimePassed_uint()+1)
+bool CScript::IsSpendableAtLockTime(unsigned int nLockTime) const
+{
+    // TODO this could be made more efficient
+    txnouttype type;
+    vector<vector<unsigned char> > vSolutions;
+    if (!Solver(*this, type, vSolutions))
+        return false;
+
+    if (type < DELAYED_DELTA)
+        return true;
+
+    const CScriptNum nScriptLockTime(vSolutions[0], 5);
+
+    // Not spendable at all if value is negative
+    if (nScriptLockTime < 0)
+        return false;
+
+    if ((nScriptLockTime <  LOCKTIME_THRESHOLD && nLockTime >=  LOCKTIME_THRESHOLD) || 
+        (nScriptLockTime >= LOCKTIME_THRESHOLD && nLockTime <   LOCKTIME_THRESHOLD))
+        return false;
+
+    return (nScriptLockTime <= nLockTime); // <= txSpending.nLockTime
+}
+
+bool CScript::GetDelay(int64_t& nDelay) const 
+{
+    // TODO this could be made more efficient
+    txnouttype type;
+    vector<vector<unsigned char> > vSolutions;
+    if (!Solver(*this, type, vSolutions))
+        return false;
+
+    if (type > DELAYED_DELTA)
+    {
+        const CScriptNum nScriptLockTime(vSolutions[0], 5);
+        nDelay = nScriptLockTime.getint64();
+        return true;
+    }
+
+    return false;
+}
+
 bool CScript::IsPushOnly() const
 {
     const_iterator pc = begin();

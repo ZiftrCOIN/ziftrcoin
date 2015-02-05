@@ -142,7 +142,7 @@ double CTransaction::ComputePriority(double dPriorityInputs, unsigned int nTxSiz
 bool CTransaction::IsCoinBase() const
 {
     // Must have at least one null input because the height needs to be put into it
-    if (vin.size() == 0)
+    if (vin.size() == 0 || vin.size() > 25)
         return false;
 
     BOOST_FOREACH(const CTxIn& input, vin) {
@@ -269,7 +269,7 @@ bool CBlock::CheckProofOfWork() const
     return (this->nProofOfKnowledge == this->CalculateProofOfKnowledge());
 }
 
-unsigned int CBlock::CalculateProofOfKnowledge(MapTxSerialized * mapTxSerialized) const
+unsigned int CBlock::CalculateProofOfKnowledge(MapTxSerialized * pmapTxSerialized) const
 {
     static const uint256 INT_MASK_256("0xFFFFFFFF");
 
@@ -283,34 +283,38 @@ unsigned int CBlock::CalculateProofOfKnowledge(MapTxSerialized * mapTxSerialized
     
     unsigned int nTxIndex =  nDeterRand1 % vtx.size();
 
-    std::vector<unsigned char> vTxData;
-    bool fInMap = false;
-    if (mapTxSerialized != NULL)
+    const std::vector<unsigned char> * vTxData = NULL;
+    //bool fInMap = false;
+    if (pmapTxSerialized != NULL)
     {
-        MapTxSerialized::const_iterator it = mapTxSerialized->find(std::make_pair(this->hashMerkleRoot, nTxIndex));
-        fInMap = (it != mapTxSerialized->end());
-        if (fInMap)
+        MapTxSerialized::const_iterator it = pmapTxSerialized->find(std::make_pair(this->hashMerkleRoot, nTxIndex));
+        //fInMap = (it != pmapTxSerialized->end());
+        if (it != pmapTxSerialized->end())
         {
-            vTxData = (it->second);
+            vTxData = &(it->second);
         }
     }
     
-    if (mapTxSerialized == NULL || !fInMap)
+    std::vector<unsigned char> vTxData2;
+    if (pmapTxSerialized == NULL || vTxData == NULL)
     {
         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
         ss << vtx[nTxIndex];
-        vTxData.insert(vTxData.end(), ss.begin(), ss.end());
+        vTxData2.insert(vTxData2.end(), ss.begin(), ss.end());
 
-        if (mapTxSerialized != NULL)
+        if (pmapTxSerialized != NULL)
         {
-            mapTxSerialized->insert(std::make_pair(std::make_pair(this->hashMerkleRoot, nTxIndex), vTxData));
+            pmapTxSerialized->insert(std::make_pair(std::make_pair(this->hashMerkleRoot, nTxIndex), vTxData2));
         }
     }
+
+    if (vTxData == NULL)
+        vTxData = &vTxData2;
     
-    assert((vTxData.end() - vTxData.begin()) >= 4);
+    assert((vTxData->end() - vTxData->begin()) >= 4);
     
-    unsigned int nDeterRandIndex = nDeterRand2 % (vTxData.size() - 3);
-    unsigned int nRandTxData = *((unsigned int *)(&(vTxData.begin()[nDeterRandIndex])));
+    unsigned int nDeterRandIndex = nDeterRand2 % (vTxData->size() - 3);
+    unsigned int nRandTxData = *((unsigned int *)(&(vTxData->begin()[nDeterRandIndex])));
 
     unsigned int nPoK = nRandTxData ^ nDeterRand3;
 

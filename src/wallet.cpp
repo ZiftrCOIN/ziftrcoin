@@ -1024,7 +1024,7 @@ int64_t CWallet::GetImmatureBalance() const
 
 // populate vCoins with vector of spendable COutputs
 // TODO this needs to change to not include delayed coins
-void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl) const
+void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fCheckForDelayScripts, bool fOnlyConfirmed, const CCoinControl *coinControl) const
 {
     vCoins.clear();
 
@@ -1048,11 +1048,34 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
             if (nDepth < 0)
                 continue;
 
-            for (unsigned int i = 0; i < pcoin->vout.size(); i++) {
+            for (unsigned int i = 0; i < pcoin->vout.size(); i++) 
+            {
                 if (!(IsSpent(wtxid, i)) && IsMine(pcoin->vout[i]) &&
-                    !IsLockedCoin((*it).first, i) && pcoin->vout[i].nValue > 0 &&
-                    (!coinControl || !coinControl->HasSelected() || coinControl->IsSelected((*it).first, i)))
+                    !IsLockedCoin((*it).first, i) && pcoin->vout[i].nValue > 0)
+                {
+                    bool fPush = false;
+                    if (coinControl && coinControl->HasSelected() && coinControl->IsSelected((*it).first, i))
+                    {
+                        // Coin control can override lock time not being satisfied and include
+                        fPush = true;
+                    }
+                    else if (fCheckForDelayScripts && 
+                             !(pcoin->vout[i].scriptPubKey.IsSpendableAtLockTime(chainActive.Tip()->nHeight + 1) ||
+                               pcoin->vout[i].scriptPubKey.IsSpendableAtLockTime(chainActive.Tip()->GetMedianTimePassed_uint() + 1)))
+                    {
+                        // If coin control doesn't override, then we check nLock time
+                        // use + 1 because it would go in next block
+                        fPush = false;
+                    }
+                    else if (!coinControl || !coinControl->HasSelected())
+                    {
+                        // By default, push at this point
+                        fPush = true;
+                    }
+
+                    if (fPush)
                         vCoins.push_back(COutput(pcoin, i, nDepth));
+                }
             }
         }
     }
@@ -1205,7 +1228,7 @@ bool CWallet::SelectCoinsMinConf(int64_t nTargetValue, int nConfMine, int nConfT
 bool CWallet::SelectCoins(int64_t nTargetValue, set<pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet, const CCoinControl* coinControl) const
 {
     vector<COutput> vCoins;
-    AvailableCoins(vCoins, true, coinControl);
+    AvailableCoins(vCoins, true, true, coinControl);
 
     // coin control -> return all selected outputs (we want all selected to go into the transaction for sure)
     if (coinControl && coinControl->HasSelected())
@@ -2017,7 +2040,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
             mapKeyBirth[it->first] = it->second.nCreateTime;
 
     // map in which we'll infer heights of other keys
-    CBlockIndex *pindexMax = chainActive[std::max(0, chainActive.Height() - 144)]; // the tip can be reorganised; use a 144-block safety margin
+    CBlockIndex *pindexMax = chainActive[std::max(0, chainActive.Height() - 1440)]; // the tip can be reorganised; use a 1-day-block safety margin
     std::map<CKeyID, CBlockIndex*> mapKeyFirstBlock;
     std::set<CKeyID> setKeys;
     GetKeys(setKeys);

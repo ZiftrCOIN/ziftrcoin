@@ -24,10 +24,8 @@ using namespace std;
 #ifdef ENABLE_WALLET
 // Key used by getwork miners.
 // Allocated in InitRPCMining, free'd in ShutdownRPCMining
-// TODO maybe get rid of this in favor of providing private key in getwork call?
 static CReserveKey* pMiningKey = NULL;
 
-// TODO Allow a way to set an arg to specify the only key that should be used for mining?
 void InitRPCMining()
 {
     if (!pwalletMain)
@@ -53,51 +51,6 @@ void ShutdownRPCMining()
 {
 }
 #endif
-
-// // Return average network hashes per second based on the last 'lookup' blocks,
-// // or from the last difficulty change if 'lookup' is nonpositive.
-// // If 'height' is nonnegative, compute the estimate at the time when a given block was found.
-// Value GetNetworkHashPS(int lookup, int height) {
-//     CBlockIndex *pb = chainActive.Tip();
-
-//     if (height >= 0 && height < chainActive.Height())
-//         pb = chainActive[height];
-
-//     if (pb == NULL || !pb->nHeight)
-//         return 0;
-
-//     // If lookup is -1, then use blocks since last difficulty change.
-//     if (lookup <= 0)
-//         lookup = pb->nHeight % 2016 + 1;
-
-//     // If lookup is larger than chain, then set it to chain length.
-//     if (lookup > pb->nHeight)
-//         lookup = pb->nHeight;
-
-//     CBlockIndex *pb0 = pb;
-//     int64_t minTime = pb0->GetBlockTime();
-//     int64_t maxTime = minTime;
-//     for (int i = 0; i < lookup; i++) {
-//         pb0 = pb0->pprev;
-//         int64_t time = pb0->GetBlockTime();
-//         minTime = std::min(time, minTime);
-//         maxTime = std::max(time, maxTime);
-//     }
-
-//     // In case there's a situation where minTime == maxTime, we don't want a divide by zero exception.
-//     if (minTime == maxTime)
-//         return 0;
-
-//     uint256 workDiff = pb->nChainWork - pb0->nChainWork;
-//     int64_t timeDiff = maxTime - minTime;
-
-//     return (int64_t)(workDiff.getdouble() / timeDiff);
-// }
-
-
-
-
-
 
 // Return average network hashes per second based on the last 'nLookUp' intervals.
 //
@@ -330,11 +283,8 @@ Value getmininginfo(const Array& params, bool fHelp)
 
 
 #ifdef ENABLE_WALLET
-// TODO add rpc call for issyncing - will give a best guess at whether the client is up to date, maybe on a 1-10 scale
-// TODO this should really be in two RPC calls, getwork and submitwork
-// TODO make sure all endianness works
-// TODO add a pubkey param to make sure coinbase is actually spendable?
 
+// TODO fix help message and fix to give work
 Value getwork(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)

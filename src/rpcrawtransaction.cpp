@@ -198,7 +198,7 @@ Value getrawtransaction(const Array& params, bool fHelp)
 #ifdef ENABLE_WALLET
 Value listunspent(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() > 3)
+    if (fHelp || params.size() > 4)
         throw runtime_error(
             "listunspent ( minconf maxconf  [\"address\",...] )\n"
             "\nReturns array of unspent transaction outputs\n"
@@ -214,6 +214,7 @@ Value listunspent(const Array& params, bool fHelp)
             "      \"address\"   (string) bitcoin address\n"
             "      ,...\n"
             "    ]\n"
+            "4. \"fIncludeDelayedOutputs\"    (bool, optional, default=true) If delayed outputs that are not spendable yet should be included\n"
             "\nResult\n"
             "[                   (array of json object)\n"
             "  {\n"
@@ -259,10 +260,15 @@ Value listunspent(const Array& params, bool fHelp)
         }
     }
 
+    // If true, currently unspendable because of the delay will not be included
+    bool fIncludeDelayedOutputs = true;
+    if (params.size() > 3)
+        fIncludeDelayedOutputs = params[3].get_bool();
+
     Array results;
     vector<COutput> vecOutputs;
     assert(pwalletMain != NULL);
-    pwalletMain->AvailableCoins(vecOutputs, false);
+    pwalletMain->AvailableCoins(vecOutputs, !fIncludeDelayedOutputs, false);
     BOOST_FOREACH(const COutput& out, vecOutputs)
     {
         if (out.nDepth < nMinDepth || out.nDepth > nMaxDepth)

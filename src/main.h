@@ -29,10 +29,6 @@
 #include <utility>
 #include <vector>
 
-// TODO delete these
-#include <iostream>
-#include <fstream>
-
 class CBlockIndex;
 class CBloomFilter;
 class CInv;
@@ -40,7 +36,7 @@ class CInv;
 /** The smallest maximum allowed size for a serialized block, in bytes (network rule) */
 static const unsigned int MIN_MAX_BLOCK_SIZE = 1000000;
 /** Number of blocks between max block size recalculations. 1 block per minute for 30 days*/
-static const int MAX_BLOCK_SIZE_RECALC_PERIOD = 60 * 24 * 30;
+static const int MAX_BLOCK_SIZE_RECALC_PERIOD = 60 * 24 * 15;
 /** Default for -blockmaxsize and -blockminsize, which control the range of sizes the mining code will create **/
 static const unsigned int DEFAULT_BLOCK_MAX_SIZE = 750000;
 static const unsigned int DEFAULT_BLOCK_MIN_SIZE = 0;
@@ -53,15 +49,16 @@ static const unsigned int DEFAULT_MAX_ORPHAN_TRANSACTIONS = 100;
 /** Default for -maxorphanblocks, maximum number of orphan blocks kept in memory */
 static const unsigned int DEFAULT_MAX_ORPHAN_BLOCKS = 750;
 /** The maximum size of a blk?????.dat file (since 0.8) */
-static const unsigned int MAX_BLOCKFILE_SIZE = 0x8000000; // 128 MiB
+static const unsigned int MAX_BLOCKFILE_SIZE =   0x10000000; // 256 MiB
 /** The pre-allocation chunk size for blk?????.dat files (since 0.8) */
-static const unsigned int BLOCKFILE_CHUNK_SIZE = 0x1000000; // 16 MiB
+static const unsigned int BLOCKFILE_CHUNK_SIZE = 0x01000000; // 16 MiB
 /** The pre-allocation chunk size for rev?????.dat files (since 0.8) */
 static const unsigned int UNDOFILE_CHUNK_SIZE = 0x100000; // 1 MiB
 /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
-static const int COINBASE_MATURITY = 120; 
+static const int COINBASE_MATURITY = 1; // 120; TODO Change back
 /** Threshold for nLockTime: below this value it is interpreted as block number, otherwise as UNIX timestamp. */
-static const unsigned int LOCKTIME_THRESHOLD = 1200000000; // Thu, 10 Jan 2008 21:20:00 GMT
+static const unsigned int LOCKTIME_THRESHOLD = 1200000000; // Thu, 10 Jan 2008 21:20:00 GMT - necessary to change because faster block times
+                                            //  500000000; // Tue Nov  5 00:53:20 1985 UTC
 /** Maximum number of script-checking threads allowed */
 static const int MAX_SCRIPTCHECK_THREADS = 16;
 /** -par default (number of script-checking threads, 0 = auto) */
@@ -312,7 +309,6 @@ unsigned int GetSigOpCount(const CTransaction& tx);
 unsigned int GetP2SHSigOpCount(const CTransaction& tx, CCoinsViewCache& mapInputs);
 
 
-// TODO maybe this should change with mature coins spent as a tie breaker?
 inline bool AllowFree(double dPriority)
 {
     // Large (in bytes) low-priority (new, small-coin) transactions
@@ -881,13 +877,18 @@ public:
 
     int64_t GetMedianTimePast() const
     {
-        int64_t pmedian[nMedianTimeSpan];
-        int64_t* pbegin = &pmedian[nMedianTimeSpan];
-        int64_t* pend = &pmedian[nMedianTimeSpan];
+        return (int64_t)GetMedianTimePassed_uint();
+    }
+
+    unsigned int GetMedianTimePassed_uint() const 
+    {
+        unsigned int pmedian[nMedianTimeSpan];
+        unsigned int * pbegin = &pmedian[nMedianTimeSpan];
+        unsigned int * pend = &pmedian[nMedianTimeSpan];
 
         const CBlockIndex* pindex = this;
         for (int i = 0; i < nMedianTimeSpan && pindex; i++, pindex = pindex->pprev)
-            *(--pbegin) = pindex->GetBlockTime();
+            *(--pbegin) = pindex->nTime;
 
         std::sort(pbegin, pend);
         return pbegin[(pend - pbegin)/2];
@@ -1100,7 +1101,11 @@ public:
     unsigned int MaxBlockSize(int nHeight) {
         int nLastSizeRetarget = nHeight - (nHeight % MAX_BLOCK_SIZE_RECALC_PERIOD);
         std::map<int, unsigned int>::const_iterator it = mapBlockSizeLimits.find(nLastSizeRetarget);
-        assert(it != mapBlockSizeLimits.end());
+        if (it == mapBlockSizeLimits.end())
+        {
+            // Shouldn't ever happen
+            return MIN_MAX_BLOCK_SIZE;
+        }
         return it->second;
     }
 

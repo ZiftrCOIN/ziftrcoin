@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
         pblock->nVersion = 1;
         pblock->nTime = chainActive.Tip()->GetMedianTimePast()+1;
         pblock->vtx[0].vin[0].scriptSig = CScript();
-        pblock->CopyHeaderSigFrom(blockinfo[i].sigR, blockinfo[i].sigS);
+        //pblock->CopyHeaderSigFrom(blockinfo[i].sigR, blockinfo[i].sigS);
         pblock->vtx[0].vin[0].scriptSig.push_back(chainActive.Height());
         pblock->vtx[0].vout[0].scriptPubKey = CScript();
         if (txFirst.size() < 2)
