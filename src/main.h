@@ -33,10 +33,12 @@ class CBlockIndex;
 class CBloomFilter;
 class CInv;
 
+// TODO alter all headers to say ziftrCOIN specific stuff
+
 /** The smallest maximum allowed size for a serialized block, in bytes (network rule) */
 static const unsigned int MIN_MAX_BLOCK_SIZE = 1000000;
-/** Number of blocks between max block size recalculations. 1 block per minute for 30 days*/
-static const int MAX_BLOCK_SIZE_RECALC_PERIOD = 60 * 24 * 15;
+/** Number of blocks between max block size recalculations. 1 block per minute for 1/4 year */
+static const int MAX_BLOCK_SIZE_RECALC_PERIOD = 60 * 24 * 365 / 4;
 /** Default for -blockmaxsize and -blockminsize, which control the range of sizes the mining code will create **/
 static const unsigned int DEFAULT_BLOCK_MAX_SIZE = 750000;
 static const unsigned int DEFAULT_BLOCK_MIN_SIZE = 0;
@@ -55,9 +57,9 @@ static const unsigned int BLOCKFILE_CHUNK_SIZE = 0x01000000; // 16 MiB
 /** The pre-allocation chunk size for rev?????.dat files (since 0.8) */
 static const unsigned int UNDOFILE_CHUNK_SIZE = 0x100000; // 1 MiB
 /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
-static const int COINBASE_MATURITY = 1; // 120; TODO Change back
+static const int COINBASE_MATURITY = 120;
 /** Threshold for nLockTime: below this value it is interpreted as block number, otherwise as UNIX timestamp. */
-static const unsigned int LOCKTIME_THRESHOLD = 1200000000; // Thu, 10 Jan 2008 21:20:00 GMT - necessary to change because faster block times
+static const unsigned int LOCKTIME_THRESHOLD = 1200000000; // Thu, 10 Jan 2008 21:20:00 GMT - necessary to change because faster block times, otherwise this would become a problem in ~15 years
                                             //  500000000; // Tue Nov  5 00:53:20 1985 UTC
 /** Maximum number of script-checking threads allowed */
 static const int MAX_SCRIPTCHECK_THREADS = 16;

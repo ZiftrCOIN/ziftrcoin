@@ -393,7 +393,6 @@ void UnregisterNodeSignals(CNodeSignals& nodeSignals)
 // CChain implementation
 //
 
-// TODO test sorting of arrays of this size to make sure it isn't painfully slow
 CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
     if (pindex == NULL) {
         mapBlockSizeLimits.clear();
@@ -446,14 +445,20 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
 
                     unsigned int * pbegin = &arrBlockSizes[0];
                     unsigned int * pend   = &arrBlockSizes[MAX_BLOCK_SIZE_RECALC_PERIOD];
+
+                    // Sorting an array this long takes about 10 ms. 
+                    // This has to be done every time the daemon is started, as well.
+                    // Even 20 years out, 20 (years) * 4 (recalcs per year) * 10 ms (time per recalc) =  800 ms
+                    // So, this should still take < 1 second total on a standard machine today 
                     std::sort(pbegin, pend);
+
                     unsigned int nMedianSize = arrBlockSizes[(pend - pbegin)/2];
 
                     // Only set new size limit if median is greater than 1/2 of the block size limit
                     if (nMedianSize * 2 > nPrevLimit)
                     {
+                        // Allow a 10% increase every 3 months -> 2x increase in 2 years if strong growth
                         nNewLimit = 11 * nPrevLimit / 10;
-                        LogPrintf("CChain::SetTip() : New Block Size Limit: %u\n", nNewLimit);
                     }
 
                     delete[] arrBlockSizes;
@@ -464,6 +469,7 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
                 nNewLimit = std::max(nNewLimit, MIN_MAX_BLOCK_SIZE);
 
                 mapBlockSizeLimits[pStartIndex->nHeight+1] = nNewLimit;
+                LogPrintf("CChain::SetTip() : New Block Size Limit: %u for blocks with %i <= nHeight < %i\n", nNewLimit, pStartIndex->nHeight+1, pStartIndex->nHeight + MAX_BLOCK_SIZE_RECALC_PERIOD);
             }
 
             CBlockIndex* pindexNext = (*this)[std::min(pStartIndex->nHeight + MAX_BLOCK_SIZE_RECALC_PERIOD, pindex->nHeight)];
@@ -611,8 +617,8 @@ unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans)
 
 
 
-// TODO make sure that delayed transactions with a delay value that is in the past
-// are considered non-standard
+// TODO When allow delayed outputs to be standard, make sure that transaction outputs
+// with a delay value that is in the past are considered non-standard
 bool IsStandardTx(const CTransaction& tx, string& reason)
 {
     AssertLockHeld(cs_main);
@@ -955,12 +961,11 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         return state.DoS(100, error("AcceptToMemoryPool: : coinbase as individual tx"),
                          REJECT_INVALID, "coinbase");
 
-    // TODO uncomment me
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
-    // string reason;
-    // if (Params().NetworkID() == CChainParams::MAIN && !IsStandardTx(tx, reason))
-    //     return state.DoS(0, error("AcceptToMemoryPool : nonstandard transaction: %s", reason),
-    //                      REJECT_NONSTANDARD, reason);
+    string reason;
+    if (Params().NetworkID() == CChainParams::MAIN && !IsStandardTx(tx, reason))
+        return state.DoS(0, error("AcceptToMemoryPool : nonstandard transaction: %s", reason),
+                         REJECT_NONSTANDARD, reason);
 
     // Basically we don't want to propagate transactions that can't included in
     // the next block.
@@ -1922,7 +1927,8 @@ bool CountMatureCoins(const CBlock& block, CBlockIndex* pindex)
         return false;
     }
 
-    assert(block.GetHash() == pindex->GetBlockHash());
+    if (block.GetHash() != pindex->GetBlockHash())
+        return false;
 
     pindex->nMatureCoinsSpent = 0;
     for (unsigned int i = 1; i < block.vtx.size(); i++)

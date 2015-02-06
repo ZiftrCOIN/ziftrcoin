@@ -195,7 +195,6 @@ enum
     SCRIPT_VERIFY_STRICTENC             = (1U << 1),            // enforce strict conformance to DER and SEC2 for signatures and pubkeys
     SCRIPT_VERIFY_EVEN_S                = (1U << 2),            // enforce even S values in signatures (depends on STRICTENC)
     SCRIPT_VERIFY_NOCACHE               = (1U << 3),            // do not store results in signature cache (but do query it)
-    SCRIPT_VERIFY_NOAPPENDSIGHASHTYPE   = (1U << 4),            // for when using signatures without the sighashtype appended
 };
 
 const int DELAYED_DELTA = 100;

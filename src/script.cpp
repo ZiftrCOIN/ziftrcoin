@@ -268,13 +268,13 @@ bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags) {
 
     if (vchSig[0] != 0x30)
         return error("Non-canonical signature: wrong type");
-    if (vchSig[1] != vchSig.size()-(flags & SCRIPT_VERIFY_NOAPPENDSIGHASHTYPE ? 2 : 3))
+    if (vchSig[1] != (vchSig.size()-3))
         return error("Non-canonical signature: wrong length marker. vchSig[1]: %c, size(): %i, flags: %i", vchSig[1], vchSig.size(), flags);
     unsigned int nLenR = vchSig[3];
     if (5 + nLenR >= vchSig.size())
         return error("Non-canonical signature: S length misplaced");
     unsigned int nLenS = vchSig[5+nLenR];
-    if ((unsigned long)(nLenR+nLenS+(flags & SCRIPT_VERIFY_NOAPPENDSIGHASHTYPE ? 6 : 7)) != vchSig.size())
+    if ((unsigned long)(nLenR+nLenS+7) != vchSig.size())
         return error("Non-canonical signature: R+S length mismatch");
 
     const unsigned char *R = &vchSig[4];
@@ -302,11 +302,9 @@ bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags) {
             return error("Non-canonical signature: S value odd");
     }
 
-    if (!(flags & SCRIPT_VERIFY_NOAPPENDSIGHASHTYPE)) {
-        unsigned char nHashType = vchSig[vchSig.size() - 1] & (~(SIGHASH_ANYONECANPAY));
-        if (nHashType < SIGHASH_ALL || nHashType > SIGHASH_SINGLE)
-            return error("Non-canonical signature: unknown hashtype byte");
-    }
+    unsigned char nHashType = vchSig[vchSig.size() - 1] & (~(SIGHASH_ANYONECANPAY));
+    if (nHashType < SIGHASH_ALL || nHashType > SIGHASH_SINGLE)
+        return error("Non-canonical signature: unknown hashtype byte");
 
     return true;
 }
