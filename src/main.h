@@ -57,7 +57,7 @@ static const unsigned int BLOCKFILE_CHUNK_SIZE = 0x01000000; // 16 MiB
 /** The pre-allocation chunk size for rev?????.dat files (since 0.8) */
 static const unsigned int UNDOFILE_CHUNK_SIZE = 0x100000; // 1 MiB
 /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
-static const int COINBASE_MATURITY = 120;
+static const int COINBASE_MATURITY = 1;//120; TODO change back
 /** Threshold for nLockTime: below this value it is interpreted as block number, otherwise as UNIX timestamp. */
 static const unsigned int LOCKTIME_THRESHOLD = 1200000000; // Thu, 10 Jan 2008 21:20:00 GMT - necessary to change because faster block times, otherwise this would become a problem in ~15 years
                                             //  500000000; // Tue Nov  5 00:53:20 1985 UTC

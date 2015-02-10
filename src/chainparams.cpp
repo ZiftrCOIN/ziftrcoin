@@ -169,11 +169,23 @@ public:
             txNew.vout[i].scriptPubKey << ParseHex("037e6d28a34b6fc0f305162a245ac55b81c3dfff7726f65dd80493b04fcebc76e7") << OP_CHECKSIG;
             txNew.vout[i].nValue = (i > 0 ? 25000000 * COIN : 350000000 * COIN);
         }
+
+        txNew.vout.resize(txNew.vout.size() + 1);
+
+        txNew.vout[txNew.vout.size()-1].scriptPubKey.clear();
+        txNew.vout[txNew.vout.size()-1].scriptPubKey 
+            << CScriptNum(3)
+            << OP_CHECKLOCKTIMEVERIFY
+            << OP_HASH160
+            << ParseHex("93720988f7ee02f085e6e7a4ef2fe388089bff80")
+            << OP_EQUAL;
+        txNew.vout[txNew.vout.size()-1].nValue = (124 * COIN);
+
         genesis.vtx.push_back(txNew);
 
         
         genesis.nVersion          = 1;
-        genesis.nNonce            = 13817;
+        genesis.nNonce            = 2033645;
         genesis.nTime             = 1422465309;
         genesis.nBits             = bnProofOfWorkLimit.GetCompact();
         genesis.hashPrevBlock     = 0;
@@ -192,8 +204,8 @@ public:
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         } 
 
-        assert(hashGenesisBlock == uint256("0x00000de128e9a759e9f0b7c4df71636661a8eaf1478d303c2a811ac6aa16fb40"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
-        assert(genesis.hashMerkleRoot == uint256("0xb04109fc6bfaf59fe0d393b471a1837aad5c77bdccb528975f30ac827b040512"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));     
+        assert(hashGenesisBlock == uint256("0x00000fcc7d4be0ce1ea7d9a6aa51d8790486e17e5978a01cf55cfff2c2049198"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
+        assert(genesis.hashMerkleRoot == uint256("0x8c7cb543e998040a3fe670d644ebe99ee3f4f9b2f82dcd998b27eb2be1eff5a0"));//"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));     
 
         // vSeeds.push_back(CDNSSeedData("bitcoin.sipa.be", "seed.bitcoin.sipa.be"));
         // vSeeds.push_back(CDNSSeedData("bluematt.me", "dnsseed.bluematt.me"));
@@ -256,7 +268,7 @@ public:
         vAlertPubKey = ParseHex("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");//"02911661822e0b2cd814ed3ff4d23c97cfe7c89ad1eb6ce2ad3181195cfa9e0886");
 
         genesis.nTime             = 1422465442;
-        genesis.nNonce            = 1390595;
+        genesis.nNonce            = 2073801;
         genesis.nProofOfKnowledge = genesis.CalculateProofOfKnowledge();
         
         hashGenesisBlock = genesis.GetHash();
@@ -265,7 +277,7 @@ public:
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         }
 
-        assert(hashGenesisBlock == uint256("0x00000aa0fc4547bc1e87d98b0e712a663de21c5e8b20e8a4def9c3ba53d9ad24"));
+        assert(hashGenesisBlock == uint256("0x0000081ab6f839f0c5bb4bbc7647516a4124fb6cca2d8ef075ba36fcadce638b"));
         // Merkle root is the same as parent
 
         vFixedSeeds.clear();
@@ -306,7 +318,7 @@ public:
             MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
         }
         
-        assert(hashGenesisBlock == uint256("0x0484b8f2bf8588f732f3da9431621543ae55ff601b372b981aae2de4c9e46ab4"));
+        assert(hashGenesisBlock == uint256("0x66054e4107dc7c9a41224d6e7992e27145c78dd9b83757517e4fc1e616089e9c"));
         // Merkle root is the same as parent
 
         vSeeds.clear();  // Regtest mode doesn't have any DNS seeds.

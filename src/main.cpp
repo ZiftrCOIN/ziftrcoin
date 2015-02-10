@@ -469,7 +469,7 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
                 nNewLimit = std::max(nNewLimit, MIN_MAX_BLOCK_SIZE);
 
                 mapBlockSizeLimits[pStartIndex->nHeight+1] = nNewLimit;
-                LogPrintf("CChain::SetTip() : New Block Size Limit: %u for blocks with %i <= nHeight < %i\n", nNewLimit, pStartIndex->nHeight+1, pStartIndex->nHeight + MAX_BLOCK_SIZE_RECALC_PERIOD);
+                LogPrintf("CChain::SetTip() : New Block Size Limit: %u for blocks with %i <= nHeight < %i\n", nNewLimit, pStartIndex->nHeight+1, pStartIndex->nHeight + 1 + MAX_BLOCK_SIZE_RECALC_PERIOD);
             }
 
             CBlockIndex* pindexNext = (*this)[std::min(pStartIndex->nHeight + MAX_BLOCK_SIZE_RECALC_PERIOD, pindex->nHeight)];
@@ -961,11 +961,12 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         return state.DoS(100, error("AcceptToMemoryPool: : coinbase as individual tx"),
                          REJECT_INVALID, "coinbase");
 
+    // TODO
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
-    string reason;
-    if (Params().NetworkID() == CChainParams::MAIN && !IsStandardTx(tx, reason))
-        return state.DoS(0, error("AcceptToMemoryPool : nonstandard transaction: %s", reason),
-                         REJECT_NONSTANDARD, reason);
+    // string reason;
+    // if (Params().NetworkID() == CChainParams::MAIN && !IsStandardTx(tx, reason))
+    //     return state.DoS(0, error("AcceptToMemoryPool : nonstandard transaction: %s", reason),
+    //                      REJECT_NONSTANDARD, reason);
 
     // Basically we don't want to propagate transactions that can't included in
     // the next block.

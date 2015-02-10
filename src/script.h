@@ -197,7 +197,7 @@ enum
     SCRIPT_VERIFY_NOCACHE               = (1U << 3),            // do not store results in signature cache (but do query it)
 };
 
-const int DELAYED_DELTA = 100;
+const int DELAYED_DELTA = 128;
 enum txnouttype
 {
     TX_NONSTANDARD              = 0,
@@ -209,9 +209,9 @@ enum txnouttype
     TX_NULL_DATA                = 5,
     
     TX_DELAYEDPUBKEY            = DELAYED_DELTA + TX_PUBKEY,
-    // TX_DELAYEDPUBKEYHASH        = DELAYED_DELTA + TX_PUBKEYHASH,
-    // TX_DELAYEDSCRIPTHASH        = DELAYED_DELTA + TX_SCRIPTHASH,
-    // TX_DELAYEDMULTISIG          = DELAYED_DELTA + TX_MULTISIG,
+    TX_DELAYEDPUBKEYHASH        = DELAYED_DELTA + TX_PUBKEYHASH,
+    TX_DELAYEDSCRIPTHASH        = DELAYED_DELTA + TX_SCRIPTHASH,
+    TX_DELAYEDMULTISIG          = DELAYED_DELTA + TX_MULTISIG,
 };
 
 class CNoDestination {
