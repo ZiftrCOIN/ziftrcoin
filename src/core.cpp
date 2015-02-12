@@ -235,16 +235,6 @@ bool CBlockHeader::CheckProofOfWork() const
     CBigNum bnTarget;
     bnTarget.SetCompact(nBits);
 
-    // CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
-    // ssBlock << *this;
-    // std::string strHex = HexStr(ssBlock.begin(), ssBlock.end());
-    // LogPrintf("block: %s\n", strHex);
-    // LogPrintf("powHash: %s\n", powHash.ToString());
-    // LogPrintf("_time_: %llu\n", nTime);
-
-    // if (nTime != 1421277610315LL)
-    //     throw std::exception();
-
     // Check range
     if (bnTarget <= 0 || bnTarget > Params().ProofOfWorkLimit())
         return error("CBlockHeader::CheckProofOfWork() : nBits below minimum work");
@@ -256,9 +246,44 @@ bool CBlockHeader::CheckProofOfWork() const
     return true;
 }
 
-uint256 CBlockHeader::GetHash() const
+static const unsigned int ALGO_SCRYPT  = 0x00001000;
+static const unsigned int ALGO_SKEIN   = 0x00002000;
+static const unsigned int ALGO_GROESTL = 0x00003000;
+static const unsigned int ALGO_POK_ZR5 = 0x00004000;
+
+uint256 CBlockHeader::GetHash(unsigned int nAlgo) const
 {   
-    return HashZ(BEGIN(nVersion), END(hashMerkleRoot), this->nProofOfKnowledge);
+    // TODO after looking over all the places where this gives compile errors, 
+    // set the default parameter to 0
+    if (nAlgo == 0)
+        nAlgo = this->GetAlgo();
+
+    switch (nAlgo)
+    {
+    case ALGO_SCRYPT:
+        // Caution: scrypt_1024_1_1_256 assumes fixed length of 80 bytes
+        uint256 thash;
+        scrypt_1024_1_1_256(BEGIN(nVersion), BEGIN(thash));
+        return thash;
+    
+    case ALGO_SKEIN:
+        return HashSkein(BEGIN(nVersion), END(nNonce));
+
+    case ALGO_GROESTL:
+        return HashGroestl(BEGIN(nVersion), END(nNonce));
+
+    case ALGO_POK_ZR5:
+        return HashZR5(BEGIN(nVersion), END(hashMerkleRoot), this->GetPoK() >> 16);
+
+    default:
+        // ALGO_SHA256D 
+        return Hash(BEGIN(nVersion), END(nNonce));
+    }
+}
+
+uint256 CBlockHeader::GetHash() const
+{
+    return this->GetHash(this->GetAlgo());
 }
 
 bool CBlock::CheckProofOfWork() const
@@ -266,7 +291,12 @@ bool CBlock::CheckProofOfWork() const
     if (!CBlockHeader::CheckProofOfWork())
         return false;
 
-    return (this->nProofOfKnowledge == this->CalculateProofOfKnowledge());
+    if (this->GetAlgo() == ALGO_POK_ZR5)
+    {
+        return (this->GetPoK() == this->CalculateProofOfKnowledge());
+    }
+
+    return true;
 }
 
 unsigned int CBlock::CalculateProofOfKnowledge(MapTxSerialized * pmapTxSerialized) const
@@ -284,11 +314,9 @@ unsigned int CBlock::CalculateProofOfKnowledge(MapTxSerialized * pmapTxSerialize
     unsigned int nTxIndex =  nDeterRand1 % vtx.size();
 
     const std::vector<unsigned char> * vTxData = NULL;
-    //bool fInMap = false;
     if (pmapTxSerialized != NULL)
     {
         MapTxSerialized::const_iterator it = pmapTxSerialized->find(std::make_pair(this->hashMerkleRoot, nTxIndex));
-        //fInMap = (it != pmapTxSerialized->end());
         if (it != pmapTxSerialized->end())
         {
             vTxData = &(it->second);
@@ -316,7 +344,7 @@ unsigned int CBlock::CalculateProofOfKnowledge(MapTxSerialized * pmapTxSerialize
     unsigned int nDeterRandIndex = nDeterRand2 % (vTxData->size() - 3);
     unsigned int nRandTxData = *((unsigned int *)(&(vTxData->begin()[nDeterRandIndex])));
 
-    unsigned int nPoK = nRandTxData ^ nDeterRand3;
+    unsigned int nPoK = (nRandTxData ^ nDeterRand3) & POK_MASK;
 
     // printf("hashTxChooser: %s\n", hashTxChooser.ToString().c_str());
     // printf("nDeterRand1: %u\n", nDeterRand1);

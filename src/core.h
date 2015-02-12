@@ -342,26 +342,48 @@ public:
 };
 
 
-/** Nodes collect new transactions into a block, hash them into a hash tree,
+// We utilize the space in the nVersion field rather than
+// modifying block header strucutre to avoid making mining incompatible
+static const unsigned int VERSION_MASK = 0x00000FFF;
+static const unsigned int ALGO_MASK    = 0x0000F000;
+static const unsigned int POK_MASK     = 0xFFFF0000;
+
+//Default for any not in set above
+static const unsigned int ALGO_SHA256D = 0x00000000;
+static const unsigned int ALGO_SCRYPT  = 0x00001000;
+static const unsigned int ALGO_SKEIN   = 0x00002000;
+static const unsigned int ALGO_GROESTL = 0x00003000;
+static const unsigned int ALGO_POK_ZR5 = 0x00004000;
+
+/** 
+ * Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
  * requirements.  When they solve the proof-of-work, they broadcast the block
  * to everyone and the block is added to the block chain.  The first transaction
  * in the block is a special one that creates a new coin owned by the creator
  * of the block.
- */
+ */ 
 class CBlockHeader
 {
 public:
     // header
     static const int CURRENT_VERSION=1;
-    
+
+private:
+    // TODO set back to public when done
     int nVersion;
-    unsigned int nProofOfKnowledge; // To prove knowledge of transaction data
-    unsigned int nNonce;
-    unsigned int nTime; 
-    unsigned int nBits;
+
+public:
+    
+    // To prove knowledge of transaction data
+    // this is now included in nVersion
+    //unsigned int nProofOfKnowledge; 
+
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
+    unsigned int nTime;
+    unsigned int nBits;
+    unsigned int nNonce;
 
     CBlockHeader()
     {
@@ -372,33 +394,69 @@ public:
     (
         READWRITE(this->nVersion);
         nVersion = this->nVersion;
-        READWRITE(nProofOfKnowledge);
-        READWRITE(nNonce);
-        READWRITE(nTime);
-        READWRITE(nBits);
         READWRITE(hashPrevBlock);
         READWRITE(hashMerkleRoot);
+        READWRITE(nTime);
+        READWRITE(nBits);
+        READWRITE(nNonce);
     )
 
     void SetNull()
     {
         nVersion = CBlockHeader::CURRENT_VERSION;
-        nProofOfKnowledge = 0;
-        nNonce = 0;
-        nTime = 0;
-        nBits = 0;
         hashPrevBlock = 0;
         hashMerkleRoot = 0;
+        nTime = 0;
+        nBits = 0;
+        nNonce = 0;
     }
 
     bool IsNull() const
     {
         return (nBits == 0);
     }
+    
+    // Include the algo in the parameters in case we ever need to do 
+    // merged mining, where the parent's block's nVersion wouldn't have the
+    // same data encoded
+    uint256 GetHash(unsigned int nAlgo) const;
+
+    uint256 GetHash() const;
 
     bool CheckProofOfWork() const;
 
-    uint256 GetHash() const;
+    unsigned int GetAlgo() const 
+    {
+        return this->nVersion & ALGO_MASK;
+    }
+
+    void SetAlgo(unsigned int nAlgo)
+    {
+        this->nVersion = this->nVersion & (~ALGO_MASK);
+        this->nVersion = this->nVersion | (ALGO_MASK & nPoK);
+    }
+
+    unsigned int GetPoK() const 
+    {
+        return this->nVersion & POK_MASK;
+    }
+
+    void SetPoK(unsigned int nPoK) 
+    {
+        this->nVersion = this->nVersion & (~POK_MASK);
+        this->nVersion = this->nVersion | (POK_MASK & nPoK);
+    }
+
+    unsigned int GetVersion() const 
+    {
+        return this->nVersion & VERSION_MASK;
+    }
+
+    void SetVersion(unsigned int nVersion) 
+    {
+        this->nVersion = this->nVersion & (~VERSION_MASK);
+        this->nVersion = this->nVersion | (VERSION_MASK & nPoK);
+    }
 
     int64_t GetBlockTime() const
     {
@@ -444,12 +502,11 @@ public:
     {
         CBlockHeader header;
         header.nVersion          = nVersion;
-        header.nProofOfKnowledge = nProofOfKnowledge;
-        header.nNonce            = nNonce;
-        header.nTime             = nTime;
-        header.nBits             = nBits;
         header.hashPrevBlock     = hashPrevBlock;
         header.hashMerkleRoot    = hashMerkleRoot;
+        header.nTime             = nTime;
+        header.nBits             = nBits;
+        header.nNonce            = nNonce;
         return header;
     }
 

@@ -151,20 +151,6 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
     txNew.vout.resize(1);
     txNew.vout[0].scriptPubKey = scriptPubKeyIn;
 
-    // Testing the rule that multisig outputs can be in the coinbase
-    // std::vector<unsigned char> pubKey(scriptPubKeyIn.begin()+1, scriptPubKeyIn.end()-1);
-    // LogPrintf("pubKey hack: %s \n", HexStr(pubKey.begin(), pubKey.end()));
-    // txNew.vout[1].scriptPubKey 
-    //     << OP_2
-    //     << pubKey
-    //     << ParseHex("037e6d28a34b6fc0f305162a245ac55b81c3dfff7726f65dd80493b04fcebc76e7")
-    //     << OP_2
-    //     << OP_CHECKMULTISIG;
-
-    // Testing the rule that this can be spent before maturity
-    // txNew.vout[1].scriptPubKey = CScript() << OP_TRUE;
-    // txNew.vout[1].nValue = 0;
-
     // Add our coinbase tx as first transaction
     pblock->vtx.push_back(txNew);
     pblocktemplate->vTxFees.push_back(-1); // updated at end
@@ -428,7 +414,8 @@ unsigned int static ScanHash(CBlock *pblock, unsigned int nTry, unsigned int nDo
     for (unsigned int i = 0; i < nTry; i++) 
     {
         pblock->nNonce++;
-        pblock->nProofOfKnowledge = pblock->CalculateProofOfKnowledge(mapTxSerialized);
+        if (pblock->GetAlgo() == ALGO_POK_ZR5)
+            pblock->SetPoK(pblock->CalculateProofOfKnowledge(mapTxSerialized));
         hashBlockHeader = pblock->GetHash();
 
         if (hashBlockHeader <= hashTarget && i >= nDontTry)

@@ -177,7 +177,7 @@ int HMAC_SHA512_Final(unsigned char *pmd, HMAC_SHA512_CTX *pctx);
 
 /* ----------- ziftrCOIN Hash ------------------------------------------------ */
 template<typename T1>
-inline uint256 HashZ(const T1 pbegin, const T1 pend, unsigned int nOrderIn)
+inline uint256 HashZR5(const T1 pbegin, const T1 pend, unsigned int nOrderIn)
 {
     static unsigned char pblank[1];
     pblank[0] = 0;
@@ -363,6 +363,46 @@ inline uint256 HashZ(const T1 pbegin, const T1 pend, unsigned int nOrderIn)
     }
 
     return hash[4].trim256();
+}
+
+template<typename T1>
+inline uint256 HashSkein(const T1 pbegin, const T1 pend)
+{
+    static unsigned char pblank[1];
+    pblank[0] = 0;
+
+    uint512 hash;
+
+    const void * pStart = (pbegin == pend ? pblank : static_cast<const void*>(&pbegin[0]));
+    size_t nSize        = (pend - pbegin) * sizeof(pbegin[0]);
+    void * pPutResult   = static_cast<void*>(BEGIN(hash));
+
+    sph_skein512_context ctx_skein;
+    sph_skein512_init(&ctx_skein);
+    sph_skein512 (&ctx_skein, pStart, nSize);
+    sph_skein512_close(&ctx_skein, pPutResult);
+
+    return hash.trim256();
+}
+
+template<typename T1>
+inline uint256 HashGroestl(const T1 pbegin, const T1 pend)
+{
+    static unsigned char pblank[1];
+    pblank[0] = 0;
+
+    uint512 hash;
+
+    const void * pStart = (pbegin == pend ? pblank : static_cast<const void*>(&pbegin[0]));
+    size_t nSize        = (pend - pbegin) * sizeof(pbegin[0]);
+    void * pPutResult   = static_cast<void*>(BEGIN(hash));
+
+    sph_groestl512_context ctx_groestl;
+    sph_groestl512_init(&ctx_groestl);
+    sph_groestl512 (&ctx_groestl, pStart, nSize);
+    sph_groestl512_close(&ctx_groestl, pPutResult);
+
+    return hash.trim256();
 }
 
 #endif
