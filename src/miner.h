@@ -20,8 +20,8 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet, int nThreads);
 /** Generate a new block, without valid proof-of-work */
 CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn);
 CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reserveKey);
-/** Update the coinbase scriptSig to have height, flags, etc. */
-void UpdateCoinbaseScriptSig(CBlock* pblock, CBlockIndex* pindexPrev);
+/** Modify the extranonce in a block */
+void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& nExtraNonce);
 /** Check mined block */
 bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey);
 

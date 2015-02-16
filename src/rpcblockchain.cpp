@@ -62,12 +62,14 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex)
         result.push_back(Pair("maxsize", (int)chainActive.MaxBlockSize(blockindex->nHeight)));
     result.push_back(Pair("height", blockindex->nHeight));
     
-    result.push_back(Pair("version", block.nVersion));
-    result.push_back(Pair("pok", (uint64_t)block.nProofOfKnowledge));
-    result.push_back(Pair("nonce", (uint64_t)block.nNonce));
+    result.push_back(Pair("version", (uint64_t)block.GetVersion()));
+    result.push_back(Pair("ispok", block.IsPoKBlock()));
+    if (block.IsPoKBlock())
+        result.push_back(Pair("pok", (uint64_t)block.GetPoK()));
+    result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
     result.push_back(Pair("time", block.GetBlockTime()));
     result.push_back(Pair("bits", HexBits(block.nBits)));
-    result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
+    result.push_back(Pair("nonce", (uint64_t)block.nNonce));
     Array txs;
     BOOST_FOREACH(const CTransaction&tx, block.vtx)
         txs.push_back(tx.GetHash().GetHex());

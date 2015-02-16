@@ -1354,15 +1354,15 @@ Block reward schedule:
 Expected block generation rate is 1 block per minute.
 */
 
-
-
-
 //
-//      0   1   2   3   4   5   6   7   8   9
-
-int64_t GetBlockValue(int nHeight, int64_t nFees)
+// Miners that prove that they know the transaction data they are mining with
+// get a small extra percentage of coins
+//
+// TODO look at funciton outputs around corner points
+//
+int64_t GetBlockValue(int nHeight, int64_t nFees, bool fUsesPoK)
 {
-    int64_t nBlockReward;
+    int64_t nBlockReward = 0;
     if (nHeight < Params().NumIncrBlocks())
     {
         double dIncrPerBlock = (double)((MAX_SUBSIDY - MIN_SUBSIDY)/Params().NumIncrBlocks());
@@ -1375,12 +1375,16 @@ int64_t GetBlockValue(int nHeight, int64_t nFees)
     else if (nHeight < (Params().NumIncrBlocks() + Params().NumConstBlocks() + Params().NumDecrBlocks()))
     {
         double dDecrPerBlock = (double)(((MAX_SUBSIDY - MIN_SUBSIDY)/Params().NumDecrBlocks()));
-        nBlockReward = MAX_SUBSIDY - ((int64_t) ((nHeight - Params().NumIncrBlocks() - Params().NumConstBlocks() + 1) * dDecrPerBlock));
+        nBlockReward = MAX_SUBSIDY - ((int64_t) ((nHeight - Params().NumIncrBlocks() - Params().NumConstBlocks()) * dDecrPerBlock));
     } 
     else 
     {
         nBlockReward = MIN_SUBSIDY;
     }
+
+    if (fUsesPoK)
+        nBlockReward = (nBlockReward * 105 / 100);
+
     
     return nBlockReward + nFees;
 }
@@ -2074,10 +2078,10 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     if (fBenchmark)
         LogPrintf("- Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin)\n", (unsigned)block.vtx.size(), 0.001 * nTime, 0.001 * nTime / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * nTime / (nInputs-1));
 
-    if (block.vtx[0].GetValueOut() > GetBlockValue(pindex->nHeight, nFees) && block.GetHash() != Params().HashGenesisBlock())
+    if (block.vtx[0].GetValueOut() > GetBlockValue(pindex->nHeight, nFees, block.IsPoKBlock()) && block.GetHash() != Params().HashGenesisBlock())
         return state.DoS(100,
                          error("ConnectBlock() : coinbase pays too much (actual=%d vs limit=%d)",
-                               block.vtx[0].GetValueOut(), GetBlockValue(pindex->nHeight, nFees)),
+                               block.vtx[0].GetValueOut(), GetBlockValue(pindex->nHeight, nFees, block.IsPoKBlock())),
                                REJECT_INVALID, "bad-cb-amount");
 
     if (!control.Wait())
@@ -2171,7 +2175,7 @@ void static UpdateTip(CBlockIndex *pindexNew) {
         const CBlockIndex* pindex = chainActive.Tip();
         for (int i = 0; i < 100 && pindex != NULL; i++)
         {
-            if (pindex->nVersion > CBlock::CURRENT_VERSION)
+            if (pindex->GetVersion() > CBlock::CURRENT_VERSION)
                 ++nUpgraded;
             pindex = pindex->pprev;
         }
@@ -2652,8 +2656,8 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
         if (pcheckpoint && nHeight < pcheckpoint->nHeight)
             return state.DoS(100, error("AcceptBlock() : forked chain older than last checkpoint (height %d)", nHeight));
 
-        // Reject block.nVersion=1 blocks when 95% (75% on testnet) of the network has upgraded:
-        // if (block.nVersion < 2)
+        // Reject block.GetVersion()=1 blocks when 95% (75% on testnet) of the network has upgraded:
+        // if (block.GetVersion() < 2)
         // {
         //     if ((!TestNet() && CBlockIndex::IsSuperMajority(2, pindexPrev, 950, 1000)) ||
         //         ( TestNet() && CBlockIndex::IsSuperMajority(2, pindexPrev, 75, 100)))
@@ -2663,8 +2667,8 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
         //     }
         // }
 
-        // Enforce block.nVersion=2 rule that the coinbase starts with serialized block height
-        // if (block.nVersion >= 2)
+        // Enforce block.GetVersion()=2 rule that the coinbase starts with serialized block height
+        // if (block.GetVersion() >= 2)
         // {
         //     // if 750 of the last 1,000 blocks are version 2 or greater (51/100 if testnet):
         //     if ((!TestNet() && CBlockIndex::IsSuperMajority(2, pindexPrev, 750, 1000)) ||
@@ -2724,7 +2728,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
 //     unsigned int nFound = 0;
 //     for (unsigned int i = 0; i < nToCheck && nFound < nRequired && pstart != NULL; i++)
 //     {
-//         if (pstart->nVersion >= minVersion)
+//         if (pstart->GetVersion() >= minVersion)
 //             ++nFound;
 //         pstart = pstart->pprev;
 //     }
@@ -2768,6 +2772,8 @@ bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBl
         return state.Invalid(error("ProcessBlock() : already have block (orphan) %s", hash.ToString()), 0, "duplicate");
 
     // Preliminary checks
+    // Process with max allowable block size first, will check with real limit later
+    // (In ConnectBlock())
     if (!CheckBlock(*pblock, state, chainActive.TipMaxBlockSize()))
         return error("ProcessBlock() : CheckBlock FAILED");
 

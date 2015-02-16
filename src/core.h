@@ -344,16 +344,9 @@ public:
 
 // We utilize the space in the nVersion field rather than
 // modifying block header strucutre to avoid making mining incompatible
-static const unsigned int VERSION_MASK = 0x00000FFF;
-static const unsigned int ALGO_MASK    = 0x0000F000;
-static const unsigned int POK_MASK     = 0xFFFF0000;
-
-//Default for any not in set above
-static const unsigned int ALGO_SHA256D = 0x00000000;
-static const unsigned int ALGO_SCRYPT  = 0x00001000;
-static const unsigned int ALGO_SKEIN   = 0x00002000;
-static const unsigned int ALGO_GROESTL = 0x00003000;
-static const unsigned int ALGO_POK_ZR5 = 0x00004000;
+static const unsigned int VERSION_MASK  = 0x00007FFF;
+static const unsigned int POK_BOOL_MASK = 0x00008000;
+static const unsigned int POK_DATA_MASK = 0xFFFF0000;
 
 /** 
  * Nodes collect new transactions into a block, hash them into a hash tree,
@@ -369,16 +362,7 @@ public:
     // header
     static const int CURRENT_VERSION=1;
 
-private:
-    // TODO set back to public when done
     int nVersion;
-
-public:
-    
-    // To prove knowledge of transaction data
-    // this is now included in nVersion
-    //unsigned int nProofOfKnowledge; 
-
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
     unsigned int nTime;
@@ -415,36 +399,32 @@ public:
     {
         return (nBits == 0);
     }
-    
-    // Include the algo in the parameters in case we ever need to do 
-    // merged mining, where the parent's block's nVersion wouldn't have the
-    // same data encoded
-    uint256 GetHash(unsigned int nAlgo) const;
 
     uint256 GetHash() const;
 
     bool CheckProofOfWork() const;
 
-    unsigned int GetAlgo() const 
+    bool IsPoKBlock() const
     {
-        return this->nVersion & ALGO_MASK;
+        return this->nVersion & POK_BOOL_MASK;
     }
 
-    void SetAlgo(unsigned int nAlgo)
+    void SetPoKFlag(bool fPoK)
     {
-        this->nVersion = this->nVersion & (~ALGO_MASK);
-        this->nVersion = this->nVersion | (ALGO_MASK & nPoK);
+        this->nVersion = this->nVersion & (~POK_BOOL_MASK);
+        if (fPoK)
+            this->nVersion = this->nVersion | POK_BOOL_MASK;
     }
 
     unsigned int GetPoK() const 
     {
-        return this->nVersion & POK_MASK;
+        return this->nVersion & POK_DATA_MASK;
     }
 
     void SetPoK(unsigned int nPoK) 
     {
-        this->nVersion = this->nVersion & (~POK_MASK);
-        this->nVersion = this->nVersion | (POK_MASK & nPoK);
+        this->nVersion = this->nVersion & (~POK_DATA_MASK);
+        this->nVersion = this->nVersion | (POK_DATA_MASK & nPoK);
     }
 
     unsigned int GetVersion() const 
@@ -452,10 +432,10 @@ public:
         return this->nVersion & VERSION_MASK;
     }
 
-    void SetVersion(unsigned int nVersion) 
+    void SetVersion(unsigned int nVersionIn) 
     {
         this->nVersion = this->nVersion & (~VERSION_MASK);
-        this->nVersion = this->nVersion | (VERSION_MASK & nPoK);
+        this->nVersion = this->nVersion | (VERSION_MASK & nVersionIn);
     }
 
     int64_t GetBlockTime() const
@@ -512,7 +492,7 @@ public:
 
     bool CheckProofOfWork() const;
 
-    unsigned int CalculateProofOfKnowledge(MapTxSerialized * pmapTxSerialized = NULL) const;
+    unsigned int CalculatePoK(MapTxSerialized * pmapTxSerialized = NULL) const;
 
     uint256 BuildMerkleTree() const;
 

@@ -6,6 +6,7 @@
 #ifndef BITCOIN_HASH_H
 #define BITCOIN_HASH_H
 
+#include "bignum.h"
 #include "serialize.h"
 #include "uint256.h"
 #include "version.h"
@@ -48,11 +49,11 @@ GLOBAL sph_skein512_context    z_skein;
 #define ZKECCAK  (memcpy(&ctx_keccak,   &z_keccak,   sizeof(z_keccak)))
 #define ZSKEIN   (memcpy(&ctx_skein,    &z_skein,    sizeof(z_skein)))
 
+//static const int KECCAK  = -1;
 static const int BLAKE   = 0;
 static const int GROESTL = 1;
 static const int JH      = 2;
-static const int KECCAK  = 3;
-static const int SKEIN   = 4;
+static const int SKEIN   = 3;
 
 template<typename T1>
 inline uint256 Hash(const T1 pbegin, const T1 pend)
@@ -177,139 +178,42 @@ int HMAC_SHA512_Final(unsigned char *pmd, HMAC_SHA512_CTX *pctx);
 
 /* ----------- ziftrCOIN Hash ------------------------------------------------ */
 template<typename T1>
-inline uint256 HashZR5(const T1 pbegin, const T1 pend, unsigned int nOrderIn)
+inline uint512 HashZR5(const T1 pbegin, const T1 pend)
 {
+    static const uint256 INT_MASK("0xFFFFFFFF");
     static unsigned char pblank[1];
     pblank[0] = 0;
 
     // Pre-computed table of permutations
-    static const int arrOrder[][5] = 
+    static const int arrOrder[][4] = 
     {
-        {0, 1, 2, 3, 4},
-        {0, 1, 2, 4, 3},
-        {0, 1, 3, 2, 4},
-        {0, 1, 3, 4, 2},
-        {0, 1, 4, 2, 3},
-        {0, 1, 4, 3, 2},
-        {0, 2, 1, 3, 4},
-        {0, 2, 1, 4, 3},
-        {0, 2, 3, 1, 4},
-        {0, 2, 3, 4, 1},
-        {0, 2, 4, 1, 3},
-        {0, 2, 4, 3, 1},
-        {0, 3, 1, 2, 4},
-        {0, 3, 1, 4, 2},
-        {0, 3, 2, 1, 4},
-        {0, 3, 2, 4, 1},
-        {0, 3, 4, 1, 2},
-        {0, 3, 4, 2, 1},
-        {0, 4, 1, 2, 3},
-        {0, 4, 1, 3, 2},
-        {0, 4, 2, 1, 3},
-        {0, 4, 2, 3, 1},
-        {0, 4, 3, 1, 2},
-        {0, 4, 3, 2, 1},
-        {1, 0, 2, 3, 4},
-        {1, 0, 2, 4, 3},
-        {1, 0, 3, 2, 4},
-        {1, 0, 3, 4, 2},
-        {1, 0, 4, 2, 3},
-        {1, 0, 4, 3, 2},
-        {1, 2, 0, 3, 4},
-        {1, 2, 0, 4, 3},
-        {1, 2, 3, 0, 4},
-        {1, 2, 3, 4, 0},
-        {1, 2, 4, 0, 3},
-        {1, 2, 4, 3, 0},
-        {1, 3, 0, 2, 4},
-        {1, 3, 0, 4, 2},
-        {1, 3, 2, 0, 4},
-        {1, 3, 2, 4, 0},
-        {1, 3, 4, 0, 2},
-        {1, 3, 4, 2, 0},
-        {1, 4, 0, 2, 3},
-        {1, 4, 0, 3, 2},
-        {1, 4, 2, 0, 3},
-        {1, 4, 2, 3, 0},
-        {1, 4, 3, 0, 2},
-        {1, 4, 3, 2, 0},
-        {2, 0, 1, 3, 4},
-        {2, 0, 1, 4, 3},
-        {2, 0, 3, 1, 4},
-        {2, 0, 3, 4, 1},
-        {2, 0, 4, 1, 3},
-        {2, 0, 4, 3, 1},
-        {2, 1, 0, 3, 4},
-        {2, 1, 0, 4, 3},
-        {2, 1, 3, 0, 4},
-        {2, 1, 3, 4, 0},
-        {2, 1, 4, 0, 3},
-        {2, 1, 4, 3, 0},
-        {2, 3, 0, 1, 4},
-        {2, 3, 0, 4, 1},
-        {2, 3, 1, 0, 4},
-        {2, 3, 1, 4, 0},
-        {2, 3, 4, 0, 1},
-        {2, 3, 4, 1, 0},
-        {2, 4, 0, 1, 3},
-        {2, 4, 0, 3, 1},
-        {2, 4, 1, 0, 3},
-        {2, 4, 1, 3, 0},
-        {2, 4, 3, 0, 1},
-        {2, 4, 3, 1, 0},
-        {3, 0, 1, 2, 4},
-        {3, 0, 1, 4, 2},
-        {3, 0, 2, 1, 4},
-        {3, 0, 2, 4, 1},
-        {3, 0, 4, 1, 2},
-        {3, 0, 4, 2, 1},
-        {3, 1, 0, 2, 4},
-        {3, 1, 0, 4, 2},
-        {3, 1, 2, 0, 4},
-        {3, 1, 2, 4, 0},
-        {3, 1, 4, 0, 2},
-        {3, 1, 4, 2, 0},
-        {3, 2, 0, 1, 4},
-        {3, 2, 0, 4, 1},
-        {3, 2, 1, 0, 4},
-        {3, 2, 1, 4, 0},
-        {3, 2, 4, 0, 1},
-        {3, 2, 4, 1, 0},
-        {3, 4, 0, 1, 2},
-        {3, 4, 0, 2, 1},
-        {3, 4, 1, 0, 2},
-        {3, 4, 1, 2, 0},
-        {3, 4, 2, 0, 1},
-        {3, 4, 2, 1, 0},
-        {4, 0, 1, 2, 3},
-        {4, 0, 1, 3, 2},
-        {4, 0, 2, 1, 3},
-        {4, 0, 2, 3, 1},
-        {4, 0, 3, 1, 2},
-        {4, 0, 3, 2, 1},
-        {4, 1, 0, 2, 3},
-        {4, 1, 0, 3, 2},
-        {4, 1, 2, 0, 3},
-        {4, 1, 2, 3, 0},
-        {4, 1, 3, 0, 2},
-        {4, 1, 3, 2, 0},
-        {4, 2, 0, 1, 3},
-        {4, 2, 0, 3, 1},
-        {4, 2, 1, 0, 3},
-        {4, 2, 1, 3, 0},
-        {4, 2, 3, 0, 1},
-        {4, 2, 3, 1, 0},
-        {4, 3, 0, 1, 2},
-        {4, 3, 0, 2, 1},
-        {4, 3, 1, 0, 2},
-        {4, 3, 1, 2, 0},
-        {4, 3, 2, 0, 1},
-        {4, 3, 2, 1, 0}
+        {0, 1, 2, 3},
+        {0, 1, 3, 2},
+        {0, 2, 1, 3},
+        {0, 2, 3, 1},
+        {0, 3, 1, 2},
+        {0, 3, 2, 1},
+        {1, 0, 2, 3},
+        {1, 0, 3, 2},
+        {1, 2, 0, 3},
+        {1, 2, 3, 0},
+        {1, 3, 0, 2},
+        {1, 3, 2, 0},
+        {2, 0, 1, 3},
+        {2, 0, 3, 1},
+        {2, 1, 0, 3},
+        {2, 1, 3, 0},
+        {2, 3, 0, 1},
+        {2, 3, 1, 0},
+        {3, 0, 1, 2},
+        {3, 0, 2, 1},
+        {3, 1, 0, 2},
+        {3, 1, 2, 0},
+        {3, 2, 0, 1},
+        {3, 2, 1, 0}
     };
 
-    unsigned int nOrder = nOrderIn % ARRAYLEN(arrOrder);
-
-    uint512 hash[5];
+    uint512 hash[4];
 
     sph_blake512_context   ctx_blake;
     sph_groestl512_context ctx_groestl;
@@ -321,7 +225,13 @@ inline uint256 HashZR5(const T1 pbegin, const T1 pend, unsigned int nOrderIn)
     size_t nSize        = (pend - pbegin) * sizeof(pbegin[0]);
     void * pPutResult   = static_cast<void*>(&hash[0]);
 
-    for (unsigned int i = 0; i < 5; i++)
+    sph_keccak512_init(&ctx_keccak);
+    sph_keccak512 (&ctx_keccak, pStart, nSize);
+    sph_keccak512_close(&ctx_keccak, pPutResult);
+
+    unsigned int nOrder = CBigNum(hash[0].trim256() & INT_MASK).getuint() % ARRAYLEN(arrOrder);
+
+    for (unsigned int i = 0; i < 4; i++)
     {
         switch (arrOrder[nOrder][i]) 
         {
@@ -340,11 +250,6 @@ inline uint256 HashZR5(const T1 pbegin, const T1 pend, unsigned int nOrderIn)
             sph_jh512 (&ctx_jh, pStart, nSize);
             sph_jh512_close(&ctx_jh, pPutResult);
             break;
-        case KECCAK:
-            sph_keccak512_init(&ctx_keccak);
-            sph_keccak512 (&ctx_keccak, pStart, nSize);
-            sph_keccak512_close(&ctx_keccak, pPutResult);
-            break;
         case SKEIN:
             sph_skein512_init(&ctx_skein);
             sph_skein512 (&ctx_skein, pStart, nSize);
@@ -354,7 +259,7 @@ inline uint256 HashZR5(const T1 pbegin, const T1 pend, unsigned int nOrderIn)
             break;
         }
 
-        if (i < 4)
+        if (i < 3)
         {
             pStart     = static_cast<const void*>(&hash[i]);
             nSize      = 64;
@@ -362,47 +267,7 @@ inline uint256 HashZR5(const T1 pbegin, const T1 pend, unsigned int nOrderIn)
         }
     }
 
-    return hash[4].trim256();
-}
-
-template<typename T1>
-inline uint256 HashSkein(const T1 pbegin, const T1 pend)
-{
-    static unsigned char pblank[1];
-    pblank[0] = 0;
-
-    uint512 hash;
-
-    const void * pStart = (pbegin == pend ? pblank : static_cast<const void*>(&pbegin[0]));
-    size_t nSize        = (pend - pbegin) * sizeof(pbegin[0]);
-    void * pPutResult   = static_cast<void*>(BEGIN(hash));
-
-    sph_skein512_context ctx_skein;
-    sph_skein512_init(&ctx_skein);
-    sph_skein512 (&ctx_skein, pStart, nSize);
-    sph_skein512_close(&ctx_skein, pPutResult);
-
-    return hash.trim256();
-}
-
-template<typename T1>
-inline uint256 HashGroestl(const T1 pbegin, const T1 pend)
-{
-    static unsigned char pblank[1];
-    pblank[0] = 0;
-
-    uint512 hash;
-
-    const void * pStart = (pbegin == pend ? pblank : static_cast<const void*>(&pbegin[0]));
-    size_t nSize        = (pend - pbegin) * sizeof(pbegin[0]);
-    void * pPutResult   = static_cast<void*>(BEGIN(hash));
-
-    sph_groestl512_context ctx_groestl;
-    sph_groestl512_init(&ctx_groestl);
-    sph_groestl512 (&ctx_groestl, pStart, nSize);
-    sph_groestl512_close(&ctx_groestl, pPutResult);
-
-    return hash.trim256();
+    return hash[3];
 }
 
 #endif

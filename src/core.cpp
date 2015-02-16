@@ -246,44 +246,9 @@ bool CBlockHeader::CheckProofOfWork() const
     return true;
 }
 
-static const unsigned int ALGO_SCRYPT  = 0x00001000;
-static const unsigned int ALGO_SKEIN   = 0x00002000;
-static const unsigned int ALGO_GROESTL = 0x00003000;
-static const unsigned int ALGO_POK_ZR5 = 0x00004000;
-
-uint256 CBlockHeader::GetHash(unsigned int nAlgo) const
-{   
-    // TODO after looking over all the places where this gives compile errors, 
-    // set the default parameter to 0
-    if (nAlgo == 0)
-        nAlgo = this->GetAlgo();
-
-    switch (nAlgo)
-    {
-    case ALGO_SCRYPT:
-        // Caution: scrypt_1024_1_1_256 assumes fixed length of 80 bytes
-        uint256 thash;
-        scrypt_1024_1_1_256(BEGIN(nVersion), BEGIN(thash));
-        return thash;
-    
-    case ALGO_SKEIN:
-        return HashSkein(BEGIN(nVersion), END(nNonce));
-
-    case ALGO_GROESTL:
-        return HashGroestl(BEGIN(nVersion), END(nNonce));
-
-    case ALGO_POK_ZR5:
-        return HashZR5(BEGIN(nVersion), END(hashMerkleRoot), this->GetPoK() >> 16);
-
-    default:
-        // ALGO_SHA256D 
-        return Hash(BEGIN(nVersion), END(nNonce));
-    }
-}
-
 uint256 CBlockHeader::GetHash() const
 {
-    return this->GetHash(this->GetAlgo());
+    return HashZR5(BEGIN(nVersion), END(nNonce)).trim256();
 }
 
 bool CBlock::CheckProofOfWork() const
@@ -291,40 +256,54 @@ bool CBlock::CheckProofOfWork() const
     if (!CBlockHeader::CheckProofOfWork())
         return false;
 
-    if (this->GetAlgo() == ALGO_POK_ZR5)
+    // In order to keep the hashing algorithm with/without PoK as similar as possible, the PoK
+    // has to be set each time, and has to be verified. The difference is the result returned by PoK.
+    // i.e. When the PoK flag is set, the PoK value actually proves knowledge or transaction data.
+    try
     {
-        return (this->GetPoK() == this->CalculateProofOfKnowledge());
-    }
+        return (this->GetPoK() == this->CalculatePoK());
+    } 
+    catch (std::exception& e) {}
 
-    return true;
+    return false;
 }
 
-unsigned int CBlock::CalculateProofOfKnowledge(MapTxSerialized * pmapTxSerialized) const
+unsigned int CBlock::CalculatePoK(MapTxSerialized * pmapTxSerialized) const
 {
-    static const uint256 INT_MASK_256("0xFFFFFFFF");
-
+    static const uint256 INT_MASK("0xFFFFFFFF");
     assert(vtx.size() > 0);
-    
-    uint256 hashTxChooser = Hash(BEGIN(nVersion), END(nVersion), BEGIN(nNonce), END(hashMerkleRoot));
 
-    unsigned int nDeterRand1 = CBigNum((hashTxChooser >>  0) & INT_MASK_256).getuint();
-    unsigned int nDeterRand2 = CBigNum((hashTxChooser >> 32) & INT_MASK_256).getuint();
-    unsigned int nDeterRand3 = CBigNum((hashTxChooser >> 64) & INT_MASK_256).getuint();
+    CBlockHeader header = this->GetBlockHeader();
+    header.nVersion = header.nVersion & (~POK_DATA_MASK);
+
+    // TODO maybe just do this by casting instead? (For speed)
+    // The first block of this hash will be the same from nonce to nonce, so if it is ever
+    // profitable/worth it, miners can implement a midstate similar to the sha256 midstate
+    uint256 hashTxChooser = HashZR5(BEGIN(header.nVersion), END(header.nNonce)).trim256();
+    unsigned int nDeterRand1 = CBigNum((hashTxChooser >>  0) & INT_MASK).getuint();
+
+    if (!IsPoKBlock())
+    {
+        return nDeterRand1 & POK_DATA_MASK;
+    }
+    
+    unsigned int nDeterRand2 = CBigNum((hashTxChooser >> 32) & INT_MASK).getuint();
+    unsigned int nDeterRand3 = CBigNum((hashTxChooser >> 64) & INT_MASK).getuint();
     
     unsigned int nTxIndex =  nDeterRand1 % vtx.size();
 
-    const std::vector<unsigned char> * vTxData = NULL;
+    const std::vector<unsigned char> * pvTxData = NULL;
     if (pmapTxSerialized != NULL)
     {
         MapTxSerialized::const_iterator it = pmapTxSerialized->find(std::make_pair(this->hashMerkleRoot, nTxIndex));
         if (it != pmapTxSerialized->end())
         {
-            vTxData = &(it->second);
+            pvTxData = &(it->second);
         }
     }
     
     std::vector<unsigned char> vTxData2;
-    if (pmapTxSerialized == NULL || vTxData == NULL)
+    if (pmapTxSerialized == NULL || pvTxData == NULL)
     {
         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
         ss << vtx[nTxIndex];
@@ -336,27 +315,28 @@ unsigned int CBlock::CalculateProofOfKnowledge(MapTxSerialized * pmapTxSerialize
         }
     }
 
-    if (vTxData == NULL)
-        vTxData = &vTxData2;
+    if (pvTxData == NULL)
+        pvTxData = &vTxData2;
     
-    assert((vTxData->end() - vTxData->begin()) >= 4);
+    assert((pvTxData->end() - pvTxData->begin()) >= 4);
     
-    unsigned int nDeterRandIndex = nDeterRand2 % (vTxData->size() - 3);
-    unsigned int nRandTxData = *((unsigned int *)(&(vTxData->begin()[nDeterRandIndex])));
+    unsigned int nDeterRandIndex = nDeterRand2 % (pvTxData->size() - 3);
+    unsigned int nRandTxData = *((unsigned int *)(&(pvTxData->begin()[nDeterRandIndex])));
 
-    unsigned int nPoK = (nRandTxData ^ nDeterRand3) & POK_MASK;
+    unsigned int nPoK = (nRandTxData ^ nDeterRand3) & POK_DATA_MASK;
 
     // printf("hashTxChooser: %s\n", hashTxChooser.ToString().c_str());
     // printf("nDeterRand1: %u\n", nDeterRand1);
     // printf("nDeterRand2: %u\n", nDeterRand2);
+    // printf("nDeterRand3: %u\n", nDeterRand3);
     // printf("vtx size: %lu\n", vtx.size());
     // printf("nTxIndex: %u\n", nTxIndex);
-    // printf("tx: %s\n", HexStr(vTxData.begin(), vTxData.end()).c_str());
-    // printf("tx length: %ld\n", (vTxData.end() - vTxData.begin()));
+    // printf("tx: %s\n", HexStr(pvTxData.begin(), pvTxData.end()).c_str());
+    // printf("tx length: %ld\n", (pvTxData.end() - pvTxData.begin()));
     // printf("nDeterRandIndex: %u\n", nDeterRandIndex);
     // printf("nRandTxData: %u\n", nRandTxData);
     // printf("nPoK: %u\n", nPoK);
-    // std::vector<unsigned char> vTxDataSample(&(vTxData.begin()[nDeterRandIndex]), &(vTxData.begin()[nDeterRandIndex+4]));
+    // std::vector<unsigned char> vTxDataSample(&(pvTxData->begin()[nDeterRandIndex]), &(pvTxData->end()[nDeterRandIndex+4]));
     // printf("vTxDataSample: %s\n", HexStr(vTxDataSample.begin(), vTxDataSample.end()).c_str());
     // std::vector<unsigned char> data(BEGIN(nVersion), END(hashMerkleRoot));
     // printf("blockheader: %s\n", HexStr(data.begin(), data.end()).c_str());
@@ -419,7 +399,7 @@ void CBlock::print() const
     LogPrintf("CBlock(hash=%s, ver=%d, pok=%u, nonce=%u, nTime=%llu, nBits=%08x, hashPrevBlock=%s, hashMerkleRoot=%s, vtx.size()=%u)\n",
         GetHash().ToString(),
         nVersion,
-        nProofOfKnowledge,
+        GetPoK(),
         nNonce,
         nTime,
         nBits,

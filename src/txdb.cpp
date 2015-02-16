@@ -212,11 +212,10 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
                 pindexNew->nDataPos          = diskindex.nDataPos;
                 pindexNew->nUndoPos          = diskindex.nUndoPos;
                 pindexNew->nVersion          = diskindex.nVersion;
-                pindexNew->nProofOfKnowledge = diskindex.nProofOfKnowledge;
-                pindexNew->nNonce            = diskindex.nNonce;
+                pindexNew->hashMerkleRoot    = diskindex.hashMerkleRoot;
                 pindexNew->nTime             = diskindex.nTime;
                 pindexNew->nBits             = diskindex.nBits;
-                pindexNew->hashMerkleRoot    = diskindex.hashMerkleRoot;
+                pindexNew->nNonce            = diskindex.nNonce;
                 pindexNew->nStatus           = diskindex.nStatus;
                 pindexNew->nTx               = diskindex.nTx;
 

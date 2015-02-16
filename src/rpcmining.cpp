@@ -220,6 +220,50 @@ Value setgenerate(const Array& params, bool fHelp)
     return Value::null;
 }
 
+Value getusepok(const json_spirit::Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "getusepok\n"
+            "\nReturn if the default block creator will use proof of knowledge or not. The default is false. \n"
+            "It is set with the command line argument -usepok (or bitcoin.conf setting usepok)\n"
+            "It can also be set with the setusepok call.\n"
+            "\nResult\n"
+            "true|false      (boolean) If the server is set to create blocks using proof of knowledge\n"
+            "\nExamples:\n"
+            + HelpExampleCli("getusepok", "")
+            + HelpExampleRpc("getusepok", "")
+        );
+    return GetBoolArg("-usepok", false);
+}
+
+Value setusepok(const json_spirit::Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "setusepok usepok\n"
+            "\nSet 'usepok' true or false to turn on or off the use of pok when creating blocks.\n"
+            "See the getusepok call for the current setting.\n"
+            "\nArguments:\n"
+            "1. usepok           (boolean, required) Set to true to turn on usage of proof of knowledge in block building, and vice versa.\n"
+            "\nExamples:\n"
+            "\nSet usepok to true\n"
+            + HelpExampleCli("setusepok", "true") +
+            "\nCheck the setting:\n"
+            + HelpExampleCli("getusepok", "") +
+            "\nTurn off usepok\n"
+            + HelpExampleCli("setusepok", "false") +
+            "\nUsing json rpc\n"
+            + HelpExampleRpc("setgenerate", "true, 1")
+        );
+    bool fUsePoK = true;
+    if (params.size() > 0)
+        fUsePoK = params[0].get_bool();
+
+    mapArgs["-usepok"] = (fUsePoK ? "1" : "0");
+    return Value::null;
+}
+
 Value gethashespersec(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -277,6 +321,7 @@ Value getmininginfo(const Array& params, bool fHelp)
 #ifdef ENABLE_WALLET
     obj.push_back(Pair("generate",         getgenerate(params, false)));
     obj.push_back(Pair("hashespersec",     gethashespersec(params, false)));
+    obj.push_back(Pair("usepok",           GetBoolArg("-usepok", false)));
 #endif
     return obj;
 }
@@ -307,16 +352,26 @@ Value getwork(const Array& params, bool fHelp)
         );
 
     if (CLIENT_VERSION_IS_RELEASE && vNodes.empty())
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Bitcoin is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "ZiftrCOIN is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Bitcoin is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "ZiftrCOIN is downloading blocks...");
 
-    static map<uint256, CBlock*> mapNewBlock;    // FIXME: thread safety
+    typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;
+    static mapNewBlock_t mapNewBlock;    // FIXME: thread safety
     static vector<CBlockTemplate*> vNewBlockTemplate;
 
-    if (params.size() == 0)
+    if (params.size() == 0 || params[0].get_str().size() == 4 || params[0].get_str().size() == 5)
     {
+        bool fGetPoKWork = GetBoolArg("-usepok", false);
+        if (params.size() != 0)
+        {
+            string strPoKBool = params[0].get_str();
+            if (strPoKBool != "true" && strPoKBool != "false")
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Must be true or false (if not providing successful work data)");
+            fGetPoKWork = (params[0].get_str() == "true");
+        }
+
         // Update block
         static unsigned int nTransactionsUpdatedLast;
         static CBlockIndex* pindexPrev;
@@ -355,48 +410,82 @@ Value getwork(const Array& params, bool fHelp)
 
         // Update nTime
         UpdateTime(*pblock, pindexPrev);
-        pblock->nProofOfKnowledge = 0;
+        pblock->SetPoK(0);
+        pblock->SetPoKFlag(fGetPoKWork);
         pblock->nNonce = 0;
 
-        // Update coinbase script sig
-        UpdateCoinbaseScriptSig(pblock, pindexPrev);
+        // Update nExtraNonce
+        static unsigned int nExtraNonce = 0;
+        IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
         // Save for submitting later
-        mapNewBlock[pblock->hashMerkleRoot] = pblock;
+        mapNewBlock[pblock->hashMerkleRoot] = make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);
 
         uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
         Object result;
-        CBlockHeader header = pblock->GetBlockHeader();
-        result.push_back(Pair("data", HexStr(BEGIN(header.nVersion), END(header.hashMerkleRoot))));
+        // struct
+        // {
+        //     int nVersion;
+        //     uint256 hashPrevBlock;
+        //     uint256 hashMerkleRoot;
+        //     unsigned int nTime;
+        //     unsigned int nBits;
+        //     unsigned int nNonce;
+        // } tmp;
+
+        // tmp.nVersion       = pblock->nVersion;
+        // tmp.hashPrevBlock  = pblock->hashPrevBlock;
+        // tmp.hashMerkleRoot = pblock->hashMerkleRoot;
+        // tmp.nTime          = pblock->nTime;
+        // tmp.nBits          = pblock->nBits;
+        // tmp.nNonce         = pblock->nNonce;
+
+        // // Byte swap all the input buffer
+        // for (unsigned int i = 0; i < sizeof(tmp)/4; i++)
+        //     ((unsigned int*)&tmp)[i] = ByteReverse(((unsigned int*)&tmp)[i]);
+
+        result.push_back(Pair("data", HexStr(BEGIN(pblock->nVersion), END(pblock->nNonce))));
         result.push_back(Pair("target", HexStr(BEGIN(hashTarget), END(hashTarget))));
+
+        if (fGetPoKWork)
+        {
+            Array txs;
+            for (size_t i = 0; i < pblock->vtx.size(); i++)
+            {
+                CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+                ss << pblock->vtx[i];
+                txs.push_back(HexStr(ss.begin(), ss.end()));
+            }
+            result.push_back(Pair("txs", txs));
+        }
+        
         return result;
     }
     else
     {
         // Parse parameters
         vector<unsigned char> vchData = ParseHex(params[0].get_str());
-        if (vchData.size() != 128)
+        if (vchData.size() != 80)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter");
         CBlock* pdata = (CBlock*)&vchData[0];
 
         // Byte reverse
-        for (int i = 0; i < 128/4; i++)
-            ((unsigned int*)pdata)[i] = ByteReverse(((unsigned int*)pdata)[i]);
+        // for (int i = 0; i < 80/4; i++)
+        //     ((unsigned int*)pdata)[i] = ByteReverse(((unsigned int*)pdata)[i]);
 
         // Get saved block
         if (!mapNewBlock.count(pdata->hashMerkleRoot))
             return false;
-        
-        CBlock* pblock = mapNewBlock[pdata->hashMerkleRoot];
+        CBlock* pblock = mapNewBlock[pdata->hashMerkleRoot].first;
 
         // Only need to copy over the things that might have
         // been changed while mining, everything else is saved
-        // Don't think we need to copy the coinbase scripsig anymore, since no extraNonce
-        // UpdateCoinbaseScriptSig(pblock, pindexPrev);
-        pblock->nProofOfKnowledge = pdata->nProofOfKnowledge;
+        pblock->SetPoK(pdata->GetPoK());
+        pblock->SetPoKFlag(pdata->IsPoKBlock());
         pblock->nNonce = pdata->nNonce;
         pblock->nTime = pdata->nTime;
+        pblock->vtx[0].vin[0].scriptSig = mapNewBlock[pdata->hashMerkleRoot].second;
         pblock->hashMerkleRoot = pblock->BuildMerkleTree();
 
         assert(pwalletMain != NULL);
@@ -524,7 +613,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
 
     // Update nTime
     UpdateTime(*pblock, pindexPrev);
-    pblock->nProofOfKnowledge = 0;
+    pblock->SetPoK(0);
     pblock->nNonce = 0;
 
     Array transactions;

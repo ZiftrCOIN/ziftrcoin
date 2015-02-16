@@ -183,8 +183,8 @@ std::string GetWarnings(std::string strFor);
 bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
 bool ActivateBestChain(CValidationState &state);
-int64_t GetBlockValue(int nHeight, int64_t nFees);
-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, unsigned int nAlgo);
+int64_t GetBlockValue(int nHeight, int64_t nFees, bool fUsesPoK);
+unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock);
 
 void UpdateTime(CBlockHeader& block, const CBlockIndex* pindexPrev);
 
@@ -754,11 +754,10 @@ public:
 
     // block header (no need to store hashPrevBlock)
     int nVersion;
-    unsigned int nProofOfKnowledge;
-    unsigned int nNonce;
+    uint256 hashMerkleRoot;
     unsigned int nTime;
     unsigned int nBits;
-    uint256 hashMerkleRoot;
+    unsigned int nNonce;
 
     // (memory only) Sequencial id assigned to distinguish order in which blocks are received.
     uint32_t nSequenceId;
@@ -785,11 +784,10 @@ public:
         nTimeReceived = 0;
 
         nVersion          = 0;
-        nProofOfKnowledge = 0;
-        nNonce            = 0;
+        hashMerkleRoot    = 0;
         nTime             = 0;
         nBits             = 0;
-        hashMerkleRoot    = 0;
+        nNonce            = 0;
     }
 
     CBlockIndex(CBlockHeader& block)
@@ -811,11 +809,10 @@ public:
         nTimeReceived = 0;
 
         nVersion          = block.nVersion;
-        nProofOfKnowledge = block.nProofOfKnowledge;
-        nNonce            = block.nNonce;
+        hashMerkleRoot    = block.hashMerkleRoot;
         nTime             = block.nTime;
         nBits             = block.nBits;
-        hashMerkleRoot    = block.hashMerkleRoot;
+        nNonce            = block.nNonce;
     }
 
     CDiskBlockPos GetBlockPos() const {
@@ -840,14 +837,18 @@ public:
     {
         CBlockHeader block;
         block.nVersion          = nVersion;
-        block.nProofOfKnowledge = nProofOfKnowledge;
-        block.nNonce            = nNonce;
         block.nTime             = nTime;
         block.nBits             = nBits;
+        block.nNonce            = nNonce;
         if (pprev)
             block.hashPrevBlock = pprev->GetBlockHash();
         block.hashMerkleRoot    = hashMerkleRoot;
         return block;
+    }
+
+    unsigned int GetVersion() const 
+    {
+        return this->nVersion & VERSION_MASK;
     }
 
     uint256 GetBlockHash() const
@@ -952,12 +953,11 @@ public:
 
         // block header
         READWRITE(this->nVersion);
-        READWRITE(this->nProofOfKnowledge);
+        READWRITE(this->hashPrev);
+        READWRITE(this->hashMerkleRoot);
         READWRITE(this->nNonce);
         READWRITE(this->nTime);
         READWRITE(this->nBits);
-        READWRITE(this->hashPrev);
-        READWRITE(this->hashMerkleRoot);
     )
 
     uint256 GetBlockHash() const

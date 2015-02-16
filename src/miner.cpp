@@ -357,14 +357,16 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
         nLastBlockSize = nBlockSize;
         LogPrintf("CreateNewBlock(): total size %u\n", nBlockSize);
 
-        pblock->vtx[0].vout[0].nValue = GetBlockValue(pindexPrev->nHeight+1, nFees);
+        pblock->vtx[0].vout[0].nValue = GetBlockValue(pindexPrev->nHeight+1, nFees, GetBoolArg("-usepok", false));
         pblocktemplate->vTxFees[0] = -nFees;
 
         // Fill in header
+        pblock->SetPoKFlag(GetBoolArg("-usepok", false));
         pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
         UpdateTime(*pblock, pindexPrev);
         pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock);
-        UpdateCoinbaseScriptSig(pblock, pindexPrev);
+        pblock->nNonce         = 0;
+        pblock->vtx[0].vin[0].scriptSig = CScript() << OP_0 << OP_0;
         pblocktemplate->vTxSigOps[0] = GetSigOpCount(pblock->vtx[0]);
 
         CBlockIndex indexDummy(*pblock);
@@ -379,10 +381,18 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
     return pblocktemplate.release();
 }
 
-void UpdateCoinbaseScriptSig(CBlock* pblock, CBlockIndex* pindexPrev)
+void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& nExtraNonce)
 {
-    unsigned int nHeight = pindexPrev->nHeight + 1; // Height first in coinbase required
-    pblock->vtx[0].vin[0].scriptSig = (CScript() << CScriptNum(nHeight));
+    // Update nExtraNonce
+    static uint256 hashPrevBlock;
+    if (hashPrevBlock != pblock->hashPrevBlock)
+    {
+        nExtraNonce = 0;
+        hashPrevBlock = pblock->hashPrevBlock;
+    }
+    nExtraNonce++;
+    unsigned int nHeight = pindexPrev->nHeight+1; // Height first in coinbase required
+    pblock->vtx[0].vin[0].scriptSig = (CScript() << CScriptNum(nHeight) << CScriptNum(nExtraNonce));
     unsigned int nScriptSigSize = pblock->vtx[0].vin[0].scriptSig.size();
     assert(MIN_COINBASE_SCRIPTSIG_SIZE <= nScriptSigSize && nScriptSigSize <= MAX_COINBASE_SCRIPTSIG_SIZE);
 
@@ -406,7 +416,7 @@ int64_t nHPSTimerStart = 0;
 //
 // (nDontTry should always be zero except for when simulating difficulty retargeting)
 //
-unsigned int static ScanHash(CBlock *pblock, unsigned int nTry, unsigned int nDontTry, MapTxSerialized * mapTxSerialized) 
+unsigned int static ScanHash(CBlock *pblock, unsigned int nTry, unsigned int nDontTry, MapTxSerialized * pmapTxSerialized) 
 {
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
     uint256 hashBlockHeader;
@@ -414,8 +424,7 @@ unsigned int static ScanHash(CBlock *pblock, unsigned int nTry, unsigned int nDo
     for (unsigned int i = 0; i < nTry; i++) 
     {
         pblock->nNonce++;
-        if (pblock->GetAlgo() == ALGO_POK_ZR5)
-            pblock->SetPoK(pblock->CalculateProofOfKnowledge(mapTxSerialized));
+        pblock->SetPoK(pblock->CalculatePoK(pmapTxSerialized));
         hashBlockHeader = pblock->GetHash();
 
         if (hashBlockHeader <= hashTarget && i >= nDontTry)
@@ -448,7 +457,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
     if (hash > hashTarget)
         return error("BitcoinMiner : solved block did not have enought work");
 
-    if (pblock->CalculateProofOfKnowledge() != pblock->nProofOfKnowledge)
+    if (pblock->CalculatePoK() != pblock->GetPoK())
         return error("BitcoinMiner : solved block did not have consistent PoK");
 
     //// debug print
@@ -495,6 +504,7 @@ void static BitcoinMiner(CWallet *pwallet)
     // Each thread has its own key and counter
     // Use a reserve key because may not want to keep the key if you don't mine anything
     CReserveKey reserveKey(pwallet);
+    unsigned int nExtraNonce = 0;
 
     try { 
         while (true) {
@@ -517,7 +527,7 @@ void static BitcoinMiner(CWallet *pwallet)
             }
 
             CBlock *pblock = &pblocktemplate->block;
-            UpdateCoinbaseScriptSig(pblock, pindexPrev);
+            IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
             MapTxSerialized mapTxSerialized;
 
             LogPrintf("Running BitcoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
