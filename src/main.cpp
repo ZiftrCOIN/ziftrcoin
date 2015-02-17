@@ -30,7 +30,7 @@ using namespace std;
 using namespace boost;
 
 #if defined(NDEBUG)
-# error "Bitcoin cannot be compiled without assertions."
+# error "ZiftrCOIN cannot be compiled without assertions."
 #endif
 
 //
@@ -1397,6 +1397,7 @@ static const int64_t TARGET_TIMESPAN    = RETARGET_INTERVAL * TARGET_SPACING;   
 // minimum amount of work that could possibly be required nTime after
 // minimum work required was nBase
 //
+
 unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 {
     const CBigNum& bnLimit = Params().ProofOfWorkLimit();
@@ -1410,7 +1411,8 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
     while (nTime > 0 && bnResult < bnLimit)
     {
         // Maximum adjustment...
-        bnResult *= (TARGET_TIMESPAN + (TARGET_TIMESPAN/2)) / TARGET_TIMESPAN;
+        bnResult *= (TARGET_TIMESPAN + (TARGET_TIMESPAN/2));
+        bnResult /= TARGET_TIMESPAN;
         
         // ... in best-case time
         nTime -= (TARGET_TIMESPAN + (TARGET_TIMESPAN/2));
@@ -1907,7 +1909,7 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
 static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 
 void ThreadScriptCheck() {
-    RenameThread("bitcoin-scriptch");
+    RenameThread("ziftrcoin-scriptch");
     scriptcheckqueue.Thread();
 }
 

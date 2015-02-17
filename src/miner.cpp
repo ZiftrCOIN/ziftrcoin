@@ -16,7 +16,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 //
-// BitcoinMiner
+// ZiftrCOINMiner
 //
 
 
@@ -455,14 +455,14 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
     if (hash > hashTarget)
-        return error("BitcoinMiner : solved block did not have enought work");
+        return error("ZiftrCOINMiner : solved block did not have enought work");
 
     if (pblock->CalculatePoK() != pblock->GetPoK())
-        return error("BitcoinMiner : solved block did not have consistent PoK");
+        return error("ZiftrCOINMiner : solved block did not have consistent PoK");
 
     //// debug print
     //pblock->print();
-    LogPrintf("BitcoinMiner:\n");
+    LogPrintf("ZiftrCOINMiner:\n");
     LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashTarget.GetHex());
     LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
 
@@ -470,7 +470,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
     {
         LOCK(cs_main);
         if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
-            return error("BitcoinMiner : generated block is stale");
+            return error("ZiftrCOINMiner : generated block is stale");
 
         // Remove key from key pool
         reserveKey.KeepKey();
@@ -486,7 +486,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
         if (!ProcessBlock(state, NULL, pblock))
         {
             //pblock->print();
-            return error("BitcoinMiner : ProcessBlock, block not accepted");
+            return error("ZiftrCOINMiner : ProcessBlock, block not accepted");
         }
     }
 
@@ -495,11 +495,11 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
 
 // extern unsigned int nDontTry;
 
-void static BitcoinMiner(CWallet *pwallet)
+void static ZiftrCOINMiner(CWallet *pwallet)
 {
     LogPrintf("ZiftrCOINMiner started\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
-    RenameThread("bitcoin-miner");
+    RenameThread("ziftrcoin-miner");
 
     // Each thread has its own key and counter
     // Use a reserve key because may not want to keep the key if you don't mine anything
@@ -522,7 +522,7 @@ void static BitcoinMiner(CWallet *pwallet)
             // Automatically delete old block template after each round
             auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reserveKey));
             if (!pblocktemplate.get()) {
-                LogPrintf("Error in BitcoinMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
+                LogPrintf("Error in ZiftrCOINMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
                 return;
             }
 
@@ -530,7 +530,7 @@ void static BitcoinMiner(CWallet *pwallet)
             IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
             MapTxSerialized mapTxSerialized;
 
-            LogPrintf("Running BitcoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
+            LogPrintf("Running ZiftrCOINMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
                    ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
             int64_t nStart = GetTime();
@@ -601,7 +601,7 @@ void static BitcoinMiner(CWallet *pwallet)
     }
     catch (boost::thread_interrupted)
     {
-        LogPrintf("BitcoinMiner terminated\n");
+        LogPrintf("ZiftrCOINMiner terminated\n");
         throw;
     }
 }
@@ -626,7 +626,7 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet, int nThreads)
 
     minerThreads = new boost::thread_group();
     for (int i = 0; i < nThreads; i++)
-        minerThreads->create_thread(boost::bind(&BitcoinMiner, pwallet));
+        minerThreads->create_thread(boost::bind(&ZiftrCOINMiner, pwallet));
 }
 
 #endif

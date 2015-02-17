@@ -67,7 +67,7 @@ public:
 };
 
 /**
- * Bitcoin RPC command dispatcher.
+ * ZiftrCOIN RPC command dispatcher.
  */
 class CRPCTable
 {

@@ -1,11 +1,11 @@
 *.tar.gz
 
 *.exe
-src/bitcoin
-src/bitcoind
-src/bitcoin-cli
-src/test/test_bitcoin
-src/qt/test/test_bitcoin-qt
+src/qt/test/test_ziftrcoin-qt
+src/qt/ziftrcoin-qt
+src/test/test_ziftrcoin
+src/ziftrcoin-cli
+src/ziftrcoind
 
 Makefile.in
 aclocal.m4

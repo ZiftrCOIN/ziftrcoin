@@ -17,17 +17,17 @@ BOOST_AUTO_TEST_CASE(subsidy_limit_test)
 	uint64_t nSum = 45000000000000; // Genesis block reward is this much
     int nNumDistrBlocks = Params().NumIncrBlocks() + Params().NumConstBlocks() + Params().NumDecrBlocks();
     for (int nHeight = 1; nHeight <= nNumDistrBlocks; nHeight++) {
-        uint64_t nSubsidy = GetBlockValue(nHeight, 0);
+        uint64_t nSubsidy = GetBlockValue(nHeight, 0, false);
         BOOST_CHECK(nSubsidy <= MAX_SUBSIDY);
         nSum += nSubsidy;
         BOOST_CHECK(MoneyRange(nSum));
 
-        if (nHeight < 50 || nHeight % (365*24*60) == 0)
-            printf("height: %i\nreward: %llu\n", nHeight, nSubsidy);
+        // if (nHeight < 50 || nHeight % (365*24*60) == 0)
+        //     printf("height: %i\nreward: %llu\n", nHeight, nSubsidy);
             //printf("I : %i, %llu\n", nHeight/nOneYear, nSum);
     }
     printf("S : %llu\n", nSum);
-    BOOST_CHECK(nSum == 1000200853746000ULL);
+    BOOST_CHECK(nSum == 1000922012424000ULL);
     
 
     // nSum = 45000000000000 - MAX_SUBSIDY;

@@ -111,6 +111,7 @@ static bool CheckNBits(unsigned int nbits1, int64_t time1, unsigned int nbits2, 
     required.SetCompact(ComputeMinWork(nbits1, deltaTime));
     CBigNum have;
     have.SetCompact(nbits2);
+
     return (have <= required);
 }
 
@@ -122,7 +123,12 @@ BOOST_AUTO_TEST_CASE(DoS_checknbits)
     // These are the block-chain checkpoint blocks
     typedef std::map<int64_t, unsigned int> BlockData;
     BlockData chainData =
-        map_list_of(1239852051,486604799);
+        map_list_of (1424123045, 0x1e0fffff)
+                    (1424123087, 0x1e0fffff)
+                    (1424123113, 0x1e08ffff)
+                    (1424123156, 0x1e06bfff)
+                    (1424123238, 0x1e050fff)
+                    (1424124043, 0x1e03cbff);
 
     // Make sure CheckNBits considers every combination of block-chain-lock-in-points
     // "sane":
@@ -139,12 +145,12 @@ BOOST_AUTO_TEST_CASE(DoS_checknbits)
     BlockData::value_type lastcheck = *(chainData.rbegin());
 
     // First checkpoint difficulty at or a while after the last checkpoint time should fail when
-    // compared to last checkpoint
-    BOOST_CHECK(!CheckNBits(firstcheck.second, lastcheck.first+60*10, lastcheck.second, lastcheck.first));
-    BOOST_CHECK(!CheckNBits(firstcheck.second, lastcheck.first+60*60*24*14, lastcheck.second, lastcheck.first));
+    // compared to last checkpoint0
+    BOOST_CHECK(!CheckNBits(firstcheck.second, lastcheck.first+5*60, lastcheck.second, lastcheck.first));
+    BOOST_CHECK(!CheckNBits(firstcheck.second, lastcheck.first+10*60, lastcheck.second, lastcheck.first));
 
     // ... but OK if enough time passed for difficulty to adjust downward:
-    BOOST_CHECK(CheckNBits(firstcheck.second, lastcheck.first+60*60*24*365*4, lastcheck.second, lastcheck.first));
+    BOOST_CHECK(CheckNBits(firstcheck.second, lastcheck.first+20*60, lastcheck.second, lastcheck.first));
 }
 
 CTransaction RandomOrphan()
