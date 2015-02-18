@@ -1376,11 +1376,11 @@ int64_t GetBlockValue(int nHeight, int64_t nFees, bool fUsesPoK)
     int64_t nBlockReward = (int64_t)(dCoinsPerDay / (24 * 60) * COIN);
     nBlockReward -= Params().GetGiveAwayCoinsTotal() / (2 * Params().GetMidwayPoint() * 24 * 60);
 
-    if (fUsesPoK)
-        nBlockReward = (nBlockReward * 105 / 100);
-
     if (nBlockReward < MIN_SUBSIDY)
         nBlockReward = MIN_SUBSIDY;
+
+    if (fUsesPoK)
+        nBlockReward = (nBlockReward * 105 / 100);
     
     return nBlockReward + nFees;
 }
