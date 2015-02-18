@@ -15,15 +15,15 @@ static const bool fEnabled = false;
 BOOST_AUTO_TEST_SUITE(miner_tests)
 
 
-static struct {
-    unsigned char sigR[32];
-    unsigned char sigS[32];
-} blockinfo[] = {
-    {
-        {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 
-        {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-    }
-};
+// static struct {
+//     unsigned char sigR[32];
+//     unsigned char sigS[32];
+// } blockinfo[] = {
+//     {
+//         {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 
+//         {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+//     }
+// };
 
 // NOTE: These tests rely on CreateNewBlock doing its own self-validation!
 BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
@@ -45,23 +45,23 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     // We can't make transactions until we have inputs
     // Therefore, load 100 blocks :)
     std::vector<CTransaction*>txFirst;
-    for (unsigned int i = 0; i < sizeof(blockinfo)/sizeof(*blockinfo); ++i)
-    {
-        CBlock *pblock = &pblocktemplate->block; // pointer for convenience
-        pblock->nVersion = 1;
-        pblock->nTime = chainActive.Tip()->GetMedianTimePast()+1;
-        pblock->vtx[0].vin[0].scriptSig = CScript();
-        //pblock->CopyHeaderSigFrom(blockinfo[i].sigR, blockinfo[i].sigS);
-        pblock->vtx[0].vin[0].scriptSig.push_back(chainActive.Height());
-        pblock->vtx[0].vout[0].scriptPubKey = CScript();
-        if (txFirst.size() < 2)
-            txFirst.push_back(new CTransaction(pblock->vtx[0]));
-        pblock->hashMerkleRoot = pblock->BuildMerkleTree();
-        CValidationState state;
-        BOOST_CHECK(ProcessBlock(state, NULL, pblock));
-        BOOST_CHECK(state.IsValid());
-        pblock->hashPrevBlock = pblock->GetHash();
-    }
+    // for (unsigned int i = 0; i < sizeof(blockinfo)/sizeof(*blockinfo); ++i)
+    // {
+    //     CBlock *pblock = &pblocktemplate->block; // pointer for convenience
+    //     pblock->nVersion = 1;
+    //     pblock->nTime = chainActive.Tip()->GetMedianTimePast()+1;
+    //     pblock->vtx[0].vin[0].scriptSig = CScript();
+    //     //pblock->CopyHeaderSigFrom(blockinfo[i].sigR, blockinfo[i].sigS);
+    //     pblock->vtx[0].vin[0].scriptSig.push_back(chainActive.Height());
+    //     pblock->vtx[0].vout[0].scriptPubKey = CScript();
+    //     if (txFirst.size() < 2)
+    //         txFirst.push_back(new CTransaction(pblock->vtx[0]));
+    //     pblock->hashMerkleRoot = pblock->BuildMerkleTree();
+    //     CValidationState state;
+    //     BOOST_CHECK(ProcessBlock(state, NULL, pblock));
+    //     BOOST_CHECK(state.IsValid());
+    //     pblock->hashPrevBlock = pblock->GetHash();
+    // }
     delete pblocktemplate;
 
     // Just to make sure we can still make simple blocks

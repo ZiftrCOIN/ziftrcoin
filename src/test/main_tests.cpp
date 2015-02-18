@@ -13,46 +13,40 @@ BOOST_AUTO_TEST_SUITE(main_tests)
 BOOST_AUTO_TEST_CASE(subsidy_limit_test)
 {
     // Takes a little longer, but is more accurate
-    
-	uint64_t nSum = 45000000000000; // Genesis block reward is this much
-    int nNumDistrBlocks = Params().NumIncrBlocks() + Params().NumConstBlocks() + Params().NumDecrBlocks();
-    for (int nHeight = 1; nHeight <= nNumDistrBlocks; nHeight++) {
-        uint64_t nSubsidy = GetBlockValue(nHeight, 0, false);
-        BOOST_CHECK(nSubsidy <= MAX_SUBSIDY);
-        nSum += nSubsidy;
-        BOOST_CHECK(MoneyRange(nSum));
 
-        // if (nHeight < 50 || nHeight % (365*24*60) == 0)
-        //     printf("height: %i\nreward: %llu\n", nHeight, nSubsidy);
-            //printf("I : %i, %llu\n", nHeight/nOneYear, nSum);
+    int64_t nMinSum = 0;
+    int64_t nMaxSum = 0;
+
+    int nTotalDays = 2 * Params().GetMidwayPoint();
+    for (int nDay = 0; nDay < nTotalDays; nDay++) 
+    {    
+        int nHeight = nDay * 24 * 60;
+
+        nMinSum += GetBlockValue(nHeight, 0, false);
+        nMaxSum += GetBlockValue(nHeight, 0, true);
+
+        int64_t nMinSubsidy = GetBlockValue(nHeight + 1, 0, false);
+        int64_t nMaxSubsidy = GetBlockValue(nHeight + 1, 0, true);
+
+        BOOST_CHECK(nMinSubsidy >= MIN_SUBSIDY);
+        BOOST_CHECK(nMaxSubsidy >= MIN_SUBSIDY);
+
+        // Should have the same value through out the day (1440 block period)
+        BOOST_CHECK(nMinSubsidy == GetBlockValue(nHeight + 24 * 60 - 2, 0, false));
+        BOOST_CHECK(nMaxSubsidy == GetBlockValue(nHeight + 24 * 60 - 2, 0, true));
+
+        nMinSum += nMinSubsidy * (24 * 60 - 1);
+        nMaxSum += nMaxSubsidy * (24 * 60 - 1);
+
+        BOOST_CHECK(MoneyRange(nMinSum));
+        BOOST_CHECK(MoneyRange(nMaxSum));
     }
-    printf("S : %llu\n", nSum);
-    BOOST_CHECK(nSum == 1000922012424000ULL);
-    
 
-    // nSum = 45000000000000 - MAX_SUBSIDY;
-    // for (int nHeight = 0; nHeight < Params().LastMaxSubsidyBlock(); nHeight += 1000) {
-    //     uint64_t nSubsidy = GetBlockValue(nHeight, 0);
-    //     BOOST_CHECK(nSubsidy == MAX_SUBSIDY);
-    //     nSum += nSubsidy * 1000;
-    //     BOOST_CHECK(MoneyRange(nSum));
+    // printf("min sum : %llu\n", nMinSum);
+    // printf("max sum : %llu\n", nMaxSum);
 
-    //     if (nHeight % nPrintDelta == 0) printf("I : %i, %llu\n", nHeight/nOneYear, nSum);
-    // }
-    // printf("S : %llu\n", nSum); // 1000200853746000
-    // // Have included up to subsidies Params().LastMaxSubsidyBlock()-1 at this point
-
-    // // The decreasing period can be calculated as an arithmetic series
-    // // T1 + T2 + T3 + ... + TN = N * (T1 + TN) / 2
-    // uint64_t N = (Params().LastDecreasingSubsidyBlock() - Params().LastMaxSubsidyBlock());
-    // uint64_t T1 = GetBlockValue(Params().LastMaxSubsidyBlock(), 0);
-    // uint64_t TN = GetBlockValue(Params().LastDecreasingSubsidyBlock(), 0);
-    // uint64_t S = (N * (T1 + TN));
-    // BOOST_CHECK(S % 2 == 0);
-    // S /= 2;
-    // nSum += S;
-    // BOOST_CHECK(MoneyRange(nSum));
-    // printf("S: %llu\n", S);
+    BOOST_CHECK(nMinSum == 993742021533401ULL);
+    BOOST_CHECK(nMaxSum == 1041179115130496ULL);
     
 }
 

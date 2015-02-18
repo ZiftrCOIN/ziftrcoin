@@ -17,6 +17,7 @@
 #include "ui_interface.h"
 #include "util.h"
 
+#include <math.h>
 #include <sstream>
 
 #include <boost/algorithm/string/replace.hpp>
@@ -961,12 +962,11 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         return state.DoS(100, error("AcceptToMemoryPool: : coinbase as individual tx"),
                          REJECT_INVALID, "coinbase");
 
-    // TODO
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
-    // string reason;
-    // if (Params().NetworkID() == CChainParams::MAIN && !IsStandardTx(tx, reason))
-    //     return state.DoS(0, error("AcceptToMemoryPool : nonstandard transaction: %s", reason),
-    //                      REJECT_NONSTANDARD, reason);
+    string reason;
+    if (Params().NetworkID() == CChainParams::MAIN && !IsStandardTx(tx, reason))
+        return state.DoS(0, error("AcceptToMemoryPool : nonstandard transaction: %s", reason),
+                         REJECT_NONSTANDARD, reason);
 
     // Basically we don't want to propagate transactions that can't included in
     // the next block.
@@ -1356,35 +1356,31 @@ Expected block generation rate is 1 block per minute.
 
 //
 // Miners that prove that they know the transaction data they are mining with
-// get a small extra percentage of coins
+// get a small bonus percentage of coins
 //
 // TODO look at funciton outputs around corner points
+// TODO check that this function produces the same values on different machine types (has some high-accuracy math)
 //
 int64_t GetBlockValue(int nHeight, int64_t nFees, bool fUsesPoK)
 {
-    int64_t nBlockReward = 0;
-    if (nHeight < Params().NumIncrBlocks())
-    {
-        double dIncrPerBlock = (double)((MAX_SUBSIDY - MIN_SUBSIDY)/Params().NumIncrBlocks());
-        nBlockReward = MIN_SUBSIDY + ((int64_t) (nHeight * dIncrPerBlock));
-    }
-    else if (nHeight < (Params().NumIncrBlocks() + Params().NumConstBlocks()))
-    {
-        nBlockReward = MAX_SUBSIDY;
-    }
-    else if (nHeight < (Params().NumIncrBlocks() + Params().NumConstBlocks() + Params().NumDecrBlocks()))
-    {
-        double dDecrPerBlock = (double)(((MAX_SUBSIDY - MIN_SUBSIDY)/Params().NumDecrBlocks()));
-        nBlockReward = MAX_SUBSIDY - ((int64_t) ((nHeight - Params().NumIncrBlocks() - Params().NumConstBlocks()) * dDecrPerBlock));
-    } 
-    else 
-    {
-        nBlockReward = MIN_SUBSIDY;
-    }
+    if (nHeight == 0)
+        return Params().GetGenesisTotal();
+
+    int64_t nDayNumber = nHeight / (24 * 60);
+
+    // Derived from the derivative of the logistic equation (used in modeling the acceptance of new technologies)
+    double dExponent    = Params().GetSpreadParam() * (nDayNumber - Params().GetMidwayPoint());
+    double dResult      = exp(-1 * dExponent);
+    double dCoinsPerDay = Params().GetSpreadParam() * (Params().GetTotalCoinsDistributed() / COIN) * dResult / ((dResult + 1) * (dResult + 1));
+
+    int64_t nBlockReward = (int64_t)(dCoinsPerDay / (24 * 60) * COIN);
+    nBlockReward -= Params().GetGiveAwayCoinsTotal() / (2 * Params().GetMidwayPoint() * 24 * 60);
 
     if (fUsesPoK)
         nBlockReward = (nBlockReward * 105 / 100);
 
+    if (nBlockReward < MIN_SUBSIDY)
+        nBlockReward = MIN_SUBSIDY;
     
     return nBlockReward + nFees;
 }

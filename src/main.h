@@ -57,7 +57,7 @@ static const unsigned int BLOCKFILE_CHUNK_SIZE = 0x01000000; // 16 MiB
 /** The pre-allocation chunk size for rev?????.dat files (since 0.8) */
 static const unsigned int UNDOFILE_CHUNK_SIZE = 0x100000; // 1 MiB
 /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
-static const int COINBASE_MATURITY = 1;//120; TODO change back
+static const int COINBASE_MATURITY = 120;
 /** Threshold for nLockTime: below this value it is interpreted as block number, otherwise as UNIX timestamp. */
 static const unsigned int LOCKTIME_THRESHOLD = 1200000000; // Thu, 10 Jan 2008 21:20:00 GMT - necessary to change because faster block times, otherwise this would become a problem in ~15 years
                                             //  500000000; // Tue Nov  5 00:53:20 1985 UTC
@@ -69,16 +69,14 @@ static const int DEFAULT_SCRIPTCHECK_THREADS = 0;
 static const int MAX_BLOCKS_IN_TRANSIT_PER_PEER = 128;
 /** Timeout in seconds before considering a block download peer unresponsive. */
 static const unsigned int BLOCK_DOWNLOAD_TIMEOUT = 60;
-/** The initial subsidy that can be rewarded in a block, not including fees. */
-static const int64_t MAX_SUBSIDY = 142357686 * SATOSHI;
 /** The minimum subsidy that can be rewarded in a block, not including fees. */
-static const int64_t MIN_SUBSIDY =   5000000 * SATOSHI;
+static const int64_t MIN_SUBSIDY = 350000 * SATOSHI;
 /** The height difference at which an alert is initiated. */
 static const int FORK_HEIGHT_DIFF_ALERT = 360;
 /** The max seconds in the future that a block will be accepted. */
 static const int MAX_BLOCK_TIME_OFFSET = 1 * 60 * 60;
 /** The minimum number of blocks for coins to be considered mature. */
-static const int TRANSACTION_MATURITY_DEPTH = 120; 
+static const int TRANSACTION_MATURITY_DEPTH = 60*12; 
 /** The delay for which blocks with more mature coins spent may possibly override. */
 static const int64_t MATURE_COINS_TIEBREAKER_TIME_LIMIT = 13 * 1000; // (milliseconds) 
 /** The maximum coinbase scriptSig size. */

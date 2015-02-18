@@ -7,6 +7,7 @@
 #define BITCOIN_CHAIN_PARAMS_H
 
 #include "bignum.h"
+#include "util.h"
 #include "uint256.h"
 
 #include <vector>
@@ -57,9 +58,12 @@ public:
     const vector<unsigned char>& AlertKey() const { return vAlertPubKey; }
     int GetDefaultPort() const { return nDefaultPort; }
     const CBigNum& ProofOfWorkLimit() const { return bnProofOfWorkLimit; }
-    int NumIncrBlocks() const { return nNumIncrBlocks; }
-    int NumConstBlocks()const { return nNumConstBlocks; }
-    int NumDecrBlocks() const { return nNumDecrBlocks; }
+
+    int64_t GetGenesisTotal() const { return 450000000ULL * COIN; }
+    int64_t GetGiveAwayCoinsTotal() const { return 300000000ULL * COIN; }
+    int64_t GetTotalCoinsDistributed() const { return (10000000000ULL * COIN - GetGenesisTotal() + GetGiveAwayCoinsTotal()); }
+    double GetSpreadParam() const { return 0.00105; }
+    int GetMidwayPoint() const {return 5475; } // Number of days in 15 years
     virtual const CBlock& GenesisBlock() const = 0;
     virtual bool RequireRPCPassword() const { return true; }
     const string& DataDir() const { return strDataDir; }
@@ -78,9 +82,6 @@ protected:
     int nDefaultPort;
     int nRPCPort;
     CBigNum bnProofOfWorkLimit;
-    int nNumIncrBlocks;
-    int nNumConstBlocks;
-    int nNumDecrBlocks;
     string strDataDir;
     vector<CDNSSeedData> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];
