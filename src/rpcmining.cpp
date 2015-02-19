@@ -378,7 +378,7 @@ Value getwork(const Array& params, bool fHelp)
         static int64_t nStart;
         static CBlockTemplate* pblocktemplate;
         if (pindexPrev != chainActive.Tip() ||
-            (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 15))
+            (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 10))
         {
             if (pindexPrev != chainActive.Tip())
             {

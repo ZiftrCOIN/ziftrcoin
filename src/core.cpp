@@ -271,7 +271,6 @@ bool CBlock::CheckProofOfWork() const
 unsigned int CBlock::CalculatePoK(MapTxSerialized * pmapTxSerialized) const
 {
     static const uint256 INT_MASK("0xFFFFFFFF");
-    assert(vtx.size() > 0);
 
     CBlockHeader header = this->GetBlockHeader();
     header.nVersion = header.nVersion & (~POK_DATA_MASK);
@@ -286,6 +285,8 @@ unsigned int CBlock::CalculatePoK(MapTxSerialized * pmapTxSerialized) const
     {
         return nDeterRand1 & POK_DATA_MASK;
     }
+    
+    assert(vtx.size() > 0);
     
     unsigned int nDeterRand2 = CBigNum((hashTxChooser >> 32) & INT_MASK).getuint();
     unsigned int nDeterRand3 = CBigNum((hashTxChooser >> 64) & INT_MASK).getuint();

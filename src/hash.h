@@ -176,6 +176,11 @@ int HMAC_SHA512_Init(HMAC_SHA512_CTX *pctx, const void *pkey, size_t len);
 int HMAC_SHA512_Update(HMAC_SHA512_CTX *pctx, const void *pdata, size_t len);
 int HMAC_SHA512_Final(unsigned char *pmd, HMAC_SHA512_CTX *pctx);
 
+    // std::cout << "hash: " << HexStr(BEGIN(hash[0]), END(hash[0])) << std::endl;
+    // std::cout << "bits: " << CBigNum(hash[0].trim256() & INT_MASK).getuint() << std::endl;
+    // std::cout << "alen: " << ARRAYLEN(arrOrder) << std::endl;
+    // std::cout << "ordr: " << nOrder << std::endl;
+
 /* ----------- ziftrCOIN Hash ------------------------------------------------ */
 template<typename T1>
 inline uint512 HashZR5(const T1 pbegin, const T1 pend)

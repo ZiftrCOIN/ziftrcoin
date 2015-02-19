@@ -29,23 +29,23 @@ static const char* pszTimestamp = "Discus Fish: 24, Unknown: 22, GHash.IO: 22";
 // == 3: Mine the reg test genesis block
 static int whichGenesisMine = 0;
 
-static void MineGenesisBlock(CBlock& genesis, CBigNum& bnProofOfWorkLimit, const string& pref) 
+static void MineGenesisBlock(CBlock * genesis, const string& pref) 
 {
-    uint256 proofOfWorkLimit = bnProofOfWorkLimit.getuint256();
-    genesis.nNonce = 0;
+    uint256 proofOfWorkLimit = CBigNum().SetCompact(genesis->nBits).getuint256();
+    genesis->nNonce = 0;
     uint256 hashGenesisBlock;
 
     do {
-        genesis.nNonce++;
-        genesis.SetPoK(genesis.CalculatePoK());
-        hashGenesisBlock = genesis.GetHash();
+        genesis->nNonce++;
+        genesis->SetPoK(genesis->CalculatePoK());
+        hashGenesisBlock = genesis->GetHash();
     } while (hashGenesisBlock > proofOfWorkLimit);
     
-    printf("%s pok: %u\n", pref.c_str(), genesis.GetPoK());
-    printf("%s nonce: %u\n", pref.c_str(), genesis.nNonce);
-    printf("%s time: %llu\n", pref.c_str(), (long long)genesis.nTime);
-    printf("%s hash: %s\n", pref.c_str(), genesis.GetHash().ToString().c_str());
-    printf("%s merkleRoot: %s\n", pref.c_str(), genesis.hashMerkleRoot.ToString().c_str());
+    printf("%s pok: %u\n", pref.c_str(), genesis->GetPoK());
+    printf("%s nonce: %u\n", pref.c_str(), genesis->nNonce);
+    printf("%s time: %llu\n", pref.c_str(), (long long)genesis->nTime);
+    printf("%s hash: %s\n", pref.c_str(), genesis->GetHash().ToString().c_str());
+    printf("%s merkleRoot: %s\n", pref.c_str(), genesis->hashMerkleRoot.ToString().c_str());
     // CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
     // ssBlock << genesis;
     // printf("%s block: \n%s\n", pref.c_str(), HexStr(ssBlock.begin(), ssBlock.end()).c_str());
@@ -128,7 +128,7 @@ public:
         // printf("hashGenesisBlock: %s\n", hashGenesisBlock.ToString().c_str());
 
         if (whichGenesisMine == 1) {
-            MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
+            MineGenesisBlock(&genesis, strDataDir);
         } 
 
         assert(hashGenesisBlock == uint256("0x00000384571a71cd10e2dfe2bc635da2a5863e8553eaa27d4cdcc169ab651ba0"));//"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
@@ -197,7 +197,7 @@ public:
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine == 2) {
-            MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
+            MineGenesisBlock(&genesis, strDataDir);
         }
 
         assert(hashGenesisBlock == uint256("0x00000bdbbc56422def24bd25c384b4fc127a9b514bde8c5a6757c0447e8e43b0"));
@@ -237,7 +237,7 @@ public:
         hashGenesisBlock = genesis.GetHash();
 
         if (whichGenesisMine == 3) {
-            MineGenesisBlock(genesis, bnProofOfWorkLimit, strDataDir);
+            MineGenesisBlock(&genesis, strDataDir);
         }
         
         assert(hashGenesisBlock == uint256("0x34591d38a5ad59dbca044da0d12036c22a476f20b2bf0856a5c91179abcc2ad6"));
