@@ -66,6 +66,11 @@ public:
         return ret;
     }
 
+    uint32_t getinnerint(unsigned int nIndex) const 
+    {
+        return pn[nIndex % WIDTH];
+    }
+
     base_uint& operator=(uint64_t b)
     {
         pn[0] = (unsigned int)b;

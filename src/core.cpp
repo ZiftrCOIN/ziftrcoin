@@ -270,26 +270,23 @@ bool CBlock::CheckProofOfWork() const
 
 unsigned int CBlock::CalculatePoK(MapTxSerialized * pmapTxSerialized) const
 {
-    static const uint256 INT_MASK("0xFFFFFFFF");
-
     CBlockHeader header = this->GetBlockHeader();
     header.nVersion = header.nVersion & (~POK_DATA_MASK);
 
-    // TODO maybe just do this by casting instead? (For speed)
     // The first block of this hash will be the same from nonce to nonce, so if it is ever
     // profitable/worth it, miners can implement a midstate similar to the sha256 midstate
-    uint256 hashTxChooser = HashZR5(BEGIN(header.nVersion), END(header.nNonce)).trim256();
-    unsigned int nDeterRand1 = CBigNum((hashTxChooser >>  0) & INT_MASK).getuint();
+    uint512 hashTxChooser = HashZR5(BEGIN(header.nVersion), END(header.nNonce));
+    unsigned int nDeterRand1 = hashTxChooser.getinnerint(0);
 
     if (!IsPoKBlock())
     {
         return nDeterRand1 & POK_DATA_MASK;
     }
-    
+
     assert(vtx.size() > 0);
     
-    unsigned int nDeterRand2 = CBigNum((hashTxChooser >> 32) & INT_MASK).getuint();
-    unsigned int nDeterRand3 = CBigNum((hashTxChooser >> 64) & INT_MASK).getuint();
+    unsigned int nDeterRand2 = hashTxChooser.getinnerint(1);
+    unsigned int nDeterRand3 = hashTxChooser.getinnerint(2);
     
     unsigned int nTxIndex =  nDeterRand1 % vtx.size();
 

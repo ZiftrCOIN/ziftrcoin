@@ -185,7 +185,6 @@ int HMAC_SHA512_Final(unsigned char *pmd, HMAC_SHA512_CTX *pctx);
 template<typename T1>
 inline uint512 HashZR5(const T1 pbegin, const T1 pend)
 {
-    static const uint256 INT_MASK("0xFFFFFFFF");
     static unsigned char pblank[1];
     pblank[0] = 0;
 
@@ -234,7 +233,7 @@ inline uint512 HashZR5(const T1 pbegin, const T1 pend)
     sph_keccak512 (&ctx_keccak, pStart, nSize);
     sph_keccak512_close(&ctx_keccak, pPutResult);
 
-    unsigned int nOrder = CBigNum(hash[0].trim256() & INT_MASK).getuint() % ARRAYLEN(arrOrder);
+    unsigned int nOrder = hash[0].getinnerint(0) % ARRAYLEN(arrOrder);
 
     for (unsigned int i = 0; i < 4; i++)
     {
