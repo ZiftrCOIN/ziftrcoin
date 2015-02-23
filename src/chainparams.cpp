@@ -75,9 +75,6 @@ public:
         vAlertPubKey = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");//"0380d4125f5357aac2b98c201ee76c3e26a5ef084a5fcd26e65c9cfff7ad1a026c");
 
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 20);
-        // nNumIncrBlocks =  5  * 365 * 24 * 60;
-        // nNumConstBlocks = 5  * 365 * 24 * 60;
-        // nNumDecrBlocks =  10 * 365 * 24 * 60;
 
         CTransaction txNew;
 

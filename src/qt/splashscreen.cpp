@@ -29,9 +29,9 @@ SplashScreen::SplashScreen(const QPixmap &pixmap, Qt::WindowFlags f, bool isTest
     float fontFactor            = 1.0;
 
     // define text to place
-    QString titleText       = tr("Bitcoin Core");
+    QString titleText       = tr("ZiftrCOIN Core");
     QString versionText     = QString("Version %1").arg(QString::fromStdString(FormatFullVersion()));
-    QString copyrightText   = QChar(0xA9)+QString(" 2009-%1 ").arg(COPYRIGHT_YEAR) + QString(tr("The Bitcoin Core developers"));
+    QString copyrightText   = QChar(0xA9)+QString(" 2009-%1 ").arg(COPYRIGHT_YEAR) + QString(tr("The ZiftrCOIN Core developers"));
     QString testnetAddText  = QString(tr("[testnet]")); // define text to place as single text object
 
     QString font            = "Arial";
@@ -46,7 +46,7 @@ SplashScreen::SplashScreen(const QPixmap &pixmap, Qt::WindowFlags f, bool isTest
     }
 
     QPainter pixPaint(&newPixmap);
-    pixPaint.setPen(QColor(100,100,100));
+    pixPaint.setPen(QColor(220,220,220));
 
     // check font size and drawing with
     pixPaint.setFont(QFont(font, 33*fontFactor));
@@ -101,7 +101,7 @@ SplashScreen::~SplashScreen()
 
 void SplashScreen::slotFinish(QWidget *mainWin)
 {
-    finish(mainWin);
+    //finish(mainWin);
 }
 
 static void InitMessage(SplashScreen *splash, const std::string &message)

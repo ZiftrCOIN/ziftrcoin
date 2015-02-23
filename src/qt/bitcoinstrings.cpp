@@ -9,7 +9,7 @@
 #define UNUSED
 #endif
 static const char UNUSED *bitcoin_strings[] = {
-QT_TRANSLATE_NOOP("bitcoin-core", ""
+QT_TRANSLATE_NOOP("ziftrcoin-core", ""
 "%s, you must set a rpcpassword in the configuration file:\n"
 "%s\n"
 "It is recommended you use the following random password:\n"
@@ -24,25 +24,25 @@ QT_TRANSLATE_NOOP("bitcoin-core", ""
 QT_TRANSLATE_NOOP("bitcoin-core", ""
 "Acceptable ciphers (default: TLSv1.2+HIGH:TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!"
 "3DES:@STRENGTH)"),
-QT_TRANSLATE_NOOP("bitcoin-core", ""
+QT_TRANSLATE_NOOP("ziftrcoin-core", ""
 "An error occurred while setting up the RPC port %u for listening on IPv4: %s"),
 QT_TRANSLATE_NOOP("bitcoin-core", ""
 "An error occurred while setting up the RPC port %u for listening on IPv6, "
 "falling back to IPv4: %s"),
-QT_TRANSLATE_NOOP("bitcoin-core", ""
+QT_TRANSLATE_NOOP("ziftrcoin-core", ""
 "Bind to given address and always listen on it. Use [host]:port notation for "
 "IPv6"),
 QT_TRANSLATE_NOOP("bitcoin-core", ""
 "Cannot obtain a lock on data directory %s. Bitcoin Core is probably already "
 "running."),
-QT_TRANSLATE_NOOP("bitcoin-core", ""
+QT_TRANSLATE_NOOP("ziftrcoin-core", ""
 "Continuously rate-limit free transactions to <n>*1000 bytes per minute "
 "(default:15)"),
 QT_TRANSLATE_NOOP("bitcoin-core", ""
 "Enter regression test mode, which uses a special chain in which blocks can "
 "be solved instantly. This is intended for regression testing tools and app "
 "development."),
-QT_TRANSLATE_NOOP("bitcoin-core", ""
+QT_TRANSLATE_NOOP("ziftrcoin-core", ""
 "Enter regression test mode, which uses a special chain in which blocks can "
 "be solved instantly."),
 QT_TRANSLATE_NOOP("bitcoin-core", ""
