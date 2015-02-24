@@ -651,7 +651,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     }
 
     Object aux;
-    aux.push_back(Pair("flags", string(""));
+    aux.push_back(Pair("flags", string("")));
 
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
@@ -664,7 +664,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     }
 
     Object result;
-    result.push_back(Pair("version", pblock->GetVersion()));
+    result.push_back(Pair("version", (int64_t)pblock->GetVersion()));
     result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
     result.push_back(Pair("transactions", transactions));
     result.push_back(Pair("coinbaseaux", aux));
