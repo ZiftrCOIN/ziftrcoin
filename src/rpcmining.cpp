@@ -651,6 +651,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     }
 
     Object aux;
+    aux.push_back(Pair("flags", string(""));
 
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
@@ -663,7 +664,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     }
 
     Object result;
-    result.push_back(Pair("version", pblock->nVersion));
+    result.push_back(Pair("version", pblock->GetVersion()));
     result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
     result.push_back(Pair("transactions", transactions));
     result.push_back(Pair("coinbaseaux", aux));
@@ -676,6 +677,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     result.push_back(Pair("curtime", (int64_t)pblock->nTime));
     result.push_back(Pair("bits", HexBits(pblock->nBits)));
     result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
+    result.push_back(Pair("usepok", GetBoolArg("-usepok", false)));
 
     return result;
 }
