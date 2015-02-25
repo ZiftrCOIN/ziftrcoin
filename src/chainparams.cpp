@@ -1,5 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
+// Copyright (c) 2015-2019 The ziftrCOIN developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,6 +11,9 @@
 #include "util.h"
 #include "script.h"
 #include "base58.h"
+#include "hash.h" 
+// TODO delete me
+
 
 #include <assert.h>
 #include <boost/assign/list_of.hpp>
@@ -200,7 +204,7 @@ public:
         genesis.nVersion          = 1;
         genesis.SetPoKFlag(true);
         genesis.SetPoK(0);
-        genesis.nNonce            = 660672;
+        genesis.nNonce            = 2334250;
         genesis.nTime             = 1424821808;
         genesis.nBits             = bnProofOfWorkLimit.GetCompact();
         genesis.hashPrevBlock     = 0;
@@ -219,7 +223,7 @@ public:
             MineGenesisBlock(&genesis, strDataDir);
         } 
 
-        assert(hashGenesisBlock == uint256("0x00000dafa1f285b4e6369baf2a784b9a9a8387b82e5f7f60621133d494137509"));
+        assert(hashGenesisBlock == uint256("0x0000035888fea2f96e3ef996beda4fa4c4c4d03b371184d1f575f9d144b7a164"));
         assert(genesis.hashMerkleRoot == uint256("0x3666f225d97542fb9f70a122aae6c40ad5dd454886f0226e8bf2d4875132b02a"));
 
         vSeeds.push_back(CDNSSeedData("ziftrcoin.com", "seed1.ziftrcoin.com"));
@@ -279,7 +283,7 @@ public:
         vAlertPubKey = ParseHex("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");//"02911661822e0b2cd814ed3ff4d23c97cfe7c89ad1eb6ce2ad3181195cfa9e0886");
 
         genesis.nTime             = 1424821917;
-        genesis.nNonce            = 28708;
+        genesis.nNonce            = 271066;
         genesis.SetPoK(genesis.CalculatePoK());
         
         hashGenesisBlock = genesis.GetHash();
@@ -288,7 +292,7 @@ public:
             MineGenesisBlock(&genesis, strDataDir);
         }
 
-        assert(hashGenesisBlock == uint256("0x00000b9f4dcf1f25a09f3aca48de5dd18a38c227979cd484a7e3e509f1ac60cb"));
+        assert(hashGenesisBlock == uint256("0x0000059f6eaa1fa17cdc2ef09aae2c772c8c50dc45f644d3bf6748d369a5cb23"));
         // Merkle root is the same as parent
 
         vFixedSeeds.clear();
@@ -319,7 +323,7 @@ public:
 
         genesis.nBits             = bnProofOfWorkLimit.GetCompact();
         genesis.nTime             = 1424822042;
-        genesis.nNonce            = 3;
+        genesis.nNonce            = 1;
         genesis.SetPoK(genesis.CalculatePoK());
 
         hashGenesisBlock = genesis.GetHash();
@@ -328,7 +332,7 @@ public:
             MineGenesisBlock(&genesis, strDataDir);
         }
         
-        assert(hashGenesisBlock == uint256("0x5e2580d8b3a63b4bd4847d3b3bed6c7db9025b3c9f7a3f655b2bec789b547818"));
+        assert(hashGenesisBlock == uint256("0x1fb10915b22f24d4794495c2bb6fe51327a310e3577846ace24a6cb1acf515f1"));
         // Merkle root is the same as parent
 
         vSeeds.clear();  // Regtest mode doesn't have any DNS seeds.
