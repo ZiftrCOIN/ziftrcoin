@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2013 The Bitcoin developers
+// Copyright (c) 2015-2019 The ziftrCOIN developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -181,12 +182,13 @@ int HMAC_SHA512_Final(unsigned char *pmd, HMAC_SHA512_CTX *pctx);
     // std::cout << "keccak    : " << HexStr(BEGIN(hash[0]), END(hash[0])) << std::endl;
     // std::cout << "inner int : " << nOrder << std::endl;
     // std::cout << "ii hex    : " << HexStr(BEGIN(nOrder), END(nOrder)) << std::endl;
-    // std::cout << "iirev hex : " << HexStr(BEGIN(nOrderRev), END(nOrderRev)) << std::endl;
+    // std::cout << "int val   : 0x" << HexStr(BEGIN(nOrderRev), END(nOrderRev)) << std::endl;
     // nOrder = nOrder % ARRAYLEN(arrOrder);
-    // std::cout << "alen: " << ARRAYLEN(arrOrder) << std::endl;
-    // std::cout << "ordr: " << nOrder << std::endl;
-    // std::cout << "zr5 : " << hash[3].ToString() << std::endl;
-    // std::cout << "trim: " << hash[3].trim256().ToString() << std::endl;
+    // std::cout << "ordr      : " << nOrder << std::endl;
+    // std::cout << "zr5       : " << hash[4].ToString() << std::endl;
+    // std::cout << "trimmed   : " << hash[4].trim256().ToString() << std::endl;
+    //     std::cout << std::endl;
+    // for (int i = 0; i < 5; i++) std::cout << hash[i].ToString() << std::endl;
 
 /* ----------- ziftrCOIN Hash ------------------------------------------------ */
 template<typename T1>
@@ -224,7 +226,7 @@ inline uint512 HashZR5(const T1 pbegin, const T1 pend)
         {3, 2, 1, 0}
     };
 
-    uint512 hash[4];
+    uint512 hash[5];
 
     sph_blake512_context   ctx_blake;
     sph_groestl512_context ctx_groestl;
@@ -241,9 +243,13 @@ inline uint512 HashZR5(const T1 pbegin, const T1 pend)
     sph_keccak512_close(&ctx_keccak, pPutResult);
 
     unsigned int nOrder = hash[0].getinnerint(0) % ARRAYLEN(arrOrder);
-
+    
     for (unsigned int i = 0; i < 4; i++)
     {
+        pStart     = static_cast<const void*>(&hash[i]);
+        nSize      = 64;
+        pPutResult = static_cast<void*>(&hash[i+1]);
+
         switch (arrOrder[nOrder][i]) 
         {
         case BLAKE:
@@ -269,16 +275,9 @@ inline uint512 HashZR5(const T1 pbegin, const T1 pend)
         default:
             break;
         }
-
-        if (i < 3)
-        {
-            pStart     = static_cast<const void*>(&hash[i]);
-            nSize      = 64;
-            pPutResult = static_cast<void*>(&hash[i+1]);
-        }
     }
 
-    return hash[3];
+    return hash[4];
 }
 
 #endif
