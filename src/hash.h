@@ -176,10 +176,17 @@ int HMAC_SHA512_Init(HMAC_SHA512_CTX *pctx, const void *pkey, size_t len);
 int HMAC_SHA512_Update(HMAC_SHA512_CTX *pctx, const void *pdata, size_t len);
 int HMAC_SHA512_Final(unsigned char *pmd, HMAC_SHA512_CTX *pctx);
 
-    // std::cout << "hash: " << HexStr(BEGIN(hash[0]), END(hash[0])) << std::endl;
-    // std::cout << "bits: " << CBigNum(hash[0].trim256() & INT_MASK).getuint() << std::endl;
+    // unsigned int nOrderRev = ByteReverse(nOrder);
+    // std::cout << "data      : " << HexStr(pbegin, pend) << std::endl;
+    // std::cout << "keccak    : " << HexStr(BEGIN(hash[0]), END(hash[0])) << std::endl;
+    // std::cout << "inner int : " << nOrder << std::endl;
+    // std::cout << "ii hex    : " << HexStr(BEGIN(nOrder), END(nOrder)) << std::endl;
+    // std::cout << "iirev hex : " << HexStr(BEGIN(nOrderRev), END(nOrderRev)) << std::endl;
+    // nOrder = nOrder % ARRAYLEN(arrOrder);
     // std::cout << "alen: " << ARRAYLEN(arrOrder) << std::endl;
     // std::cout << "ordr: " << nOrder << std::endl;
+    // std::cout << "zr5 : " << hash[3].ToString() << std::endl;
+    // std::cout << "trim: " << hash[3].trim256().ToString() << std::endl;
 
 /* ----------- ziftrCOIN Hash ------------------------------------------------ */
 template<typename T1>

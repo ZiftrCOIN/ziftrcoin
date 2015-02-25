@@ -101,7 +101,7 @@ SplashScreen::~SplashScreen()
 
 void SplashScreen::slotFinish(QWidget *mainWin)
 {
-    //finish(mainWin);
+    finish(mainWin);
 }
 
 static void InitMessage(SplashScreen *splash, const std::string &message)
