@@ -11,8 +11,6 @@
 #include "util.h"
 #include "script.h"
 #include "base58.h"
-#include "hash.h" 
-// TODO delete me
 
 
 #include <assert.h>

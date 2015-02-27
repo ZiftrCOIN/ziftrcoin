@@ -365,7 +365,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
         pblock->SetPoKFlag(GetBoolArg("-usepok", false));
         pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
         UpdateTime(*pblock, pindexPrev);
-        pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock);
+        pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock->GetBlockTime());
         pblock->nNonce         = 0;
         pblock->vtx[0].vin[0].scriptSig = CScript() << OP_0 << OP_0;
         pblocktemplate->vTxSigOps[0] = GetSigOpCount(pblock->vtx[0]);
@@ -407,8 +407,9 @@ void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& 
 // Internal miner
 //
 
-double dHashesPerSec = 0.0;
+double dHashesPerSec   = 0.0;
 int64_t nHPSTimerStart = 0;
+int64_t nBaseCaseTime  = 0;
 
 
 // Returns the number of failed attempts. 
@@ -422,13 +423,17 @@ unsigned int static ScanHash(CBlock *pblock, unsigned int nTry, unsigned int nDo
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
     uint256 hashBlockHeader;
 
-    for (unsigned int i = 0; i < nTry; i++) 
+    // Sleep for some amount of the time according to the base case
+    MicroSleep(nBaseCaseTime * nDontTry / nTry);
+
+    // Use the rest of the time to actually mine
+    for (unsigned int i = nDontTry; i < nTry; i++) 
     {
         pblock->nNonce++;
         pblock->SetPoK(pblock->CalculatePoK(pmapTxSerialized));
         hashBlockHeader = pblock->GetHash();
 
-        if (hashBlockHeader <= hashTarget && i >= nDontTry)
+        if (hashBlockHeader <= hashTarget)
             return i;
     }
 
@@ -535,6 +540,8 @@ void static ZiftrCOINMiner(CWallet *pwallet)
                    ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
             int64_t nStart = GetTime();
+            bool fDoBaseCaseTest = false;
+
             while (true)
             {
                 // Meter hashes/sec
@@ -546,9 +553,20 @@ void static ZiftrCOINMiner(CWallet *pwallet)
                     nHashCounter = 0;
                 }
 
-                unsigned int nTries = 1000; 
-                unsigned int nDontHash = 0; // nDontTry; // For simulating increases/decreases of network hash power
+                unsigned int nTries = 5000;
+                unsigned int nPercentHashPower = fDoBaseCaseTest ? 100 : GetArg("-usepercenthashpower", 0);
+                nPercentHashPower = std::max(std::min(nPercentHashPower, (unsigned int)100), (unsigned int)0);
+                unsigned int nDontHash = (100 - nPercentHashPower) * nTries / 100;
+
+                int64_t nTimeStartBaseCase = fDoBaseCaseTest ? GetTimeMicros() : 0;
                 unsigned int nNumFailedAttempts = ScanHash(pblock, nTries, nDontHash, &mapTxSerialized);
+                if (fDoBaseCaseTest) {
+                    nBaseCaseTime = GetTimeMicros() - nTimeStartBaseCase;
+                    LogPrintf("base case time: %llu\n", (long long)nBaseCaseTime);
+                    fDoBaseCaseTest = false;
+                }
+                
+
                 nHashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
                 nHashCounter -= nDontHash;
 
@@ -570,6 +588,7 @@ void static ZiftrCOINMiner(CWallet *pwallet)
                     static CCriticalSection cs; 
                     {
                         LOCK(cs);
+                        fDoBaseCaseTest = true;
                         if (GetTimeMillis() - nHPSTimerStart > 4000) {
                             dHashesPerSec = 1000.0 * nHashCounter / (GetTimeMillis() - nHPSTimerStart);
                             nHPSTimerStart = GetTimeMillis();

@@ -1424,7 +1424,7 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 //
 // Fixed to prevent agains time warp attack
 //
-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
+unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const int64_t nBlockTime)
 {
     unsigned int nProofOfWorkLimit = Params().ProofOfWorkLimit().GetCompact();
 
@@ -1439,7 +1439,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
             // Special difficulty rule for testnet:
             // If the new block's timestamp is more than 2 * TARGET_SPACING in the future,
             // then allow mining of a min-difficulty block.
-            if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + TARGET_SPACING*2)
+            if (nBlockTime > pindexLast->GetBlockTime() + TARGET_SPACING*2)
             {
                 return nProofOfWorkLimit;
             }
@@ -1654,7 +1654,7 @@ void UpdateTime(CBlockHeader& block, const CBlockIndex* pindexPrev)
 
     // Updating time can change work required on testnet:
     if (TestNet())
-        block.nBits = GetNextWorkRequired(pindexPrev, &block);
+        block.nBits = GetNextWorkRequired(pindexPrev, block.GetBlockTime());
 }
 
 
@@ -2630,7 +2630,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
         nHeight = pindexPrev->nHeight+1;
 
         // Check proof of work
-        if (block.nBits != GetNextWorkRequired(pindexPrev, &block))
+        if (block.nBits != GetNextWorkRequired(pindexPrev, block.GetBlockTime()))
             return state.DoS(100, error("AcceptBlock() : incorrect proof of work"),
                                 REJECT_INVALID, "bad-diffbits");
 
