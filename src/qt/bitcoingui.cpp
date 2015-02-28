@@ -219,6 +219,7 @@ BitcoinGUI::~BitcoinGUI()
 void BitcoinGUI::createActions(bool fIsTestnet)
 {
     QActionGroup *tabGroup = new QActionGroup(this);
+    // tabGroup->setStyleSheet("{background-color: #15444A; color: #15444A}");
 
     overviewAction = new QAction(QIcon(":/icons/overview"), tr("&Overview"), this);
     overviewAction->setStatusTip(tr("Show general overview of wallet"));
