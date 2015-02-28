@@ -20,7 +20,7 @@ using namespace boost::assign;
 
 unsigned int pnSeed[] =
 {
-    0xcc5a0134
+    0x96359936, 0xcc5a0134
 };
 
 static const char* pszTimestamp = "The Times 27/Feb/2015 Spock actor Leonard Nimoy dies aged 83. \\\\//_";
@@ -218,8 +218,7 @@ public:
         assert(hashGenesisBlock == uint256("0x0000002844ad8197e16ea8d53173da248e0ac23dd0436c90a15c22bc09d976b2"));
         assert(genesis.hashMerkleRoot == uint256("0x942ff871843e5a6bfe0c5ba40ef15e0d1fca258493acac1ef512ab368ec71371"));
 
-        vSeeds.push_back(CDNSSeedData("ziftrcoin.com", "seed1.ziftrcoin.com"));
-        vSeeds.push_back(CDNSSeedData("ziftrcoin.com", "seed2.ziftrcoin.com"));
+        vSeeds.push_back(CDNSSeedData("ziftrcoin.com", "seed.ziftrcoin.com"));
 
         // Convert the pnSeeds array into usable address objects.
         for (unsigned int i = 0; i < ARRAYLEN(pnSeed); i++)
