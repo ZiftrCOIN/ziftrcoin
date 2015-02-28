@@ -262,7 +262,8 @@ RES_ICONS = \
   res/icons/tx_input.png \
   res/icons/tx_output.png \
   res/icons/tx_mined.png \
-  res/icons/tx_mined2.png
+  res/icons/tx_mined2.png \
+  res/icons/wallet_bgcoin.png
 
 BITCOIN_QT_CPP = \
   bitcoin.cpp \
