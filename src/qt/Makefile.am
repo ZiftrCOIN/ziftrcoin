@@ -262,8 +262,7 @@ RES_ICONS = \
   res/icons/tx_input.png \
   res/icons/tx_output.png \
   res/icons/tx_mined.png \
-  res/icons/tx_mined2.png \
-  res/icons/wallet_bgcoin.png
+  res/icons/tx_mined2.png
 
 BITCOIN_QT_CPP = \
   bitcoin.cpp \
@@ -321,7 +320,8 @@ endif
 RES_IMAGES = \
   res/images/about.png \
   res/images/splash.png \
-  res/images/splash_testnet.png
+  res/images/splash_testnet.png \
+  res/images/wallet_bgcoin.png
 
 RES_MOVIES = $(wildcard res/movies/spinner-*.png)
 
