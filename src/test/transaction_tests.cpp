@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(tx_valid)
                     break;
                 }
 
-                BOOST_CHECK_MESSAGE(VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout], tx, i, test[2].get_bool() ? SCRIPT_VERIFY_P2SH : SCRIPT_VERIFY_NONE, 0), strTest);
+                BOOST_CHECK_MESSAGE(VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout], tx, i, test[2].get_bool() ? SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC : SCRIPT_VERIFY_NONE, 0), strTest);
             }
         }
     }
@@ -143,6 +143,7 @@ BOOST_AUTO_TEST_CASE(tx_invalid)
             }
 
             string transaction = test[1].get_str();
+
             CDataStream stream(ParseHex(transaction), SER_NETWORK, PROTOCOL_VERSION);
             CTransaction tx;
             stream >> tx;
@@ -158,7 +159,7 @@ BOOST_AUTO_TEST_CASE(tx_invalid)
                     break;
                 }
 
-                fValid = VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout], tx, i, test[2].get_bool() ? SCRIPT_VERIFY_P2SH : SCRIPT_VERIFY_NONE, 0);
+                fValid = VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout], tx, i, test[2].get_bool() ? SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC : SCRIPT_VERIFY_NONE, 0);
             }
 
             BOOST_CHECK_MESSAGE(!fValid, strTest);

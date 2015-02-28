@@ -23,7 +23,7 @@ unsigned int pnSeed[] =
     0xcc5a0134
 };
 
-static const char* pszTimestamp = "Discus Fish: 24, Unknown: 22, GHash.IO: 22";
+static const char* pszTimestamp = "The Times 27/Feb/2015 Spock actor Leonard Nimoy dies aged 83. \\\\//_";
 
 // == 0: Don't mine any
 // == 1: Mine the main net genesis block
@@ -171,9 +171,9 @@ public:
         pchMessageStart[3] = 0x2b;
         nDefaultPort = 10333;
         nRPCPort = 10332;
-        vAlertPubKey = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");//"0380d4125f5357aac2b98c201ee76c3e26a5ef084a5fcd26e65c9cfff7ad1a026c");
+        vAlertPubKey = ParseHex("024725c9c766a51b223004cbbb41fb3c6c12238de07bae83cd44402ed391bc9f7c");
 
-        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 20);
+        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 25);
 
         CTransaction txNew;
 
@@ -202,8 +202,8 @@ public:
         genesis.nVersion          = 1;
         genesis.SetPoKFlag(true);
         genesis.SetPoK(0);
-        genesis.nNonce            = 2334250;
-        genesis.nTime             = 1424821808;
+        genesis.nNonce            = 12963623;
+        genesis.nTime             = 1425097800;
         genesis.nBits             = bnProofOfWorkLimit.GetCompact();
         genesis.hashPrevBlock     = 0;
         genesis.hashMerkleRoot    = genesis.BuildMerkleTree();
@@ -211,18 +211,12 @@ public:
 
         hashGenesisBlock          = genesis.GetHash();
 
-        // CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
-        // ssBlock << *((CBlockHeader*)&genesis);
-        // std::string strHex = HexStr(ssBlock.begin(), ssBlock.end());
-        // printf("block: %s\n", strHex.c_str());
-        // printf("hashGenesisBlock: %s\n", hashGenesisBlock.ToString().c_str());
-
         if (whichGenesisMine == 1) {
             MineGenesisBlock(&genesis, strDataDir);
-        } 
+        }
 
-        assert(hashGenesisBlock == uint256("0x0000035888fea2f96e3ef996beda4fa4c4c4d03b371184d1f575f9d144b7a164"));
-        assert(genesis.hashMerkleRoot == uint256("0x3666f225d97542fb9f70a122aae6c40ad5dd454886f0226e8bf2d4875132b02a"));
+        assert(hashGenesisBlock == uint256("0x0000002844ad8197e16ea8d53173da248e0ac23dd0436c90a15c22bc09d976b2"));
+        assert(genesis.hashMerkleRoot == uint256("0x942ff871843e5a6bfe0c5ba40ef15e0d1fca258493acac1ef512ab368ec71371"));
 
         vSeeds.push_back(CDNSSeedData("ziftrcoin.com", "seed1.ziftrcoin.com"));
         vSeeds.push_back(CDNSSeedData("ziftrcoin.com", "seed2.ziftrcoin.com"));
@@ -278,10 +272,9 @@ public:
         nDefaultPort = 11333;
         nRPCPort = 11332;
         strDataDir = "testnet";
-        vAlertPubKey = ParseHex("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");//"02911661822e0b2cd814ed3ff4d23c97cfe7c89ad1eb6ce2ad3181195cfa9e0886");
 
-        genesis.nTime             = 1424821917;
-        genesis.nNonce            = 271066;
+        genesis.nTime             = 1425097801;
+        genesis.nNonce            = 27099750;
         genesis.SetPoK(genesis.CalculatePoK());
         
         hashGenesisBlock = genesis.GetHash();
@@ -290,7 +283,7 @@ public:
             MineGenesisBlock(&genesis, strDataDir);
         }
 
-        assert(hashGenesisBlock == uint256("0x0000059f6eaa1fa17cdc2ef09aae2c772c8c50dc45f644d3bf6748d369a5cb23"));
+        assert(hashGenesisBlock == uint256("0x000000178867ba7d8ca2a47dee91c97bd75b99170a28bca485de7fe6da027032"));
         // Merkle root is the same as parent
 
         vFixedSeeds.clear();
@@ -320,8 +313,8 @@ public:
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 1);
 
         genesis.nBits             = bnProofOfWorkLimit.GetCompact();
-        genesis.nTime             = 1424822042;
-        genesis.nNonce            = 1;
+        genesis.nTime             = 1425097802;
+        genesis.nNonce            = 2;
         genesis.SetPoK(genesis.CalculatePoK());
 
         hashGenesisBlock = genesis.GetHash();
@@ -330,7 +323,7 @@ public:
             MineGenesisBlock(&genesis, strDataDir);
         }
         
-        assert(hashGenesisBlock == uint256("0x1fb10915b22f24d4794495c2bb6fe51327a310e3577846ace24a6cb1acf515f1"));
+        assert(hashGenesisBlock == uint256("0x2fad14b5f9fb4cf19bf8d3ce5f2a42820d621ec81a762b0691a951e4577ca69a"));
         // Merkle root is the same as parent
 
         vSeeds.clear();  // Regtest mode doesn't have any DNS seeds.

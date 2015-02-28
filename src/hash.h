@@ -250,7 +250,7 @@ inline uint512 HashZR5(const T1 pbegin, const T1 pend)
         nSize      = 64;
         pPutResult = static_cast<void*>(&hash[i+1]);
 
-        switch (arrOrder[nOrder][i]) 
+        switch (arrOrder[nOrder][i])
         {
         case BLAKE:
             sph_blake512_init(&ctx_blake);

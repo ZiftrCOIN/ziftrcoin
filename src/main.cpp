@@ -2015,7 +2015,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     // Probably could get rid of the SCRIPT_VERIFY_P2SH flag entirely, since 
     // we will have P2SH from block 0, but will leave it in for now
     // Actually, it is useful for turning on and off verification?
-    unsigned int flags = SCRIPT_VERIFY_NOCACHE | SCRIPT_VERIFY_P2SH;
+    unsigned int flags = SCRIPT_VERIFY_NOCACHE | SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC;
 
     CBlockUndo blockundo;
 
@@ -2561,7 +2561,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, unsigned int nMaxB
                         REJECT_INVALID, "high-hash");
 
     // Check timestamp
-    if (block.GetBlockTime() > GetAdjustedTime() + MAX_BLOCK_TIME_OFFSET)
+    if (block.GetBlockTime() > GetAdjustedTime() + MAX_BLOCK_TIME_OFFSET && block.GetHash() != Params().HashGenesisBlock())
         return state.Invalid(error("CheckBlock() : block timestamp too far in the future"),
                              REJECT_INVALID, "time-too-new");
 

@@ -7,6 +7,31 @@
 // Unit tests for denial-of-service detection/prevention code
 //
 
+//
+// Useful for generating the test cases
+//
+// int64_t nTimeStart = GetTime();
+// std::cout << "(" << nTimeStart << ", " << bnProofOfWorkLimit.GetCompact() << ")\n";
+
+// for (int i = 0; i < 10; i++)
+// {
+//     nTimeStart += 45*4;
+//     bnProofOfWorkLimit = 45 * bnProofOfWorkLimit / 60;
+//     bnProofOfWorkLimit.SetCompact(bnProofOfWorkLimit.GetCompact());
+//     std::cout << "(" << nTimeStart << ", " << bnProofOfWorkLimit.GetCompact() << ")\n";
+// }
+
+// for (int i = 0; i < 4; i++)
+// {
+//     nTimeStart += 90*4;
+//     bnProofOfWorkLimit = 360 * bnProofOfWorkLimit;
+//     bnProofOfWorkLimit = bnProofOfWorkLimit / 240;
+//     bnProofOfWorkLimit.SetCompact(bnProofOfWorkLimit.GetCompact());
+//     std::cout << "(" << nTimeStart << ", " << bnProofOfWorkLimit.GetCompact() << ")\n";
+// }
+
+// throw std::exception();
+
 
 
 #include "bignum.h"
@@ -113,6 +138,12 @@ static bool CheckNBits(unsigned int nbits1, int64_t time1, unsigned int nbits2, 
     CBigNum have;
     have.SetCompact(nbits2);
 
+    if (time1 == 1425108718 && nbits1 == 490078207 && time2 == 1425109078 && nbits2 == 491847679)
+    {
+        std::cout << "have: " << have.GetCompact() << std::endl;
+        std::cout << "req : " << required.GetCompact() << std::endl;
+    }
+
     return (have <= required);
 }
 
@@ -124,12 +155,21 @@ BOOST_AUTO_TEST_CASE(DoS_checknbits)
     // These are the block-chain checkpoint blocks
     typedef std::map<int64_t, unsigned int> BlockData;
     BlockData chainData =
-        map_list_of (1424123045, 0x1e0fffff)
-                    (1424123087, 0x1e0fffff)
-                    (1424123113, 0x1e08ffff)
-                    (1424123156, 0x1e06bfff)
-                    (1424123238, 0x1e050fff)
-                    (1424124043, 0x1e03cbff);
+        map_list_of (1425111048, 494927871)
+                    (1425111228, 492830719)
+                    (1425111408, 491257855)
+                    (1425111588, 490078207)
+                    (1425111768, 489193471)
+                    (1425111948, 488529919)
+                    (1425112128, 488032255)
+                    (1425112308, 487659007)
+                    (1425112488, 487379071)
+                    (1425112668, 487169119)
+                    (1425112848, 487011655)
+                    (1425113208, 487247850)
+                    (1425113568, 487602143)
+                    (1425113928, 488133582)
+                    (1425114288, 488930741);
 
     // Make sure CheckNBits considers every combination of block-chain-lock-in-points
     // "sane":

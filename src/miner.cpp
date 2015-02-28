@@ -554,7 +554,7 @@ void static ZiftrCOINMiner(CWallet *pwallet)
                 }
 
                 unsigned int nTries = 5000;
-                unsigned int nPercentHashPower = fDoBaseCaseTest ? 100 : GetArg("-usepercenthashpower", 0);
+                unsigned int nPercentHashPower = fDoBaseCaseTest ? 100 : GetArg("-usepercenthashpower", 100);
                 nPercentHashPower = std::max(std::min(nPercentHashPower, (unsigned int)100), (unsigned int)0);
                 unsigned int nDontHash = (100 - nPercentHashPower) * nTries / 100;
 
@@ -562,7 +562,6 @@ void static ZiftrCOINMiner(CWallet *pwallet)
                 unsigned int nNumFailedAttempts = ScanHash(pblock, nTries, nDontHash, &mapTxSerialized);
                 if (fDoBaseCaseTest) {
                     nBaseCaseTime = GetTimeMicros() - nTimeStartBaseCase;
-                    LogPrintf("base case time: %llu\n", (long long)nBaseCaseTime);
                     fDoBaseCaseTest = false;
                 }
                 
