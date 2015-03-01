@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2013 The Bitcoin developers
-// Copyright (c) 2015-2019 The ziftrCOIN developers
+// Copyright (c) 2015 The ziftrCOIN developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -64,7 +64,7 @@ public:
     bool IsNull() const { return (ptx == NULL && n == (unsigned int) -1); }
 };
 
-/** 
+/**
  * An input of a transaction.  It contains the location of the previous
  * transaction's output that it claims and a signature that matches the
  * output's public key.
@@ -158,7 +158,7 @@ public:
         // to spend something, then we consider it dust.
         // A typical txout is 34 bytes big, and will
         // need a CTxIn of at least 148 bytes to spend,
-        // so dust is a txout less than 546 satoshis 
+        // so dust is a txout less than 546 satoshis
         // with default nMinRelayTxFee.
         return ((nValue*1000)/(3*((int)GetSerializeSize(SER_DISK,0)+148)) < nMinRelayTxFee);
     }
@@ -233,7 +233,7 @@ public:
 
     bool IsCoinBase() const;
 
-    // bool LockTimeInEffect() const 
+    // bool LockTimeInEffect() const
     // {
     //     BOOST_FOREACH(const CTxIn& txin, vin)
     //     {
@@ -349,14 +349,14 @@ static const unsigned int VERSION_MASK  = 0x00007FFF;
 static const unsigned int POK_BOOL_MASK = 0x00008000;
 static const unsigned int POK_DATA_MASK = 0xFFFF0000;
 
-/** 
+/**
  * Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
  * requirements.  When they solve the proof-of-work, they broadcast the block
  * to everyone and the block is added to the block chain.  The first transaction
  * in the block is a special one that creates a new coin owned by the creator
  * of the block.
- */ 
+ */
 class CBlockHeader
 {
 public:
@@ -417,23 +417,23 @@ public:
             this->nVersion = this->nVersion | POK_BOOL_MASK;
     }
 
-    unsigned int GetPoK() const 
+    unsigned int GetPoK() const
     {
         return this->nVersion & POK_DATA_MASK;
     }
 
-    void SetPoK(unsigned int nPoK) 
+    void SetPoK(unsigned int nPoK)
     {
         this->nVersion = this->nVersion & (~POK_DATA_MASK);
         this->nVersion = this->nVersion | (POK_DATA_MASK & nPoK);
     }
 
-    unsigned int GetVersion() const 
+    unsigned int GetVersion() const
     {
         return this->nVersion & VERSION_MASK;
     }
 
-    void SetVersion(unsigned int nVersionIn) 
+    void SetVersion(unsigned int nVersionIn)
     {
         this->nVersion = this->nVersion & (~VERSION_MASK);
         this->nVersion = this->nVersion | (VERSION_MASK & nVersionIn);
