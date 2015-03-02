@@ -1,9 +1,11 @@
 Release Process
 ====================
 
-### Once per-computer or per-developer pre-build step
+### Pre-build setup
 
-(OS X)
+Once per-computer or per-developer
+
+#### OS X
 
 	brew install gpg
 	gpg --gen-key
@@ -132,24 +134,34 @@ Release Process
     a0999037e8b0ef9ade13efd88fee261ba401f5ca910068b7e0cd3262ba667db0  protobuf-win64-2.5.0-gitian-r4.zip
 
  Build ziftrcoind and ziftrcoin-qt on Linux32, Linux64, and Win32:
-  
-	./bin/gbuild --commit ziftrcoin=v${VERSION} ../ZiftrCOIN/contrib/gitian-descriptors/gitian-linux.yml
-	./bin/gsign --signer $SIGNER --release ${VERSION} --destination ../gitian.sigs/ ../ZiftrCOIN/contrib/gitian-descriptors/gitian-linux.yml
+
+	# Linux build
+	./bin/gbuild --commit ziftrcoin=v${VERSION} ../ziftrcoin/contrib/gitian-descriptors/gitian-linux.yml
+	./bin/gsign --signer $SIGNER --release ${VERSION} --destination ../gitian.sigs/ ../ziftrcoin/contrib/gitian-descriptors/gitian-linux.yml
+	./bin/gverify --release ${VERSION} --destination ../gitian.sigs/ ../ziftrcoin/contrib/gitian-descriptors/gitian-linux.yml
 	pushd build/out
 	zip -r ziftrcoin-${VERSION}-linux-gitian.zip *
 	mv ziftrcoin-${VERSION}-linux-gitian.zip ../../../
 	popd
-	./bin/gbuild --commit ziftrcoin=v${VERSION} ../ZiftrCOIN/contrib/gitian-descriptors/gitian-win.yml
-	./bin/gsign --signer $SIGNER --release ${VERSION}-win --destination ../gitian.sigs/ ../ZiftrCOIN/contrib/gitian-descriptors/gitian-win.yml
+
+	# Windows build
+	./bin/gbuild --commit ziftrcoin=v${VERSION} ../ziftrcoin/contrib/gitian-descriptors/gitian-win.yml
+	./bin/gsign --signer $SIGNER --release ${VERSION}-win --destination ../gitian.sigs/ ../ziftrcoin/contrib/gitian-descriptors/gitian-win.yml
+	./bin/gverify --release ${VERSION}-win --destination ../gitian.sigs/ ../ziftrcoin/contrib/gitian-descriptors/gitian-win.yml
 	pushd build/out
 	zip -r ziftrcoin-${VERSION}-win-gitian.zip *
 	mv ziftrcoin-${VERSION}-win-gitian.zip ../../../
 	popd
-        ./bin/gbuild --commit ziftrcoin=v${VERSION} ../ZiftrCOIN/contrib/gitian-descriptors/gitian-osx-ziftrcoin.yml
-        ./bin/gsign --signer $SIGNER --release ${VERSION}-osx --destination ../gitian.sigs/ ../ZiftrCOIN/contrib/gitian-descriptors/gitian-osx-ziftrcoin.yml
+
+	# OS X build
+	./bin/gbuild --commit ziftrcoin=v${VERSION} ../ziftrcoin/contrib/gitian-descriptors/gitian-osx-ziftrcoin.yml
+	./bin/gsign --signer $SIGNER --release ${VERSION}-osx --destination ../gitian.sigs/ ../ziftrcoin/contrib/gitian-descriptors/gitian-osx-ziftrcoin.yml
+	./bin/gverify --release ${VERSION}-osx --destination ../gitian.sigs/ ../ziftrcoin/contrib/gitian-descriptors/gitian-osx-ziftrcoin.yml
 	pushd build/out
 	mv ZiftrCOIN-Qt.dmg ../../../
 	popd
+
+	# pushd gitian-builder/
 	popd
 
   Build output expected:
