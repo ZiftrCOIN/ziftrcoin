@@ -482,12 +482,14 @@ Value getwork(const Array& params, bool fHelp)
 
         // Only need to copy over the things that might have
         // been changed while mining, everything else is saved
-        pblock->SetPoK(pdata->GetPoK());
         pblock->SetPoKFlag(pdata->IsPoKBlock());
         pblock->nNonce = pdata->nNonce;
         pblock->nTime = pdata->nTime;
         pblock->vtx[0].vin[0].scriptSig = mapNewBlock[pdata->hashMerkleRoot].second;
         pblock->hashMerkleRoot = pblock->BuildMerkleTree();
+
+        // Recalculate the pok
+        pblock->SetPoK(pblock->GetPoK());
 
         assert(pwalletMain != NULL);
         return CheckWork(pblock, *pwalletMain, *pMiningKey);
