@@ -850,6 +850,16 @@ public:
         return this->nVersion & VERSION_MASK;
     }
 
+    bool IsPoKBlock() const
+    {
+        return this->nVersion & POK_BOOL_MASK;
+    }
+
+    int GetDayNumber() const 
+    {
+        return this->nHeight / (24 * 60);
+    }
+
     uint256 GetBlockHash() const
     {
         return *phashBlock;
@@ -1051,11 +1061,13 @@ class CChain {
 private:
     std::vector<CBlockIndex*> vChain;
     std::map<int, unsigned int> mapBlockSizeLimits;
+    int64_t nTotalCoinsCreated;
 
 public:
 
     CChain() {
         mapBlockSizeLimits[0] = MIN_MAX_BLOCK_SIZE;
+        nTotalCoinsCreated = 0;
     }
 
     /** Returns the index entry for the genesis block of this chain, or NULL if none. */
@@ -1097,6 +1109,10 @@ public:
     /** Return the maximal height in the chain. Is equal to chain.Tip() ? chain.Tip()->nHeight : -1. */
     int Height() const {
         return vChain.size() - 1;
+    }
+
+    int64_t GetTotalCoinsCreated() const {
+        return nTotalCoinsCreated;
     }
 
     unsigned int MaxBlockSize(int nHeight) {

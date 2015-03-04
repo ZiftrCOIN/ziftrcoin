@@ -399,6 +399,7 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
     if (pindex == NULL) {
         mapBlockSizeLimits.clear();
         mapBlockSizeLimits[0] = MIN_MAX_BLOCK_SIZE;
+        nTotalCoinsCreated = 0;
         vChain.clear();
         return NULL;
     }
@@ -406,6 +407,15 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
     vChain.resize(pindex->nHeight + 1);
     CBlockIndex* pIndexCopy = pindex;
     while (pIndexCopy && vChain[pIndexCopy->nHeight] != pIndexCopy) {
+        // Keep track of total coins. Not techincally accurate because you can claim less
+        // than the total amount, but will likely be right. An exact number isn't usally required
+        // for this kind of statistic anyway.
+        if (vChain[pIndexCopy->nHeight] != NULL) {
+            nTotalCoinsCreated -= GetBlockValue(pIndexCopy->nHeight, 0, vChain[pIndexCopy->nHeight]->IsPoKBlock());
+        }
+        nTotalCoinsCreated += GetBlockValue(pIndexCopy->nHeight, 0, pIndexCopy->IsPoKBlock());
+        
+        // Update the chain
         vChain[pIndexCopy->nHeight] = pIndexCopy;
         pIndexCopy = pIndexCopy->pprev;
     }
@@ -438,7 +448,7 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
                 // If currently averaging more than 2/3 of the block size limit
                 if (3 * nAverageSize > 2 * nPrevLimit)
                 {
-                    // Calculat the median size of the blocks in the last period
+                    // Calculate the median size of the blocks in the last period
                     unsigned int * arrBlockSizes = new unsigned int[MAX_BLOCK_SIZE_RECALC_PERIOD];
                     for (unsigned int i = 0; i < MAX_BLOCK_SIZE_RECALC_PERIOD; i++)
                     {
@@ -481,6 +491,7 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
         }
 
     }
+
     return pindex;
 }
 
@@ -1957,7 +1968,7 @@ bool CountMatureCoins(const CBlock& block, CBlockIndex* pindex)
         }
     }
 
-    LogPrintf("Block %s has %llu total mature coins spent. \n", block.GetHash().ToString(), (long long)pindex->nMatureCoinsSpent);
+    LogPrintf("Block %s has %llu total mature ziftrcoin-satoshis spent. \n", block.GetHash().ToString(), (long long)pindex->nMatureCoinsSpent);
     return true;
 }
 
