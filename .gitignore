@@ -83,3 +83,12 @@ qa/pull-tester/run-bitcoind-for-test.sh
 qa/pull-tester/build-tests.sh
 
 !src/leveldb*/Makefile
+
+# My local files
+
+alertmail.txt
+onalertnotify.sh
+onblocknotify.sh
+times.txt
+
+
