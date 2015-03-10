@@ -4,10 +4,27 @@
 #include <QWidget>
 #include <memory>
 
+#include <QDir>
+#include <QFile>
+#include <QProcess>
+#include <QTime>
+#include <QTimer>
+#include <QStringList>
+#include <QMap>
+#include <QSettings>
+
+#include "clientmodel.h"
 #include "walletmodel.h"
 
 class ClientModel;
 class WalletModel;
+
+// Log types
+#define STARTED 0
+#define SHARE_SUCCESS 1
+#define SHARE_FAIL 2
+#define ERROR 3
+#define LONGPOLL 4
 
 namespace Ui {
 class MiningPage;
@@ -21,21 +38,69 @@ public:
     explicit MiningPage(QWidget *parent = 0);
     ~MiningPage();
 
-    void setModel(WalletModel *model);
+    void setWalletModel(WalletModel *model);
+
+    bool minerActive;
+
+    QProcess *minerProcess;
+
+    QMap<int, double> threadSpeed;
+
+    QTimer *readTimer;
+    QTimer *hashTimer;
+
+    int acceptedShares;
+    int rejectedShares;
+
+    int roundAcceptedShares;
+    int roundRejectedShares;
+
+    int initThreads;
+
+    void setClientModel(ClientModel *model);
+
+public slots:
+    void startPoolMining();
+    void stopPoolMining();
+
+    void updateSpeed();
+
+    void loadSettings();
+    void saveSettings();
+
+    void reportToList(QString, int, QString);
+
+    void minerStarted();
+
+    void minerError(QProcess::ProcessError);
+    void minerFinished();
+
+    void readProcessOutput();
+    void updateHashRates();
+
+    QString getTime(QString);
+    void EnableMiningControlsAppropriately();
+    ClientModel::MiningType getMiningType();
+    void typeChanged(int index);
+    void usePoKToggled(bool checked);
+    void debugToggled(bool checked);
+
+    void changePercentMiningPower(int i);
+    void startPressed();
+    void clearPressed();
 
 private:
     Ui::MiningPage *ui;
-    WalletModel *model;
+    WalletModel *walletmodel;
+    ClientModel *clientmodel;
     std::auto_ptr<WalletModel::UnlockContext> unlockContext;
 
-    void restartMining(bool fGenerate);
-    void timerEvent(QTimerEvent *event);
-    void updateUI();
+    void resetMiningButton();
+    void logShareCounts();
 
-private slots:
-
-    void changeNumberOfCores(int i);
-    void switchMining();
+    // void restartMining(bool fGenerate);
+    // void timerEvent(QTimerEvent *event);
+    // void updateUI();
 };
 
 #endif // MININGPAGE_H

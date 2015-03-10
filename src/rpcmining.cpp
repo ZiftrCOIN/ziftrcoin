@@ -235,7 +235,7 @@ Value getusepok(const json_spirit::Array& params, bool fHelp)
             + HelpExampleCli("getusepok", "")
             + HelpExampleRpc("getusepok", "")
         );
-    return GetBoolArg("-usepok", false);
+    return GetBoolArg("-usepok", DEFAULT_USE_POK);
 }
 
 Value setusepok(const json_spirit::Array& params, bool fHelp)
@@ -322,7 +322,7 @@ Value getmininginfo(const Array& params, bool fHelp)
 #ifdef ENABLE_WALLET
     obj.push_back(Pair("generate",         getgenerate(params, false)));
     obj.push_back(Pair("hashespersec",     gethashespersec(params, false)));
-    obj.push_back(Pair("usepok",           GetBoolArg("-usepok", false)));
+    obj.push_back(Pair("usepok",           GetBoolArg("-usepok", DEFAULT_USE_POK)));
 #endif
     return obj;
 }
@@ -364,7 +364,7 @@ Value getwork(const Array& params, bool fHelp)
 
     if (params.size() == 0 || params[0].get_str().size() == 4 || params[0].get_str().size() == 5)
     {
-        bool fGetPoKWork = GetBoolArg("-usepok", false);
+        bool fGetPoKWork = GetBoolArg("-usepok", DEFAULT_USE_POK);
         if (params.size() != 0)
         {
             string strPoKBool = params[0].get_str();
@@ -680,7 +680,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     result.push_back(Pair("curtime", (int64_t)pblock->nTime));
     result.push_back(Pair("bits", HexBits(pblock->nBits)));
     result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
-    result.push_back(Pair("usepok", GetBoolArg("-usepok", false)));
+    result.push_back(Pair("usepok", GetBoolArg("-usepok", DEFAULT_USE_POK)));
 
     return result;
 }

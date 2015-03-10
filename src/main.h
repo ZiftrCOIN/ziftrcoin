@@ -84,6 +84,10 @@ static const int64_t MATURE_COINS_TIEBREAKER_TIME_LIMIT = 13 * 1000; // (millise
 static const unsigned int MAX_COINBASE_SCRIPTSIG_SIZE = 250;
 /** The minimum coinbase scriptSig size. */
 static const unsigned int MIN_COINBASE_SCRIPTSIG_SIZE = 2;
+/** Default for -usepercenthashpower, for not mining on full power. **/
+static const unsigned int DEFAULT_USE_PERCENT_HASH_POWER = 100;
+/** Default for -usepok, for mining with proof of knowledge for 5% higher rewards. **/
+static const bool DEFAULT_USE_POK = true;
 
 #ifdef USE_UPNP
 static const int fHaveUPnP = true;
