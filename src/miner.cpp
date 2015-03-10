@@ -358,11 +358,11 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
         nLastBlockSize = nBlockSize;
         LogPrintf("CreateNewBlock(): total size %u\n", nBlockSize);
 
-        pblock->vtx[0].vout[0].nValue = GetBlockValue(pindexPrev->nHeight+1, nFees, GetBoolArg("-usepok", false));
+        pblock->vtx[0].vout[0].nValue = GetBlockValue(pindexPrev->nHeight+1, nFees, GetBoolArg("-usepok", DEFAULT_USE_POK));
         pblocktemplate->vTxFees[0] = -nFees;
 
         // Fill in header
-        pblock->SetPoKFlag(GetBoolArg("-usepok", false));
+        pblock->SetPoKFlag(GetBoolArg("-usepok", DEFAULT_USE_POK));
         pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
         UpdateTime(*pblock, pindexPrev);
         pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock->GetBlockTime());
@@ -554,7 +554,7 @@ void static ZiftrCOINMiner(CWallet *pwallet)
                 }
 
                 unsigned int nTries = 5000;
-                unsigned int nPercentHashPower = fDoBaseCaseTest ? 100 : GetArg("-usepercenthashpower", 100);
+                unsigned int nPercentHashPower = fDoBaseCaseTest ? 100 : GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER);
                 nPercentHashPower = std::max(std::min(nPercentHashPower, (unsigned int)100), (unsigned int)0);
                 unsigned int nDontHash = (100 - nPercentHashPower) * nTries / 100;
 

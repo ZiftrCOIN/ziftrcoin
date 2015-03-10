@@ -54,6 +54,35 @@ public:
     double getVerificationProgress() const;
     QDateTime getLastBlockDate() const;
 
+    // ----
+
+    enum MiningType
+    {
+        SoloMining,
+        PoolMining
+    };
+
+    MiningType getMiningType() const;
+    bool getMiningStarted() const;
+
+    QString getMiningServer() const;
+    void setMiningServer(QString server);
+    QString getMiningPort() const;
+    void setMiningPort(QString port);
+    QString getMiningUsername() const;
+    void setMiningUsername(QString username);
+    QString getMiningPassword() const;
+    void setMiningPassword(QString password);
+    bool getDebug() const;
+    void setDebug(bool debug);
+
+    int64_t getHashrate() const;
+    double GetDifficulty() const;
+
+    void setMining(MiningType type, bool mining, int percent);
+
+    // ----
+
     //! Return network (main, testnet3, regtest)
     QString getNetworkName() const;
     //! Return true if core is doing initial block download
@@ -76,6 +105,20 @@ private:
     bool cachedReindexing;
     bool cachedImporting;
 
+    // ----
+
+    MiningType miningType;
+    bool miningStarted;
+    bool miningDebug;
+    int miningScanTime;
+    QString miningServer;
+    QString miningPort;
+    QString miningUsername;
+    QString miningPassword;
+    bool fDebug;
+
+    // ----
+
     int numBlocksAtStartup;
 
     QTimer *pollTimer;
@@ -86,6 +129,7 @@ private:
 signals:
     void numConnectionsChanged(int count);
     void numBlocksChanged(int count);
+    void miningChanged(bool mining, int count);
     void alertsChanged(const QString &warnings);
     void bytesChanged(quint64 totalBytesIn, quint64 totalBytesOut);
 

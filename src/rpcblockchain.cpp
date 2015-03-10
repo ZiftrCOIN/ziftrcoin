@@ -493,7 +493,7 @@ Value gettotalcoins(const Array& params, bool fHelp)
             "gettotalcoins ( fIncludeGenesis )\n"
             "Returns the number of coins currently created on the main chain\n"
             "\nArguments:\n"
-            "1. fIncludeGenesis   (boolean, optional) Default false. Call with true to get total coins including unspent genesis block coins. \n"
+            "1. fIncludeGenesis   (boolean, optional) Default true. Call with false to get total coins except for unspent genesis coins. \n"
             "\nResult:\n"
             "  integer -- the total number of coins\n"
             "\nExamples:\n"
