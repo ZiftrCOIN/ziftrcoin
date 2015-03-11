@@ -55,8 +55,8 @@ MiningPage::MiningPage(QWidget *parent) :
 
     initThreads = 0;
 
-    ui->serverLine->setText(QString(GetArg("-poolserver", "http://zrc.maxminers.net").c_str()));
-    ui->portLine->setText(QString(GetArg("-poolport", "3331").c_str()));
+    ui->serverLine->setText(QString(GetArg("-poolserver", "stratum+tcp://ziftrpool.io").c_str()));
+    ui->portLine->setText(QString(GetArg("-poolport", "3032").c_str()));
     ui->usernameLine->setText(QString(GetArg("-poolusername", "").c_str()));
     ui->passwordLine->setText(QString(GetArg("-poolpassword", "").c_str()));
 
