@@ -159,12 +159,13 @@ void MiningPage::startPoolMining()
     // If minerd is in current path, then use that. Otherwise, assume minerd is in the path somewhere.
     QDir appDir = QDir(QCoreApplication::applicationDirPath());
     QString program = appDir.filePath("minerd");
-    reportToList(QString("Using minerd Application located at: ").append(program), ERROR, NULL);
     if (!QFile::exists(program))
         program = "minerd";
 
     if (ui->debugCheckBox->isChecked())
-        ui->list->addItem(args.join(" ").prepend(" ").prepend(program));
+    {
+        ui->list->addItem(QString("Using minerd application located at: ").append(program));
+    }
 
     ui->mineSpeedLabel->setText("Your hash rate: N/A");
     this->logShareCounts();
@@ -238,13 +239,13 @@ void MiningPage::readProcessOutput()
                 reportToList("Share accepted", SHARE_SUCCESS, getTime(line));
             else if (line.contains("(booooo)"))
                 reportToList("Share rejected", SHARE_FAIL, getTime(line));
-            else if (line.contains("LONGPOLL detected new block"))
-                reportToList("Detected a new block -- new round", LONGPOLL, getTime(line));
+            else if (line.contains("detected new block"))
+                reportToList("Detected a new block -- new round", NEW_ROUND, getTime(line));
             else if (line.contains("Supported options:"))
                 reportToList("Miner didn't start properly. Try checking your settings.", ERROR, NULL);
             else if (line.contains("The requested URL returned error: 403"))
                 reportToList("Couldn't connect. Please check your username and password.", ERROR, NULL);
-            else if (line.contains("HTTP request failed"))
+            else if (line.contains("Connection refused"))
                 reportToList("Couldn't connect. Please check pool server and port.", ERROR, NULL);
             else if (line.contains("JSON-RPC call failed"))
                 reportToList("Couldn't communicate with server. Retrying in 30 seconds.", ERROR, NULL);
@@ -389,7 +390,7 @@ void MiningPage::reportToList(QString msg, int type, QString time)
             this->logShareCounts();
             break;
 
-        case LONGPOLL:
+        case NEW_ROUND:
             roundAcceptedShares = 0;
             roundRejectedShares = 0;
             break;
