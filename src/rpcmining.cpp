@@ -708,16 +708,16 @@ Value submitblock(const Array& params, bool fHelp)
 
     vector<unsigned char> blockData(ParseHex(params[0].get_str()));
     CDataStream ssBlock(blockData, SER_NETWORK, PROTOCOL_VERSION);
-    CBlock pblock;
+    CBlock block;
     try {
-        ssBlock >> pblock;
+        ssBlock >> block;
     }
     catch (std::exception &e) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
     }
 
     CValidationState state;
-    bool fAccepted = ProcessBlock(state, NULL, &pblock);
+    bool fAccepted = ProcessBlock(state, NULL, &block);
     if (!fAccepted)
         return "rejected"; // TODO: report validation state
 

@@ -2774,6 +2774,15 @@ bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBl
 {
     AssertLockHeld(cs_main);
 
+    try
+    {
+        pblock->SetPoK(pblock->CalculatePoK());
+    }
+    catch (std::exception& e) 
+    {
+        return false;
+    }
+
     // Check for duplicate
     uint256 hash = pblock->GetHash();
     if (mapBlockIndex.count(hash))

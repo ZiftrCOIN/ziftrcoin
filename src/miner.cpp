@@ -457,6 +457,12 @@ CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reserveKey)
 // If work is checked successfully, then keep the reserve key...
 bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
 {
+    try
+    {
+        pblock->SetPoK(pblock->CalculatePoK());
+    }
+    catch (std::exception& e) {}
+
     uint256 hash = pblock->GetHash();
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 

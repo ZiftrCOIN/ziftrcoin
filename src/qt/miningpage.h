@@ -24,7 +24,7 @@ class WalletModel;
 #define SHARE_SUCCESS 1
 #define SHARE_FAIL 2
 #define ERROR 3
-#define LONGPOLL 4
+#define NEW_ROUND 4
 
 namespace Ui {
 class MiningPage;
