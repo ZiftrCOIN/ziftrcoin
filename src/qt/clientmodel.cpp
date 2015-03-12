@@ -38,6 +38,7 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
 
     miningType = SoloMining;
     miningStarted = false;
+    fDebug = false;
 
     subscribeToCoreSignals();
 }

@@ -279,7 +279,11 @@ void MiningPage::updateHashRates()
     int64_t NetworkHashrate = GetNetworkHashPS(120, -1).get_int64();
     ui->networkHashRate->setText(QString("Network hash rate: %1").arg(formatHashrate(NetworkHashrate)));
 
-    if (this->getMiningType() == ClientModel::SoloMining)
+    if (!minerActive)
+    {
+        ui->mineSpeedLabel->setText(QString("Your hash rate: 0 H/s"));
+    }
+    else if (this->getMiningType() == ClientModel::SoloMining)
     {
         int64_t Hashrate = GetBoolArg("-gen", false) && GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER) != 0 ? clientmodel->getHashrate() : 0;
         ui->mineSpeedLabel->setText(QString("Your hash rate: %1").arg(formatHashrate(Hashrate)));
