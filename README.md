@@ -3,7 +3,7 @@ ZiftrCOIN Core integration/staging tree
 
 http://www.ziftrcoin.org
 
-Copyright (c) 2015-2019 ZiftrCOIN Core Developers
+Copyright (c) 2015
 
 What is ZiftrCOIN?
 ----------------
