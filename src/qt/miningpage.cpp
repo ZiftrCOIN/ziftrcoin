@@ -27,7 +27,7 @@ static const string introText =
     "  poolusername=\n"
     "  poolpassword=\n\n";
 
-static QString formatHashrate(int64_t n)
+static QString formatHashrate(qint64 n)
 {
     if (n == 0)
         return "0 H/s";
@@ -312,7 +312,7 @@ void MiningPage::readProcessOutput()
 
 void MiningPage::updateHashRates()
 {
-    int64_t NetworkHashrate = GetNetworkHashPS(120, -1).get_int64();
+    qint64 NetworkHashrate = (qint64)GetNetworkHashPS(120, -1).get_int64();
     ui->networkHashRate->setText(QString("Network hash rate: %1").arg(formatHashrate(NetworkHashrate)));
 
     if (!minerActive)
@@ -321,7 +321,7 @@ void MiningPage::updateHashRates()
     }
     else if (this->getMiningType() == ClientModel::SoloMining)
     {
-        int64_t Hashrate = GetBoolArg("-gen", false) && GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER) != 0 ? clientmodel->getHashrate() : 0;
+        qint64 Hashrate = GetBoolArg("-gen", false) && GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER) != 0 ? clientmodel->getHashrate() : 0;
         ui->mineSpeedLabel->setText(QString("Your hash rate: %1").arg(formatHashrate(Hashrate)));
 
         // QString NextBlockTime;
