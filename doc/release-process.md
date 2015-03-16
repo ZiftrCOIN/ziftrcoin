@@ -58,6 +58,10 @@ Once per-computer or per-developer
   
 	export SIGNER=(your gitian key, ie bluematt, sipa, etc)
 	export VERSION=(new version, e.g. 0.8.0)
+
+	# When building on OS X using VirtualBox:
+	#export USE_VBOX=1
+
 	pushd ./ziftrcoin
 	git checkout v${VERSION}
 	popd
