@@ -171,9 +171,9 @@ void MiningPage::startPoolMining()
         passwordLine = QString("x");
 
     args << "--algo" << "ziftr";
-    args << "--url" << urlLine.toAscii();
-    args << "-u" << userLine.toAscii();
-    args << "-p" << passwordLine.toAscii();
+    args << "--url" << urlLine.toUtf8().data();
+    args << "-u" << userLine.toUtf8().data();
+    args << "-p" << passwordLine.toUtf8().data();
 
     unsigned int nPercentHashPow = GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER);
     nPercentHashPow = std::min(std::max(nPercentHashPow, (unsigned int)0), (unsigned int)100);
