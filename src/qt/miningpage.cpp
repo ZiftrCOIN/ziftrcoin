@@ -11,7 +11,23 @@
 
 extern json_spirit::Value GetNetworkHashPS(int lookup, int height);
 
-static QString formatHashrate(int64_t n)
+static const string introText = 
+    "Welcome to ziftrCOIN mining!\n"
+    "If all you would like to do is to just mine to the ziftrCOIN pool, \n"
+    "then just click 'Start Mining'!\n"
+    "\n"
+    "Please occasionally check that the cumulative hashrate of the pool you are \n"
+    "in does not have more than 50\% of the network hashrate. It is not healty \n"
+    "for the hashing power of the network to be so concentrated. \n"
+    "\n"
+    "You can also set the following parameters in your ziftrcoin.conf file to set \n"
+    "and automatically load your chosen pool configurations at start. \n"
+    "  poolserver=\n"
+    "  poolport=\n"
+    "  poolusername=\n"
+    "  poolpassword=\n\n";
+
+static QString formatHashrate(qint64 n)
 {
     if (n == 0)
         return "0 H/s";
@@ -55,9 +71,27 @@ MiningPage::MiningPage(QWidget *parent) :
 
     initThreads = 0;
 
+    this->AddListItem(QString(introText.c_str()));
+
     ui->serverLine->setText(QString(GetArg("-poolserver", "stratum+tcp://ziftrpool.io").c_str()));
     ui->portLine->setText(QString(GetArg("-poolport", "3032").c_str()));
-    ui->usernameLine->setText(QString(GetArg("-poolusername", "").c_str()));
+    
+    string sPoolUsername = GetArg("-poolusername", "");
+    
+    if (sPoolUsername.empty())
+    {
+        // If getaccountaddress fails due to not having enough addresses in key pool,
+        // just don't autofill
+        try {
+            json_spirit::Array params;
+            params.push_back(string("Ziftr Pool Payouts"));
+            params.push_back(true);
+            sPoolUsername = getaccountaddress(params, false).get_str();
+        } 
+        catch (exception& e) {}
+    }
+    ui->usernameLine->setText(QString(sPoolUsername.c_str()));
+
     ui->passwordLine->setText(QString(GetArg("-poolpassword", "").c_str()));
 
     connect(readTimer, SIGNAL(timeout()), this, SLOT(readProcessOutput()));
@@ -133,6 +167,8 @@ void MiningPage::startPoolMining()
     QString urlLine = QString("%1:%2").arg(url, ui->portLine->text());
     QString userLine = QString("%1").arg(ui->usernameLine->text());
     QString passwordLine = QString("%1").arg(ui->passwordLine->text());
+    if (passwordLine.isEmpty())
+        passwordLine = QString("x");
 
     args << "--algo" << "ziftr";
     args << "--url" << urlLine.toAscii();
@@ -164,7 +200,7 @@ void MiningPage::startPoolMining()
 
     if (ui->debugCheckBox->isChecked())
     {
-        ui->list->addItem(QString("Using minerd application located at: ").append(program));
+        this->AddListItem(QString("Using minerd application located at: ").append(program));
     }
 
     ui->mineSpeedLabel->setText("Your hash rate: N/A");
@@ -231,7 +267,7 @@ void MiningPage::readProcessOutput()
 
             if (ui->debugCheckBox->isChecked())
             {
-                ui->list->addItem(line.trimmed());
+                this->AddListItem(line.trimmed());
             }
             ui->list->scrollToBottom();
 
@@ -276,7 +312,7 @@ void MiningPage::readProcessOutput()
 
 void MiningPage::updateHashRates()
 {
-    int64_t NetworkHashrate = GetNetworkHashPS(120, -1).get_int64();
+    qint64 NetworkHashrate = (qint64)GetNetworkHashPS(120, -1).get_int64();
     ui->networkHashRate->setText(QString("Network hash rate: %1").arg(formatHashrate(NetworkHashrate)));
 
     if (!minerActive)
@@ -285,7 +321,7 @@ void MiningPage::updateHashRates()
     }
     else if (this->getMiningType() == ClientModel::SoloMining)
     {
-        int64_t Hashrate = GetBoolArg("-gen", false) && GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER) != 0 ? clientmodel->getHashrate() : 0;
+        qint64 Hashrate = GetBoolArg("-gen", false) && GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER) != 0 ? clientmodel->getHashrate() : 0;
         ui->mineSpeedLabel->setText(QString("Your hash rate: %1").arg(formatHashrate(Hashrate)));
 
         // QString NextBlockTime;
@@ -316,7 +352,7 @@ void MiningPage::minerFinished()
         reportToList("Solo mining stopped.", ERROR, NULL);
     else
         reportToList("Miner exited.", ERROR, NULL);
-    ui->list->addItem("");
+    this->AddListItem("");
     minerActive = false;
     resetMiningButton();
     clientmodel->setMining(getMiningType(), false, -1);
@@ -376,7 +412,7 @@ void MiningPage::reportToList(QString msg, int type, QString time)
     else
         message = QString("[%1] - %2").arg(time, msg);
 
-    ui->list->addItem(message);
+    this->AddListItem(message);
 
     switch(type)
     {
@@ -405,6 +441,13 @@ void MiningPage::reportToList(QString msg, int type, QString time)
 
 
     ui->list->scrollToBottom();
+}
+
+void MiningPage::AddListItem(const QString& text)
+{
+    QListWidgetItem * item = new QListWidgetItem(text);
+    item->setFlags(item->flags() | Qt::ItemIsSelectable);
+    ui->list->addItem(item);
 }
 
 // Function for fetching the time
@@ -486,6 +529,12 @@ void MiningPage::changePercentMiningPower(int i)
 void MiningPage::resetMiningButton()
 {
     ui->startButton->setText(minerActive ? "Stop Mining" : "Start Mining");
+    QString style;
+    if (minerActive)
+        style = "QPushButton { color: #e46e1f; }";
+    else 
+        style = "QPushButton { color: #15444A; }";
+    ui->startButton->setStyleSheet(style);
     EnableMiningControlsAppropriately();
 }
 
@@ -499,8 +548,8 @@ void MiningPage::logShareCounts()
 
     QString messageTotal = QString("Total Shares Accepted: %1 - Rejected: %2").arg(acceptedString, rejectedString);
     QString messageShare = QString("Round Shares Accepted: %1 - Rejected: %2").arg(roundAcceptedString, roundRejectedString);
-    ui->list->addItem(messageTotal);
-    ui->list->addItem(messageShare);
+    this->AddListItem(messageTotal);
+    this->AddListItem(messageShare);
 }
 
 // static QString formatTimeInterval(CBigNum t)

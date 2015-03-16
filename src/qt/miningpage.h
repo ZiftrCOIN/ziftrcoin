@@ -97,6 +97,7 @@ private:
 
     void resetMiningButton();
     void logShareCounts();
+    void AddListItem(const QString& text);
 
     // void restartMining(bool fGenerate);
     // void timerEvent(QTimerEvent *event);

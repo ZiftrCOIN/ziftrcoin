@@ -79,6 +79,9 @@
      <property name="enabled">
       <bool>true</bool>
      </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
      <property name="text">
       <string/>
      </property>
@@ -90,7 +93,7 @@
       <bool>true</bool>
      </property>
      <property name="text">
-      <string>Username</string>
+      <string>Username or Address</string>
      </property>
     </widget>
    </item>
@@ -140,7 +143,7 @@
       <bool>true</bool>
      </property>
      <property name="text">
-      <string>Password</string>
+      <string>Password*</string>
      </property>
     </widget>
    </item>
@@ -148,6 +151,9 @@
     <widget class="QLineEdit" name="passwordLine">
      <property name="enabled">
       <bool>true</bool>
+     </property>
+     <property name="inputMethodHints">
+      <set>Qt::ImhHiddenText</set>
      </property>
     </widget>
    </item>
@@ -180,7 +186,7 @@
       </sizepolicy>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: blue;</string>
+      <string notr="true">color: #15444A;</string>
      </property>
      <property name="text">
       <string>Start Mining</string>
@@ -239,8 +245,14 @@
      <property name="styleSheet">
       <string notr="true">margin-bottom: 10px;</string>
      </property>
+     <property name="inputMethodHints">
+      <set>Qt::ImhNone</set>
+     </property>
      <property name="autoScrollMargin">
       <number>100000</number>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked</set>
      </property>
      <property name="dragDropMode">
       <enum>QAbstractItemView::DragOnly</enum>
@@ -297,6 +309,30 @@
     <widget class="Line" name="line_2">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="4" colspan="2">
+    <widget class="QLabel" name="label">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>15</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>* Password not required on NOMP Pools (like Ziftr's)</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
     </widget>
    </item>
