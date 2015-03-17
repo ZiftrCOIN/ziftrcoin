@@ -135,6 +135,13 @@ done${UNSECTION_ID}:
 # Uninstaller sections
 Section /o -un.Main UNSEC0000
     Delete /REBOOTOK $INSTDIR\ziftrcoin-qt.exe
+    Delete /REBOOTOK $INSTDIR\minerd.exe
+    Delete /REBOOTOK $INSTDIR\libcurl.dll
+    Delete /REBOOTOK $INSTDIR\libeay32.dll
+    Delete /REBOOTOK $INSTDIR\libjansson-4.dll
+    Delete /REBOOTOK $INSTDIR\libwinpthread-1.dll
+    Delete /REBOOTOK $INSTDIR\ssleay32.dll
+    Delete /REBOOTOK $INSTDIR\zlib1.dll
     Delete /REBOOTOK $INSTDIR\COPYING.txt
     Delete /REBOOTOK $INSTDIR\readme.txt
     RMDir /r /REBOOTOK $INSTDIR\daemon
