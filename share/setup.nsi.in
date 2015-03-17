@@ -77,8 +77,6 @@ Section -Main SEC0000
     File @abs_top_srcdir@/minerd.exe
     File @abs_top_srcdir@/libcurl.dll
     File @abs_top_srcdir@/libeay32.dll
-    File @abs_top_srcdir@/libjansson-4.dll
-    File @abs_top_srcdir@/libwinpthread-1.dll
     File @abs_top_srcdir@/ssleay32.dll
     File @abs_top_srcdir@/zlib1.dll
     File /oname=COPYING.txt @abs_top_srcdir@/COPYING
@@ -138,8 +136,6 @@ Section /o -un.Main UNSEC0000
     Delete /REBOOTOK $INSTDIR\minerd.exe
     Delete /REBOOTOK $INSTDIR\libcurl.dll
     Delete /REBOOTOK $INSTDIR\libeay32.dll
-    Delete /REBOOTOK $INSTDIR\libjansson-4.dll
-    Delete /REBOOTOK $INSTDIR\libwinpthread-1.dll
     Delete /REBOOTOK $INSTDIR\ssleay32.dll
     Delete /REBOOTOK $INSTDIR\zlib1.dll
     Delete /REBOOTOK $INSTDIR\COPYING.txt
