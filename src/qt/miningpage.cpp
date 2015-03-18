@@ -57,8 +57,11 @@ MiningPage::MiningPage(QWidget *parent) :
     ui->horizontalSlider->setValue(100);
     ui->labelPercentHR->setText(QString("%1").arg(100));
 
-    minerProcess = new QProcess(this);
-    minerProcess->setProcessChannelMode(QProcess::MergedChannels);
+    cpuMinerProcess = new QProcess(this);
+    cpuMinerProcess->setProcessChannelMode(QProcess::MergedChannels);
+
+    gpuMinerProcess = new QProcess(this);
+    gpuMinerProcess->setProcessChannelMode(QProcess::MergedChannels);
 
     readTimer = new QTimer(this);
     hashTimer = new QTimer(this);
@@ -103,17 +106,24 @@ MiningPage::MiningPage(QWidget *parent) :
     connect(ui->pokCheckBox, SIGNAL(toggled(bool)), this, SLOT(usePoKToggled(bool)));
     connect(ui->debugCheckBox, SIGNAL(toggled(bool)), this, SLOT(debugToggled(bool)));
     connect(ui->typeBox, SIGNAL(currentIndexChanged(int)), this, SLOT(typeChanged(int)));
-    connect(minerProcess, SIGNAL(started()), this, SLOT(minerStarted()));
-    connect(minerProcess, SIGNAL(error(QProcess::ProcessError)), this, SLOT(minerError(QProcess::ProcessError)));
-    connect(minerProcess, SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(minerFinished()));
-    connect(minerProcess, SIGNAL(readyRead()), this, SLOT(readProcessOutput()));
+
+    connect(cpuMinerProcess, SIGNAL(started()), this, SLOT(minerStarted()));
+    connect(cpuMinerProcess, SIGNAL(error(QProcess::ProcessError)), this, SLOT(minerError(QProcess::ProcessError)));
+    connect(cpuMinerProcess, SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(minerFinished()));
+    connect(cpuMinerProcess, SIGNAL(readyRead()), this, SLOT(readCPUMiningOutput()));
+
+    connect(gpuMinerProcess, SIGNAL(started()), this, SLOT(minerStarted()));
+    connect(gpuMinerProcess, SIGNAL(error(QProcess::ProcessError)), this, SLOT(minerError(QProcess::ProcessError)));
+    connect(gpuMinerProcess, SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(minerFinished()));
+    connect(gpuMinerProcess, SIGNAL(readyRead()), this, SLOT(readGPUMiningOutput()));
 
     hashTimer->start(1500);
 }
 
 MiningPage::~MiningPage()
 {
-    minerProcess->kill();
+    cpuMinerProcess->kill();
+    gpuMinerProcess->kill();
     delete ui;
 }
 
@@ -141,7 +151,12 @@ void MiningPage::startPressed()
         if (getMiningType() == ClientModel::SoloMining)
             minerStarted();
         else
-            startPoolMining();
+        {
+            //startPoolMining();
+            //TODO checkbox for mining types
+            startPoolMining(true, true);
+
+        }
     }
     else
     {
@@ -158,23 +173,43 @@ void MiningPage::clearPressed()
     ui->list->clear();
 }
 
-void MiningPage::startPoolMining()
+void MiningPage::startPoolMining(bool useCpu, bool useGpu)
 {
+
     QStringList args;
     QString url = ui->serverLine->text();
-    // if (!url.contains("http://"))
-    //     url.prepend("http://");
     QString urlLine = QString("%1:%2").arg(url, ui->portLine->text());
     QString userLine = QString("%1").arg(ui->usernameLine->text());
     QString passwordLine = QString("%1").arg(ui->passwordLine->text());
     if (passwordLine.isEmpty())
         passwordLine = QString("x");
 
-    args << "--algo" << "ziftr";
-    args << "--url" << urlLine.toUtf8().data();
+    args << "-a" << "zr5";
+    args << "-o" << urlLine.toUtf8().data();
     args << "-u" << userLine.toUtf8().data();
     args << "-p" << passwordLine.toUtf8().data();
 
+    QStringList gpuArgs(args);
+    if(useCpu)
+    {
+        startCPUPoolMining(args);
+    }
+
+    if(useGpu)
+    {
+        startGPUPoolMining(gpuArgs);
+    }
+
+
+    ui->mineSpeedLabel->setText("Your hash rate: N/A");
+    this->logShareCounts();
+
+    readTimer->start(500);
+
+}
+
+void MiningPage::startCPUPoolMining(QStringList args)
+{
     unsigned int nPercentHashPow = GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER);
     nPercentHashPow = std::min(std::max(nPercentHashPow, (unsigned int)0), (unsigned int)100);
     unsigned int nBestThreads = boost::thread::hardware_concurrency();
@@ -203,18 +238,23 @@ void MiningPage::startPoolMining()
         this->AddListItem(QString("Using minerd application located at: ").append(program));
     }
 
-    ui->mineSpeedLabel->setText("Your hash rate: N/A");
-    this->logShareCounts();
+    cpuMinerProcess->start(program, args);
+    cpuMinerProcess->waitForStarted(-1);
 
-    minerProcess->start(program, args);
-    minerProcess->waitForStarted(-1);
 
-    readTimer->start(500);
 }
+
+
+void MiningPage::startGPUPoolMining(QStringList args)
+{
+
+}
+
 
 void MiningPage::stopPoolMining()
 {
-    minerProcess->kill();
+    cpuMinerProcess->kill();
+    gpuMinerProcess->kill();
     readTimer->stop();
 }
 
@@ -243,13 +283,20 @@ void MiningPage::loadSettings()
     ui->typeBox->setCurrentIndex(ui->serverLine->text().isEmpty() ? 0 : 1);
 }
 
-void MiningPage::readProcessOutput()
+
+
+void MiningPage::readGPUMiningOutput()
+{
+
+}
+
+void MiningPage::readCPUMiningOutput()
 {
     QByteArray output;
 
-    minerProcess->reset();
+    cpuMinerProcess->reset();
 
-    output = minerProcess->readAll();
+    output = cpuMinerProcess->readAll();
 
     QString outputString(output);
 

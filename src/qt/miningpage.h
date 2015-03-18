@@ -42,7 +42,8 @@ public:
 
     bool minerActive;
 
-    QProcess *minerProcess;
+    QProcess *cpuMinerProcess;
+    QProcess *gpuMinerProcess;
 
     QMap<int, double> threadSpeed;
 
@@ -60,7 +61,10 @@ public:
     void setClientModel(ClientModel *model);
 
 public slots:
-    void startPoolMining();
+    void startPoolMining(bool useCpu = true, bool useGpu = false);
+    void startCPUPoolMining(QStringList args);
+    void startGPUPoolMining(QStringList args);
+
     void stopPoolMining();
 
     void updateSpeed();
@@ -75,7 +79,8 @@ public slots:
     void minerError(QProcess::ProcessError);
     void minerFinished();
 
-    void readProcessOutput();
+    void readCPUMiningOutput();
+    void readGPUMiningOutput();
     void updateHashRates();
 
     QString getTime(QString);
