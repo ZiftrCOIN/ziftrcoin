@@ -87,8 +87,6 @@ script: |
     #
     cp $STAGING/lib/libcurl.dll $BUILDDIR/distsrc/
     cp $STAGING/lib/libeay32.dll $BUILDDIR/distsrc/
-    cp $STAGING/lib/libjansson-4.dll $BUILDDIR/distsrc/
-    cp $STAGING/lib/libwinpthread-1.dll $BUILDDIR/distsrc/
     cp $STAGING/lib/ssleay32.dll $BUILDDIR/distsrc/
     cp $STAGING/lib/zlib1.dll $BUILDDIR/distsrc/
     #
