@@ -46,6 +46,7 @@ public:
     QProcess *gpuMinerProcess;
 
     QMap<int, double> threadSpeed;
+    double gpuSpeed;
 
     QTimer *readTimer;
     QTimer *hashTimer;
@@ -57,6 +58,7 @@ public:
     int roundRejectedShares;
 
     int initThreads;
+    bool useCuda;
 
     void setClientModel(ClientModel *model);
 

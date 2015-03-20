@@ -247,7 +247,20 @@ void MiningPage::startCPUPoolMining(QStringList args)
 
 void MiningPage::startGPUPoolMining(QStringList args)
 {
+    gpuSpeed = 0;
 
+    //TODO -add sgminer and check for specific gpu, set useCuda boolean
+    useCuda = true;
+
+    QDir appDir = QDir(QCoreApplication::applicationDirPath());
+
+    if(useCuda)
+    {
+        QString program = appDir.filePath("ccminer");
+
+        gpuMinerProcess->start(program, args);
+        gpuMinerProcess->waitForStarted(-1);
+    }
 }
 
 
@@ -287,7 +300,72 @@ void MiningPage::loadSettings()
 
 void MiningPage::readGPUMiningOutput()
 {
+    double totalGpuSpeed = 0;
+    int gpuSpeedCount = 0;
 
+    QByteArray outputBytes;
+    outputBytes = gpuMinerProcess->readAll();
+
+    QString outputString(outputBytes);
+
+    if (!outputString.isEmpty())
+    {
+        //this->AddListItem(outputString);
+
+        QStringList list = outputString.split("\n", QString::SkipEmptyParts);
+        for(int x = 0; x < list.size(); x++) {
+            QString outputLine = list.at(x);
+
+            if (ui->debugCheckBox->isChecked())
+            {
+                this->AddListItem(outputLine.trimmed());
+            }
+            ui->list->scrollToBottom();
+
+            if(useCuda)
+            {
+                //the cuda output makes it easier as it will calculate the total of all gpu hashrate for us
+                //eg [2015-03-19 13:27:40] Total: 220.35 khash/s
+
+                this->AddListItem(outputLine.trimmed());
+
+                //hash rate is reported like this
+                //[2015-03-19 18:42:26] GPU #0: GeForce GT 650M, 211.28 khash/s
+                int gpuIndex = outputLine.indexOf("GPU #");
+                if(gpuIndex > 0)
+                {
+                    //get the gpu number
+                    gpuIndex += 5;
+                    int gpuEndIndex = outputLine.indexOf(":", gpuIndex);
+                    QString gpuNumberString = outputLine.mid(gpuIndex, gpuEndIndex);
+
+                    int gpuId = gpuNumberString.toInt();
+
+                }
+
+
+                int hashrateIndex = outputLine.indexOf("Total:");
+                if(hashrateIndex > 0)
+                {
+                    //get everything between "Total: " and the next space " "
+                    hashrateIndex += 7;
+                    int endIndex = outputLine.indexOf(" ", hashrateIndex);
+                    QString hashrateString = outputLine.mid(hashrateIndex, endIndex);
+
+                    this->AddListItem(QString("GPU rate: ").append(hashrateString));
+
+                    totalGpuSpeed += hashrateString.toDouble();
+                    gpuSpeedCount++;
+                }
+            }//end useCuda
+
+        }
+
+        if(gpuSpeedCount > 0 && totalGpuSpeed > 0)
+        {
+            gpuSpeed = totalGpuSpeed / gpuSpeedCount; //get an average of the last few reported speeds
+        }
+    }
 }
 
 void MiningPage::readCPUMiningOutput()
@@ -424,29 +502,47 @@ void MiningPage::updateSpeed()
     double totalSpeed=0;
     int totalThreads=0;
 
-    QMapIterator<int, double> iter(threadSpeed);
-    while(iter.hasNext())
+    QString cpuSpeedString("0.00");
+    QString gpuSpeedString("0.00");
+
+    if(true)
     {
-        iter.next();
-        totalSpeed += iter.value();
-        totalThreads++;
+        double totalCpuSpeed = 0;
+        QMapIterator<int, double> iter(threadSpeed);
+        while(iter.hasNext())
+        {
+            iter.next();
+            totalCpuSpeed += iter.value();
+            totalThreads++;
+        }
+
+        // If all threads haven't reported the hash speed yet, make an assumption
+        if (totalThreads != initThreads)
+        {
+            totalCpuSpeed = (totalCpuSpeed * initThreads / totalThreads);
+            cpuSpeedString = QString("~%1").arg(totalCpuSpeed);
+        }
+        else
+        {
+            cpuSpeedString = QString("%1").arg(totalCpuSpeed);
+        }
+        totalSpeed += totalCpuSpeed;
     }
 
-    if (totalThreads == 0)
-        return;
-
-    // If all threads haven't reported the hash speed yet, make an assumption
-    if (totalThreads != initThreads)
+    if(true)
     {
-        totalSpeed = (totalSpeed * initThreads / totalThreads);
+        gpuSpeedString = QString("%1").arg(gpuSpeed);
+        totalSpeed += gpuSpeed;
     }
 
-    QString speedString = QString("%1").arg(totalSpeed);
-
+    /**
     if (totalThreads == initThreads)
         ui->mineSpeedLabel->setText(QString("Your hash rate: %1 kH/s").arg(speedString));
     else
         ui->mineSpeedLabel->setText(QString("Your hash rate: ~%1 kH/s").arg(speedString));
+    **/
+
+    ui->mineSpeedLabel->setText(QString("Your hash rate: %1 kH/s | %2 kH/s :: %3 kH/s").arg(cpuSpeedString).arg(gpuSpeedString).arg(totalSpeed));
 
     clientmodel->setMining(getMiningType(), true, -1);
 }
