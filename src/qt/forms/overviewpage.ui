@@ -14,7 +14,7 @@
    <string>Form</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">background: #09363b;</string>
+   <string notr="true">background: #0c434a;</string>
   </property>
   <layout class="QVBoxLayout" name="topLayout">
    <item>
@@ -243,7 +243,7 @@ border-radius: 10px;</string>
                  <bool>false</bool>
                 </property>
                 <property name="styleSheet">
-                 <string>0</string>
+                 <string notr="true"/>
                 </property>
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
