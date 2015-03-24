@@ -56,8 +56,8 @@ border-radius: 10px;</string>
              <widget class="QLabel" name="label_5">
               <property name="font">
                <font>
-                <weight>75</weight>
-                <bold>true</bold>
+                <family>Lato</family>
+                <pointsize>18</pointsize>
                </font>
               </property>
               <property name="styleSheet">
@@ -114,6 +114,12 @@ border-radius: 10px;</string>
               </property>
               <item row="0" column="0">
                <widget class="QLabel" name="label">
+                <property name="font">
+                 <font>
+                  <family>Lato</family>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Available:</string>
                 </property>
@@ -123,6 +129,8 @@ border-radius: 10px;</string>
                <widget class="QLabel" name="labelBalance">
                 <property name="font">
                  <font>
+                  <family>Lato</family>
+                  <pointsize>14</pointsize>
                   <weight>75</weight>
                   <bold>true</bold>
                  </font>
@@ -146,6 +154,12 @@ border-radius: 10px;</string>
               </item>
               <item row="1" column="0">
                <widget class="QLabel" name="label_3">
+                <property name="font">
+                 <font>
+                  <family>Lato</family>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Pending:</string>
                 </property>
@@ -155,6 +169,8 @@ border-radius: 10px;</string>
                <widget class="QLabel" name="labelUnconfirmed">
                 <property name="font">
                  <font>
+                  <family>Lato</family>
+                  <pointsize>14</pointsize>
                   <weight>75</weight>
                   <bold>true</bold>
                  </font>
@@ -178,6 +194,12 @@ border-radius: 10px;</string>
               </item>
               <item row="2" column="0">
                <widget class="QLabel" name="labelImmatureText">
+                <property name="font">
+                 <font>
+                  <family>Lato</family>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Immature:</string>
                 </property>
@@ -187,6 +209,8 @@ border-radius: 10px;</string>
                <widget class="QLabel" name="labelImmature">
                 <property name="font">
                  <font>
+                  <family>Lato</family>
+                  <pointsize>14</pointsize>
                   <weight>75</weight>
                   <bold>true</bold>
                  </font>
@@ -207,6 +231,12 @@ border-radius: 10px;</string>
               </item>
               <item row="4" column="0">
                <widget class="QLabel" name="labelTotalText">
+                <property name="font">
+                 <font>
+                  <family>Lato</family>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Total:</string>
                 </property>
@@ -216,6 +246,8 @@ border-radius: 10px;</string>
                <widget class="QLabel" name="labelTotal">
                 <property name="font">
                  <font>
+                  <family>Lato</family>
+                  <pointsize>14</pointsize>
                   <weight>75</weight>
                   <bold>true</bold>
                  </font>
@@ -323,6 +355,12 @@ border-radius: 10px;</string>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <item>
              <widget class="QLabel" name="label_4">
+              <property name="font">
+               <font>
+                <family>Lato</family>
+                <pointsize>18</pointsize>
+               </font>
+              </property>
               <property name="styleSheet">
                <string notr="true">color: #2f9ca1;</string>
               </property>
