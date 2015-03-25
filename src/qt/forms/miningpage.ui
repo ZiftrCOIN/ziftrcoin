@@ -17,6 +17,43 @@
    <property name="sizeConstraint">
     <enum>QLayout::SetMaximumSize</enum>
    </property>
+   <item row="7" column="4">
+    <widget class="QLineEdit" name="usernameLine">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="13" column="1" colspan="5">
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="1">
+    <widget class="QLineEdit" name="serverLine">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="2">
+    <widget class="QLineEdit" name="portLine">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="value" stdset="0">
+      <number>9332</number>
+     </property>
+    </widget>
+   </item>
    <item row="4" column="2">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
@@ -50,127 +87,6 @@
      </item>
     </layout>
    </item>
-   <item row="4" column="4">
-    <widget class="QCheckBox" name="pokCheckBox">
-     <property name="text">
-      <string>Use Proof of Knowledge</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="1">
-    <widget class="QLabel" name="typeLabel">
-     <property name="text">
-      <string>Type</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="2">
-    <widget class="QLabel" name="threadsLabel">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="text">
-      <string>Percentage max hash rate:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="4">
-    <widget class="QLineEdit" name="usernameLine">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="4">
-    <widget class="QLabel" name="usernameLabel">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="text">
-      <string>Username</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="1">
-    <widget class="QLineEdit" name="serverLine">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="2">
-    <widget class="QLineEdit" name="portLine">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="value" stdset="0">
-      <number>9332</number>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1">
-    <widget class="QLabel" name="serverLabel">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="text">
-      <string>Pool Server URL</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="2">
-    <widget class="QLabel" name="portLabel">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="text">
-      <string>Port</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="5">
-    <widget class="QLabel" name="passwordLabel">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="text">
-      <string>Password</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="5">
-    <widget class="QLineEdit" name="passwordLine">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="1">
-    <widget class="QComboBox" name="typeBox">
-     <property name="editable">
-      <bool>false</bool>
-     </property>
-     <property name="currentIndex">
-      <number>0</number>
-     </property>
-     <item>
-      <property name="text">
-       <string>Solo Mining</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Pool Mining</string>
-      </property>
-     </item>
-    </widget>
-   </item>
    <item row="4" column="5">
     <widget class="QPushButton" name="startButton">
      <property name="sizePolicy">
@@ -184,48 +100,6 @@
      </property>
      <property name="text">
       <string>Start Mining</string>
-     </property>
-    </widget>
-   </item>
-   <item row="9" column="1" colspan="5">
-    <widget class="Line" name="line">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>20</height>
-      </size>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="14" column="4">
-    <widget class="QCheckBox" name="debugCheckBox">
-     <property name="layoutDirection">
-      <enum>Qt::LeftToRight</enum>
-     </property>
-     <property name="text">
-      <string>Debug</string>
-     </property>
-    </widget>
-   </item>
-   <item row="14" column="5">
-    <widget class="QPushButton" name="clearButton">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Clear</string>
      </property>
     </widget>
    </item>
@@ -256,6 +130,13 @@
      </property>
     </widget>
    </item>
+   <item row="3" column="1">
+    <widget class="QLabel" name="typeLabel">
+     <property name="text">
+      <string>Type</string>
+     </property>
+    </widget>
+   </item>
    <item row="14" column="2">
     <widget class="QLabel" name="mineSpeedLabel">
      <property name="sizePolicy">
@@ -279,6 +160,59 @@
      </property>
     </widget>
    </item>
+   <item row="7" column="5">
+    <widget class="QLineEdit" name="passwordLine">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="4">
+    <widget class="QCheckBox" name="debugCheckBox">
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>Debug</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="4">
+    <widget class="QCheckBox" name="pokCheckBox">
+     <property name="text">
+      <string>Use Proof of Knowledge</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QLabel" name="threadsLabel">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Percentage max hash rate:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="1" colspan="5">
+    <widget class="Line" name="line">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>20</height>
+      </size>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
    <item row="14" column="1">
     <widget class="QLabel" name="networkHashRate">
      <property name="font">
@@ -293,10 +227,76 @@
      </property>
     </widget>
    </item>
-   <item row="13" column="1" colspan="5">
-    <widget class="Line" name="line_2">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+   <item row="4" column="1">
+    <widget class="QComboBox" name="typeBox">
+     <property name="editable">
+      <bool>false</bool>
+     </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <item>
+      <property name="text">
+       <string>Solo Mining</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Pool Mining</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QLabel" name="serverLabel">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Pool Server URL</string>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="5">
+    <widget class="QPushButton" name="clearButton">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Clear</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="5">
+    <widget class="QLabel" name="passwordLabel">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Password</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="2">
+    <widget class="QLabel" name="portLabel">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Port</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="4">
+    <widget class="QLabel" name="usernameLabel">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Username</string>
      </property>
     </widget>
    </item>
@@ -311,6 +311,8 @@
   <tabstop>passwordLine</tabstop>
   <tabstop>list</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="../bitcoin.qrc"/>
+ </resources>
  <connections/>
 </ui>

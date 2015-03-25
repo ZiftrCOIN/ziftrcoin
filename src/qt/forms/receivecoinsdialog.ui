@@ -6,208 +6,275 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>776</width>
-    <height>364</height>
+    <width>899</width>
+    <height>715</height>
    </rect>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,1">
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0">
    <item>
-   <widget class="QFrame" name="frame2">
-    <property name="sizePolicy">
+    <widget class="QFrame" name="frame2">
+     <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
       </sizepolicy>
-    </property>
-    <property name="frameShape">
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background: #fff;
+border-radius: 10px;</string>
+     </property>
+     <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
-    </property>
-    <property name="frameShadow">
+     </property>
+     <property name="frameShadow">
       <enum>QFrame::Sunken</enum>
-    </property>
-    <layout class="QVBoxLayout" name="verticalLayout_3">
-    <item>
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="7" column="2">
-      <widget class="QCheckBox" name="reuseAddress">
-       <property name="toolTip">
-        <string>Reuse one of the previously used receiving addresses. Reusing addresses has security and privacy issues. Do not use this unless re-generating a payment request made before.</string>
-       </property>
-       <property name="text">
-        <string>R&amp;euse an existing receiving address (not recommended)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="7" column="0">
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="toolTip">
-        <string>An optional message to attach to the payment request, which will be displayed when the request is opened. Note: The message will not be sent with the payment over the ZiftrCOIN network.</string>
-       </property>
-       <property name="text">
-        <string>&amp;Message:</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-       <property name="buddy">
-        <cstring>reqMessage</cstring>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="2">
-      <widget class="QLineEdit" name="reqLabel">
-       <property name="toolTip">
-        <string>An optional label to associate with the new receiving address.</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="2">
-      <widget class="QLineEdit" name="reqMessage">
-       <property name="toolTip">
-        <string>An optional message to attach to the payment request, which will be displayed when the request is opened. Note: The message will not be sent with the payment over the ZiftrCOIN network.</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="2">
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>Use this form to request payments. All fields are &lt;b&gt;optional&lt;/b&gt;.</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="toolTip">
-        <string>An optional label to associate with the new receiving address.</string>
-       </property>
-       <property name="text">
-        <string>&amp;Label:</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-       <property name="buddy">
-        <cstring>reqLabel</cstring>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="label">
-       <property name="toolTip">
-        <string>An optional amount to request. Leave this empty or zero to not request a specific amount.</string>
-       </property>
-       <property name="text">
-        <string>&amp;Amount:</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-       <property name="buddy">
-        <cstring>reqAmount</cstring>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="2">
-      <widget class="BitcoinAmountField" name="reqAmount">
-       <property name="minimumSize">
-        <size>
-         <width>80</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>An optional amount to request. Leave this empty or zero to not request a specific amount.</string>
-       </property>
-      </widget>
-     </item>
-    <item row="8" column="2">
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QPushButton" name="receiveButton">
-       <property name="minimumSize">
-        <size>
-         <width>150</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>&amp;Request payment</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../bitcoin.qrc">
-         <normaloff>:/icons/receiving_addresses</normaloff>:/icons/receiving_addresses</iconset>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="clearButton">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="toolTip">
-        <string>Clear all fields of the form.</string>
-       </property>
-       <property name="text">
-        <string>Clear</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../bitcoin.qrc">
-         <normaloff>:/icons/remove</normaloff>:/icons/remove</iconset>
-       </property>
-       <property name="autoRepeatDelay">
-        <number>300</number>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-     </item>
-     <item row="8" column="0">
-      <widget class="QLabel" name="label_7">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   </layout>
-   </widget>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="7" column="0">
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0" alignment="Qt::AlignLeft">
+         <widget class="QLabel" name="label_3">
+          <property name="font">
+           <font>
+            <family>Lato</family>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="toolTip">
+           <string>An optional message to attach to the payment request, which will be displayed when the request is opened. Note: The message will not be sent with the payment over the ZiftrCOIN network.</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #2f9ca1;</string>
+          </property>
+          <property name="text">
+           <string>&amp;Message:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buddy">
+           <cstring>reqMessage</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="2">
+         <widget class="QCheckBox" name="reuseAddress">
+          <property name="font">
+           <font>
+            <family>Lato</family>
+            <pointsize>14</pointsize>
+           </font>
+          </property>
+          <property name="toolTip">
+           <string>Reuse one of the previously used receiving addresses. Reusing addresses has security and privacy issues. Do not use this unless re-generating a payment request made before.</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #473f3c</string>
+          </property>
+          <property name="text">
+           <string>R&amp;euse an existing receiving address (not recommended)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="2">
+         <widget class="QLineEdit" name="reqLabel">
+          <property name="toolTip">
+           <string>An optional label to associate with the new receiving address.</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">border: 1px solid #bcbcbc; border-radius: 0;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="2">
+         <widget class="QLineEdit" name="reqMessage">
+          <property name="toolTip">
+           <string>An optional message to attach to the payment request, which will be displayed when the request is opened. Note: The message will not be sent with the payment over the ZiftrCOIN network.</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">border: 1px solid #bcbcbc; border-radius: 0;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QLabel" name="label_5">
+          <property name="font">
+           <font>
+            <family>Lato</family>
+            <pointsize>14</pointsize>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #2f9ca1;</string>
+          </property>
+          <property name="text">
+           <string>Use this form to request payments. All fields are optional.</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0" alignment="Qt::AlignLeft">
+         <widget class="QLabel" name="label_2">
+          <property name="font">
+           <font>
+            <family>Lato</family>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="toolTip">
+           <string>An optional label to associate with the new receiving address.</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #2f9ca1;</string>
+          </property>
+          <property name="text">
+           <string>&amp;Label:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buddy">
+           <cstring>reqLabel</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0" alignment="Qt::AlignLeft">
+         <widget class="QLabel" name="label">
+          <property name="font">
+           <font>
+            <family>Lato</family>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="toolTip">
+           <string>An optional amount to request. Leave this empty or zero to not request a specific amount.</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #2f9ca1;</string>
+          </property>
+          <property name="text">
+           <string>&amp;Amount:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buddy">
+           <cstring>reqAmount</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="2">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QPushButton" name="receiveButton">
+            <property name="minimumSize">
+             <size>
+              <width>150</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: #e37025;
+color: #fff;
+height: 30px;
+width: 10px;
+border-radius: 5px;</string>
+            </property>
+            <property name="text">
+             <string>REQUEST PAYMENT</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="clearButton">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>Clear all fields of the form.</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: #419d9e;
+color: #fff;
+height: 30px;
+width: 100px;
+border-radius: 5px;</string>
+            </property>
+            <property name="text">
+             <string>CLEAR</string>
+            </property>
+            <property name="autoRepeatDelay">
+             <number>300</number>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item row="5" column="2">
+         <widget class="BitcoinAmountField" name="reqAmount">
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="toolTip">
+           <string>An optional amount to request. Leave this empty or zero to not request a specific amount.</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">border: 1px solid #bcbcbc; border-radius: 0;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0">
+         <widget class="QLabel" name="label_7">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
-    <spacer name="verticalSpacer_2">
+    <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>
        <width>20</width>
-       <height>10</height>
+       <height>40</height>
       </size>
      </property>
     </spacer>
@@ -220,94 +287,175 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="styleSheet">
+      <string notr="true">border: 0</string>
+     </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
+     <layout class="QVBoxLayout" name="verticalLayout_5">
       <item>
-       <widget class="QLabel" name="label_6">
-        <property name="font">
-         <font>
-          <weight>75</weight>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Requested payments history</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QTableView" name="recentRequestsView">
-        <property name="contextMenuPolicy">
-         <enum>Qt::CustomContextMenu</enum>
-        </property>
-        <property name="tabKeyNavigation">
-         <bool>false</bool>
-        </property>
-        <property name="sortingEnabled">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
-         <widget class="QPushButton" name="showRequestButton">
-          <property name="toolTip">
-           <string>Show the selected request (does the same as double clicking an entry)</string>
-          </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QLabel" name="label_6">
+            <property name="font">
+             <font>
+              <family>Lato</family>
+              <pointsize>16</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: #2f9ca1;</string>
+            </property>
+            <property name="text">
+             <string>Requested payments history</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTableView" name="recentRequestsView">
+            <property name="contextMenuPolicy">
+             <enum>Qt::CustomContextMenu</enum>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background: #fff; border-radius: 10px;</string>
+            </property>
+            <property name="tabKeyNavigation">
+             <bool>false</bool>
+            </property>
+            <property name="sortingEnabled">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QPushButton" name="showRequestButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Show the selected request (does the same as double clicking an entry)</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: #419d9e;
+color: #fff;
+height: 30px;
+width: 100px;
+border-radius: 5px;</string>
+            </property>
+            <property name="text">
+             <string>Show</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="removeRequestButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Remove the selected entries from the list</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: #419d9e;
+color: #fff;
+height: 30px;
+width: 100px;
+border-radius: 5px;</string>
+            </property>
+            <property name="text">
+             <string>Remove</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <item>
+         <widget class="QLabel" name="label_wallet_bgcoin">
           <property name="text">
-           <string>Show</string>
+           <string/>
           </property>
-          <property name="enabled">
+          <property name="pixmap">
+           <pixmap resource="../bitcoin.qrc">:/images/wallet_bgcoin</pixmap>
+          </property>
+          <property name="scaledContents">
            <bool>false</bool>
           </property>
-          <property name="icon">
-           <iconset resource="../bitcoin.qrc">
-            <normaloff>:/icons/edit</normaloff>:/icons/edit</iconset>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <property name="margin">
+           <number>-2</number>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="removeRequestButton">
-          <property name="toolTip">
-           <string>Remove the selected entries from the list</string>
-          </property>
-          <property name="text">
-           <string>Remove</string>
-          </property>
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="icon">
-           <iconset resource="../bitcoin.qrc">
-            <normaloff>:/icons/remove</normaloff>:/icons/remove</iconset>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <item>
+           <spacer name="horizontalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>
      </layout>
+     <zorder>label_6</zorder>
+     <zorder>recentRequestsView</zorder>
+     <zorder>removeRequestButton</zorder>
+     <zorder>layoutWidget</zorder>
+     <zorder>label_wallet_bgcoin</zorder>
     </widget>
    </item>
   </layout>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>100</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_4"/>
+  </widget>
  </widget>
  <customwidgets>
   <customwidget>

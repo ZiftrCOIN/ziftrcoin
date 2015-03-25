@@ -6,17 +6,20 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>850</width>
-    <height>400</height>
+    <width>861</width>
+    <height>634</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Send Coins</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0">
-   <property name="bottomMargin">
-    <number>8</number>
-   </property>
+  <property name="autoFillBackground">
+   <bool>true</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_3">
    <item>
     <widget class="QFrame" name="frameCoinControl">
      <property name="sizePolicy">
@@ -30,6 +33,9 @@
        <width>16777215</width>
        <height>16777215</height>
       </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background: #fff; border-radius: 10px;</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
@@ -54,7 +60,7 @@
        <number>6</number>
       </property>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayoutCoinControl" stretch="0,0,0,0,1">
+       <layout class="QVBoxLayout" name="verticalLayoutCoinControl" stretch="0,0,0,0">
         <property name="spacing">
          <number>0</number>
         </property>
@@ -79,6 +85,8 @@
             </property>
             <property name="font">
              <font>
+              <family>Lato</family>
+              <pointsize>14</pointsize>
               <weight>75</weight>
               <bold>true</bold>
              </font>
@@ -104,7 +112,11 @@
           <item>
            <widget class="QPushButton" name="pushButtonCoinControl">
             <property name="styleSheet">
-             <string notr="true"/>
+             <string notr="true">background-color: #e37025;
+color: #fff;
+height: 30px;
+width: 80px;
+border-radius: 5px;</string>
             </property>
             <property name="text">
              <string>Inputs...</string>
@@ -113,6 +125,12 @@
           </item>
           <item>
            <widget class="QLabel" name="labelCoinControlAutomaticallySelected">
+            <property name="font">
+             <font>
+              <family>Lato</family>
+              <pointsize>14</pointsize>
+             </font>
+            </property>
             <property name="text">
              <string>automatically selected</string>
             </property>
@@ -217,6 +235,8 @@
                 <widget class="QLabel" name="labelCoinControlQuantityText">
                  <property name="font">
                   <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
@@ -231,6 +251,11 @@
                </item>
                <item row="0" column="1">
                 <widget class="QLabel" name="labelCoinControlQuantity">
+                 <property name="font">
+                  <font>
+                   <family>Lato</family>
+                  </font>
+                 </property>
                  <property name="cursor">
                   <cursorShape>IBeamCursor</cursorShape>
                  </property>
@@ -252,6 +277,8 @@
                 <widget class="QLabel" name="labelCoinControlBytesText">
                  <property name="font">
                   <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
@@ -263,6 +290,11 @@
                </item>
                <item row="1" column="1">
                 <widget class="QLabel" name="labelCoinControlBytes">
+                 <property name="font">
+                  <font>
+                   <family>Lato</family>
+                  </font>
+                 </property>
                  <property name="cursor">
                   <cursorShape>IBeamCursor</cursorShape>
                  </property>
@@ -300,6 +332,8 @@
                 <widget class="QLabel" name="labelCoinControlAmountText">
                  <property name="font">
                   <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
@@ -314,6 +348,12 @@
                </item>
                <item row="0" column="1">
                 <widget class="QLabel" name="labelCoinControlAmount">
+                 <property name="font">
+                  <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
+                  </font>
+                 </property>
                  <property name="cursor">
                   <cursorShape>IBeamCursor</cursorShape>
                  </property>
@@ -332,6 +372,8 @@
                 <widget class="QLabel" name="labelCoinControlPriorityText">
                  <property name="font">
                   <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
@@ -343,6 +385,12 @@
                </item>
                <item row="1" column="1">
                 <widget class="QLabel" name="labelCoinControlPriority">
+                 <property name="font">
+                  <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
+                  </font>
+                 </property>
                  <property name="cursor">
                   <cursorShape>IBeamCursor</cursorShape>
                  </property>
@@ -380,6 +428,8 @@
                 <widget class="QLabel" name="labelCoinControlFeeText">
                  <property name="font">
                   <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
@@ -394,6 +444,12 @@
                </item>
                <item row="0" column="1">
                 <widget class="QLabel" name="labelCoinControlFee">
+                 <property name="font">
+                  <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
+                  </font>
+                 </property>
                  <property name="cursor">
                   <cursorShape>IBeamCursor</cursorShape>
                  </property>
@@ -412,6 +468,8 @@
                 <widget class="QLabel" name="labelCoinControlLowOutputText">
                  <property name="font">
                   <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
@@ -423,6 +481,12 @@
                </item>
                <item row="1" column="1">
                 <widget class="QLabel" name="labelCoinControlLowOutput">
+                 <property name="font">
+                  <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
+                  </font>
+                 </property>
                  <property name="cursor">
                   <cursorShape>IBeamCursor</cursorShape>
                  </property>
@@ -460,6 +524,8 @@
                 <widget class="QLabel" name="labelCoinControlAfterFeeText">
                  <property name="font">
                   <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
@@ -474,6 +540,12 @@
                </item>
                <item row="0" column="1">
                 <widget class="QLabel" name="labelCoinControlAfterFee">
+                 <property name="font">
+                  <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
+                  </font>
+                 </property>
                  <property name="cursor">
                   <cursorShape>IBeamCursor</cursorShape>
                  </property>
@@ -492,6 +564,8 @@
                 <widget class="QLabel" name="labelCoinControlChangeText">
                  <property name="font">
                   <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
@@ -503,6 +577,12 @@
                </item>
                <item row="1" column="1">
                 <widget class="QLabel" name="labelCoinControlChange">
+                 <property name="font">
+                  <font>
+                   <family>Lato</family>
+                   <pointsize>14</pointsize>
+                  </font>
+                 </property>
                  <property name="cursor">
                   <cursorShape>IBeamCursor</cursorShape>
                  </property>
@@ -559,6 +639,9 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="styleSheet">
+             <string notr="true">border: 1px solid #bcbcbc; border-radius: 0;</string>
+            </property>
            </widget>
           </item>
           <item>
@@ -585,19 +668,6 @@
           </item>
          </layout>
         </item>
-        <item>
-         <spacer name="verticalSpacerCoinControl">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>800</width>
-            <height>1</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
        </layout>
       </item>
      </layout>
@@ -605,6 +675,9 @@
    </item>
    <item>
     <widget class="QScrollArea" name="scrollArea">
+     <property name="styleSheet">
+      <string notr="true">border:0;</string>
+     </property>
      <property name="widgetResizable">
       <bool>true</bool>
      </property>
@@ -613,11 +686,11 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>830</width>
-        <height>178</height>
+        <width>837</width>
+        <height>249</height>
        </rect>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,1">
+      <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0">
        <property name="leftMargin">
         <number>0</number>
        </property>
@@ -635,20 +708,20 @@
          <property name="spacing">
           <number>6</number>
          </property>
+         <item>
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>17</width>
+             <height>37</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
         </layout>
-       </item>
-       <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>
@@ -667,15 +740,24 @@
        <property name="toolTip">
         <string>Confirm the send action</string>
        </property>
-       <property name="text">
-        <string>S&amp;end</string>
+       <property name="autoFillBackground">
+        <bool>false</bool>
        </property>
-       <property name="icon">
-        <iconset resource="../bitcoin.qrc">
-         <normaloff>:/icons/send</normaloff>:/icons/send</iconset>
+       <property name="styleSheet">
+        <string notr="true">background-color: #e37025;
+color: #fff;
+height: 30px;
+width: 10px;
+border-radius: 5px;</string>
+       </property>
+       <property name="text">
+        <string>SEND</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
        </property>
        <property name="default">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -690,12 +772,15 @@
        <property name="toolTip">
         <string>Clear all fields of the form.</string>
        </property>
-       <property name="text">
-        <string>Clear &amp;All</string>
+       <property name="styleSheet">
+        <string notr="true">background-color: #419d9e;
+color: #fff;
+height: 30px;
+width: 100px;
+border-radius: 5px;</string>
        </property>
-       <property name="icon">
-        <iconset resource="../bitcoin.qrc">
-         <normaloff>:/icons/remove</normaloff>:/icons/remove</iconset>
+       <property name="text">
+        <string>CLEAR ALL</string>
        </property>
        <property name="autoRepeatDelay">
         <number>300</number>
@@ -710,12 +795,15 @@
        <property name="toolTip">
         <string>Send to multiple recipients at once</string>
        </property>
-       <property name="text">
-        <string>Add &amp;Recipient</string>
+       <property name="styleSheet">
+        <string notr="true">background-color: #419d9e;
+color: #fff;
+height: 30px;
+width: 150px;
+border-radius: 5px;</string>
        </property>
-       <property name="icon">
-        <iconset resource="../bitcoin.qrc">
-         <normaloff>:/icons/add</normaloff>:/icons/add</iconset>
+       <property name="text">
+        <string>ADD RECIPIENT</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>
@@ -748,6 +836,15 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="font">
+          <font>
+           <family>Lato</family>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">color: #000;</string>
+         </property>
          <property name="text">
           <string>Balance:</string>
          </property>
@@ -761,8 +858,19 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="font">
+          <font>
+           <family>Lato</family>
+           <pointsize>14</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
          <property name="cursor">
           <cursorShape>IBeamCursor</cursorShape>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">color: #000;</string>
          </property>
          <property name="text">
           <string notr="true">123.456 BTC</string>
@@ -771,6 +879,46 @@
           <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
          </property>
         </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <widget class="QLabel" name="label_wallet_bgcoin">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="pixmap">
+          <pixmap resource="../bitcoin.qrc">:/images/wallet_bgcoin</pixmap>
+         </property>
+         <property name="scaledContents">
+          <bool>false</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="margin">
+          <number>-2</number>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </item>
