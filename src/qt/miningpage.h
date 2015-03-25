@@ -12,6 +12,7 @@
 #include <QStringList>
 #include <QMap>
 #include <QSettings>
+#include <QCheckBox>
 
 #include "clientmodel.h"
 #include "walletmodel.h"
@@ -25,6 +26,15 @@ class WalletModel;
 #define SHARE_FAIL 2
 #define ERROR 3
 #define NEW_ROUND 4
+
+// GPU state machine
+enum GPU_STATE
+{
+    GPU_UNINITIALIZED,
+    GPU_SETUP_LAUNCHED,
+    GPU_SETUP_DETECTED_GPU_COUNT,
+    GPU_READY
+};
 
 namespace Ui {
 class MiningPage;
@@ -57,13 +67,17 @@ public:
     int roundAcceptedShares;
     int roundRejectedShares;
 
-    int initThreads;
+    int cpuInitThreads;
+
+    GPU_STATE GPUState;
+    int numGPUs;
+    QMap<int, bool> mapGpuCheckBoxStates;
     bool useCuda;
 
     void setClientModel(ClientModel *model);
 
 public slots:
-    void startPoolMining(bool useCpu = true, bool useGpu = false);
+    void startPoolMining();
     void startCPUPoolMining(QStringList args);
     void startGPUPoolMining(QStringList args);
 
@@ -96,6 +110,9 @@ public slots:
     void startPressed();
     void clearPressed();
 
+    void LaunchGPUInitialCheck();
+    // void LoadGPUCheckBoxes();
+
 private:
     Ui::MiningPage *ui;
     WalletModel *walletmodel;
@@ -105,6 +122,8 @@ private:
     void resetMiningButton();
     void logShareCounts();
     void AddListItem(const QString& text);
+    QStringList GetCheckedGPUs();
+    QCheckBox * GetGPUCheckBox(int nId);
 
     // void restartMining(bool fGenerate);
     // void timerEvent(QTimerEvent *event);
