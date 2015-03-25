@@ -120,6 +120,7 @@ MiningPage::~MiningPage()
 void MiningPage::setWalletModel(WalletModel *model)
 {
     this->walletmodel = model;
+    this->optionsModel = model->getOptionsModel();
 }
 
 void MiningPage::setClientModel(ClientModel *model)
@@ -218,6 +219,12 @@ void MiningPage::stopPoolMining()
     readTimer->stop();
 }
 
+
+void MiningPage::setOptionsModel(OptionsModel *optionsModel)
+{
+    this->optionsModel = optionsModel;
+}
+
 void MiningPage::saveSettings()
 {
     clientmodel->setDebug(ui->debugCheckBox->isChecked());
@@ -227,8 +234,18 @@ void MiningPage::saveSettings()
     clientmodel->setMiningPassword(ui->passwordLine->text());
 }
 
+
+void MiningPage::saveSettingsToFile()
+{
+
+
+}
+
+
 void MiningPage::loadSettings()
 {
+    this->walletmodel->getOptionsModel();
+
     ui->debugCheckBox->setChecked(clientmodel->getDebug());
     if (ui->serverLine->text().isEmpty())
         ui->serverLine->setText(clientmodel->getMiningServer());
@@ -242,6 +259,14 @@ void MiningPage::loadSettings()
     ui->horizontalSlider->setValue(GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER));
     ui->typeBox->setCurrentIndex(ui->serverLine->text().isEmpty() ? 0 : 1);
 }
+
+
+void MiningPage::loadSettingsFromFile()
+{
+
+
+}
+
 
 void MiningPage::readProcessOutput()
 {
@@ -475,10 +500,12 @@ void MiningPage::EnableMiningControlsAppropriately()
     if (type == ClientModel::PoolMining)
     {
         ui->pokCheckBox->setChecked(false);
+        optionsModel->setData(OptionID.PoolMining, true);
     }
     else
     {
         ui->pokCheckBox->setChecked(GetBoolArg("-usepok", DEFAULT_USE_POK));
+        optionsModel->setData(OptionID.PoolMining, false);
     }
     ui->pokCheckBox->setEnabled(type == ClientModel::SoloMining);
 

@@ -217,6 +217,8 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
             return settings.value("nDatabaseCache");
         case ThreadsScriptVerif:
             return settings.value("nThreadsScriptVerif");
+        case PoolMining:
+            return settings.value("bPoolMining");
         default:
             return QVariant();
         }
@@ -340,6 +342,10 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
                 setRestartRequired(true);
             }
             break;
+        case PoolMining:
+            if(settings.value("bPoolMining") != value) {
+                settings.setValue("nPoolMining", value);
+            }
         default:
             break;
         }

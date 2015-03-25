@@ -15,6 +15,7 @@
 
 #include "clientmodel.h"
 #include "walletmodel.h"
+#include "optionsmodel.h"
 
 class ClientModel;
 class WalletModel;
@@ -57,7 +58,10 @@ public:
 
     int initThreads;
 
+    OptionsModel *optionsModel;
+
     void setClientModel(ClientModel *model);
+    void setOptionsModel(OptionsModel *optionsModel);
 
 public slots:
     void startPoolMining();
@@ -66,7 +70,9 @@ public slots:
     void updateSpeed();
 
     void loadSettings();
+    void loadSettingsFromFile();
     void saveSettings();
+    void saveSettingsToFile();
 
     void reportToList(QString, int, QString);
 
