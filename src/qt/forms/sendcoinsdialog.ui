@@ -14,10 +14,10 @@
    <string>Send Coins</string>
   </property>
   <property name="autoFillBackground">
-   <bool>true</bool>
+   <bool>false</bool>
   </property>
   <property name="styleSheet">
-   <string notr="true"/>
+   <string notr="true">background: #144248;</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <item>
@@ -86,13 +86,13 @@
             <property name="font">
              <font>
               <family>Lato</family>
-              <pointsize>14</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
+              <pointsize>16</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
              </font>
             </property>
             <property name="styleSheet">
-             <string notr="true">font-weight:bold;</string>
+             <string notr="true">color: #419d9e;</string>
             </property>
             <property name="text">
              <string>Coin Control Features</string>
@@ -112,7 +112,7 @@
           <item>
            <widget class="QPushButton" name="pushButtonCoinControl">
             <property name="styleSheet">
-             <string notr="true">background-color: #e37025;
+             <string notr="true">background-color: #419d9e;
 color: #fff;
 height: 30px;
 width: 80px;
@@ -130,6 +130,9 @@ border-radius: 5px;</string>
               <family>Lato</family>
               <pointsize>14</pointsize>
              </font>
+            </property>
+            <property name="styleSheet">
+             <string>color: #473f3c;</string>
             </property>
             <property name="text">
              <string>automatically selected</string>
@@ -241,6 +244,9 @@ border-radius: 5px;</string>
                    <bold>true</bold>
                   </font>
                  </property>
+                 <property name="styleSheet">
+                  <string>color: #473f3c;</string>
+                 </property>
                  <property name="text">
                   <string>Quantity:</string>
                  </property>
@@ -282,6 +288,9 @@ border-radius: 5px;</string>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string>color: #473f3c;</string>
                  </property>
                  <property name="text">
                   <string>Bytes:</string>
@@ -338,6 +347,9 @@ border-radius: 5px;</string>
                    <bold>true</bold>
                   </font>
                  </property>
+                 <property name="styleSheet">
+                  <string>color: #473f3c;</string>
+                 </property>
                  <property name="text">
                   <string>Amount:</string>
                  </property>
@@ -360,6 +372,9 @@ border-radius: 5px;</string>
                  <property name="contextMenuPolicy">
                   <enum>Qt::ActionsContextMenu</enum>
                  </property>
+                 <property name="styleSheet">
+                  <string>color: #473f3c;</string>
+                 </property>
                  <property name="text">
                   <string notr="true">0.00 BTC</string>
                  </property>
@@ -377,6 +392,9 @@ border-radius: 5px;</string>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string>color: #473f3c;</string>
                  </property>
                  <property name="text">
                   <string>Priority:</string>
@@ -396,6 +414,9 @@ border-radius: 5px;</string>
                  </property>
                  <property name="contextMenuPolicy">
                   <enum>Qt::ActionsContextMenu</enum>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">color: #e6002d;</string>
                  </property>
                  <property name="text">
                   <string notr="true">medium</string>
@@ -434,6 +455,9 @@ border-radius: 5px;</string>
                    <bold>true</bold>
                   </font>
                  </property>
+                 <property name="styleSheet">
+                  <string>color: #473f3c;</string>
+                 </property>
                  <property name="text">
                   <string>Fee:</string>
                  </property>
@@ -456,6 +480,9 @@ border-radius: 5px;</string>
                  <property name="contextMenuPolicy">
                   <enum>Qt::ActionsContextMenu</enum>
                  </property>
+                 <property name="styleSheet">
+                  <string>color: #473f3c;</string>
+                 </property>
                  <property name="text">
                   <string notr="true">0.00 BTC</string>
                  </property>
@@ -473,6 +500,9 @@ border-radius: 5px;</string>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">color: #939393</string>
                  </property>
                  <property name="text">
                   <string>Low Output:</string>
@@ -492,6 +522,9 @@ border-radius: 5px;</string>
                  </property>
                  <property name="contextMenuPolicy">
                   <enum>Qt::ActionsContextMenu</enum>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">color: #939393</string>
                  </property>
                  <property name="text">
                   <string notr="true">no</string>
@@ -530,6 +563,9 @@ border-radius: 5px;</string>
                    <bold>true</bold>
                   </font>
                  </property>
+                 <property name="styleSheet">
+                  <string>color: #473f3c;</string>
+                 </property>
                  <property name="text">
                   <string>After Fee:</string>
                  </property>
@@ -552,6 +588,9 @@ border-radius: 5px;</string>
                  <property name="contextMenuPolicy">
                   <enum>Qt::ActionsContextMenu</enum>
                  </property>
+                 <property name="styleSheet">
+                  <string>color: #473f3c;</string>
+                 </property>
                  <property name="text">
                   <string notr="true">0.00 BTC</string>
                  </property>
@@ -569,6 +608,9 @@ border-radius: 5px;</string>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">color: #939393</string>
                  </property>
                  <property name="text">
                   <string>Change:</string>
@@ -588,6 +630,9 @@ border-radius: 5px;</string>
                  </property>
                  <property name="contextMenuPolicy">
                   <enum>Qt::ActionsContextMenu</enum>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">color: #939393</string>
                  </property>
                  <property name="text">
                   <string notr="true">0.00 BTC</string>
@@ -622,6 +667,9 @@ border-radius: 5px;</string>
            <widget class="QCheckBox" name="checkBoxCoinControlChange">
             <property name="toolTip">
              <string>If this is activated, but the change address is empty or invalid, change will be sent to a newly generated address.</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: #473f3c;</string>
             </property>
             <property name="text">
              <string>Custom change address</string>
@@ -843,7 +891,7 @@ border-radius: 5px;</string>
           </font>
          </property>
          <property name="styleSheet">
-          <string notr="true">color: #000;</string>
+          <string notr="true">color: #fff;</string>
          </property>
          <property name="text">
           <string>Balance:</string>
@@ -870,7 +918,7 @@ border-radius: 5px;</string>
           <cursorShape>IBeamCursor</cursorShape>
          </property>
          <property name="styleSheet">
-          <string notr="true">color: #000;</string>
+          <string notr="true">color: #fff;</string>
          </property>
          <property name="text">
           <string notr="true">123.456 BTC</string>

@@ -10,6 +10,12 @@
     <height>597</height>
    </rect>
   </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background: #fff;</string>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <item>
     <widget class="QRImageWidget" name="lblQRCode">
@@ -71,6 +77,13 @@
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QPushButton" name="btnCopyURI">
+       <property name="styleSheet">
+        <string notr="true">background-color: #e37025;
+color: #fff;
+height: 30px;
+width: 100px;
+border-radius: 5px;</string>
+       </property>
        <property name="text">
         <string>Copy &amp;URI</string>
        </property>
@@ -78,6 +91,13 @@
      </item>
      <item>
       <widget class="QPushButton" name="btnCopyAddress">
+       <property name="styleSheet">
+        <string notr="true">background-color: #e37025;
+color: #fff;
+height: 30px;
+width: 100px;
+border-radius: 5px;</string>
+       </property>
        <property name="text">
         <string>Copy &amp;Address</string>
        </property>
@@ -85,6 +105,13 @@
      </item>
      <item>
       <widget class="QPushButton" name="btnSaveAs">
+       <property name="styleSheet">
+        <string notr="true">background-color: #e37025;
+color: #fff;
+height: 30px;
+width: 100px;
+border-radius: 5px;</string>
+       </property>
        <property name="text">
         <string>&amp;Save Image...</string>
        </property>
@@ -105,6 +132,13 @@
      </item>
      <item>
       <widget class="QDialogButtonBox" name="buttonBox">
+       <property name="styleSheet">
+        <string notr="true">background-color: #419d9e;
+color: #fff;
+height: 30px;
+width: 100px;
+border-radius: 5px;</string>
+       </property>
        <property name="standardButtons">
         <set>QDialogButtonBox::Close</set>
        </property>

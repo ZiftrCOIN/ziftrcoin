@@ -178,7 +178,7 @@ color: #2f9ca1;</string>
       </property>
       <property name="styleSheet">
        <string notr="true">border: 1px solid #bcbcbc; border-radius: 0;
-backgrround: #ccc;</string>
+background: #dbdbdb;</string>
       </property>
      </widget>
     </item>
@@ -1261,14 +1261,14 @@ color: #2f9ca1;</string>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>QValidatedLineEdit</class>
-   <extends>QLineEdit</extends>
-   <header>qvalidatedlineedit.h</header>
-  </customwidget>
-  <customwidget>
    <class>BitcoinAmountField</class>
    <extends>QLineEdit</extends>
    <header>bitcoinamountfield.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QValidatedLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>qvalidatedlineedit.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
