@@ -11,7 +11,7 @@
 
 extern json_spirit::Value GetNetworkHashPS(int lookup, int height);
 
-static const string introText = 
+static const string introText =
     "Welcome to ziftrCOIN mining!\n"
     "If all you would like to do is to just mine to the ziftrCOIN pool, \n"
     "then just click 'Start Mining'!\n"
@@ -29,11 +29,11 @@ static const string introText =
 
 // The AMD chips that ZRC sgminer supports
 static const string AMD_SPECIFIC_STRINGS[] = {
-    "AMD",          "Radeon",       "Barts",        "BeaverCreek",      "Beaver Creek",     
-    "Bonaire",      "Caicos",       "CapeVerde",    "Cape Verde",       "Cayman",  
+    "AMD",          "Radeon",       "Barts",        "BeaverCreek",      "Beaver Creek",
+    "Bonaire",      "Caicos",       "CapeVerde",    "Cape Verde",       "Cayman",
     "Cedar",        "Cypress",      "Devastator",   "Hainan",           "Hawaii",
     "Iceland",      "Juniper",      "Kalindi",      "Loveland",         "Love Land",
-    "Mullins",      "Oland",        "Pitcairn",     "Redwood",          "Scrapper", 
+    "Mullins",      "Oland",        "Pitcairn",     "Redwood",          "Scrapper",
     "Spectre",      "Spooky",       "Tahiti",       "Tonga",            "Turks",
     "WinterPark",   "Winter Park",  "END"
 };
@@ -73,7 +73,7 @@ MiningPage::MiningPage(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    setFixedSize(400, 420);
+    //setFixedSize(400, 420);
 
     minerActive = false;
 
@@ -105,9 +105,9 @@ MiningPage::MiningPage(QWidget *parent) :
 
     ui->serverLine->setText(QString(GetArg("-poolserver", "stratum+tcp://ziftrpool.io").c_str()));
     ui->portLine->setText(QString(GetArg("-poolport", "3032").c_str()));
-    
+
     string sPoolUsername = GetArg("-poolusername", "");
-    
+
     if (sPoolUsername.empty())
     {
         // If getaccountaddress fails due to not having enough addresses in key pool,
@@ -178,7 +178,7 @@ void MiningPage::LaunchGPUInitialCheck()
         args << "-n";
 
         QDir appDir = QDir(QCoreApplication::applicationDirPath());
-        
+
         QString program = appDir.filePath("sgminer");
         if (!QFile::exists(program))
             program = "sgminer";
@@ -253,7 +253,7 @@ void MiningPage::startPoolMining()
 
         readTimer->start(500);
     }
-    else 
+    else
     {
         this->AddListItem("You do not have any devices enabled.");
     }
@@ -266,7 +266,7 @@ void MiningPage::startCPUPoolMining(QStringList args)
     nPercentHashPow = std::min(std::max(nPercentHashPow, (unsigned int)0), (unsigned int)100);
     unsigned int nBestThreads = boost::thread::hardware_concurrency();
     cpuInitThreads = nPercentHashPow == 0 ? 0 : std::max(nBestThreads * nPercentHashPow / 100, (unsigned int)1);
-    
+
     args << "-t" << QString("%1").arg(cpuInitThreads);
     args << "-a" << "zr5";
     args << "--retries" << "-1"; // Retry forever.
@@ -304,7 +304,7 @@ void MiningPage::startGPUPoolMining(QStringList args)
                 args << "-d" << this->GetGPUCheckBox(1+i)->text();
         }
     }
-    else 
+    else
     {
         args << "--algorithm" << "zr5";
         args << "-d" << GetCheckedGPUs().join(",");
@@ -454,8 +454,8 @@ void MiningPage::readGPUMiningOutput()
                     gpuCounter++;
 
                     QStringList sublist = outputLine.split("\t", QString::SkipEmptyParts);
-                    
-                    QString gpuName = ""; 
+
+                    QString gpuName = "";
                     if (sublist.size() > 2)
                         gpuName = sublist.at(2);
 
@@ -700,7 +700,7 @@ void MiningPage::updateSpeed()
     }
     else if (this->getMiningType() == ClientModel::SoloMining)
     {
-        qint64 Hashrate = GetBoolArg("-gen", false) && 
+        qint64 Hashrate = GetBoolArg("-gen", false) &&
                 GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER) != 0 ? clientmodel->getHashrate() : 0;
         ui->mineSpeedLabel->setText(QString("%1").arg(formatHashrate(Hashrate)));
 
@@ -732,7 +732,7 @@ void MiningPage::updateSpeed()
                 totalCpuSpeed += iter.value();
                 totalThreads++;
             }
-            
+
             if (totalThreads != 0)
             {
                 totalSpeed += (totalCpuSpeed * cpuInitThreads / totalThreads);
@@ -744,7 +744,7 @@ void MiningPage::updateSpeed()
             totalSpeed += gpuSpeed;
         }
 
-        // Everything is stored as a double of the number of kH/s, but formatted as whatever 
+        // Everything is stored as a double of the number of kH/s, but formatted as whatever
         // is most appropriate
         ui->mineSpeedLabel->setText(QString("%1").arg(formatHashrate(totalSpeed*1000)));
     }
@@ -890,7 +890,7 @@ void MiningPage::resetMiningButton()
     QString style;
     if (minerActive)
         style = "QPushButton { color: #e46e1f; }";
-    else 
+    else
         style = "QPushButton { color: #15444A; }";
     ui->startButton->setStyleSheet(style);
     EnableMiningControlsAppropriately();

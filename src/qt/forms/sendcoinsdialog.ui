@@ -707,7 +707,7 @@ border-radius: 5px;</string>
         <x>0</x>
         <y>0</y>
         <width>835</width>
-        <height>131</height>
+        <height>124</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0">
@@ -917,7 +917,7 @@ border-radius: 5px;</string>
           <string/>
          </property>
          <property name="pixmap">
-          <pixmap resource="../bitcoin.qrc">:/images/wallet_bgcoin</pixmap>
+          <pixmap resource="../bitcoin.qrc">:/images/wallet_nocoin</pixmap>
          </property>
          <property name="scaledContents">
           <bool>false</bool>

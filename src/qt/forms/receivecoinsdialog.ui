@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>899</width>
-    <height>715</height>
+    <height>915</height>
    </rect>
   </property>
   <property name="styleSheet">
@@ -406,7 +406,7 @@ border-radius: 5px;</string>
            <string/>
           </property>
           <property name="pixmap">
-           <pixmap resource="../bitcoin.qrc">:/images/wallet_bgcoin</pixmap>
+           <pixmap resource="../bitcoin.qrc">:/images/wallet_nocoin</pixmap>
           </property>
           <property name="scaledContents">
            <bool>false</bool>
@@ -439,15 +439,12 @@ border-radius: 5px;</string>
        </layout>
       </item>
      </layout>
-     <zorder>label_6</zorder>
-     <zorder>recentRequestsView</zorder>
-     <zorder>removeRequestButton</zorder>
-     <zorder>layoutWidget</zorder>
-     <zorder>label_wallet_bgcoin</zorder>
+     <zorder>label_8</zorder>
+     <zorder></zorder>
     </widget>
    </item>
   </layout>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>0</x>
