@@ -94,3 +94,5 @@ Dockerfile
 miningpage_old.ui
 zr5_minerd
 minerd
+ccminer
+**/*.creator.user

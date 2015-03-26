@@ -137,9 +137,9 @@ void ClientModel::setDebug(bool debug)
     this->fDebug = debug;
 }
 
-int64_t ClientModel::getHashrate() const
+qint64 ClientModel::getHashrate() const
 {
-    return (int64_t)dHashesPerSec;
+    return (qint64)dHashesPerSec;
 }
 
 double ClientModel::GetDifficulty() const

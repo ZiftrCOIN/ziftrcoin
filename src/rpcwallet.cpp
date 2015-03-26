@@ -111,7 +111,7 @@ Value getnewaddress(const Array& params, bool fHelp)
 }
 
 
-CBitcoinAddress GetAccountAddress(string strAccount, bool bForceNew=false)
+CBitcoinAddress GetAccountAddress(string strAccount, bool bForceNew=false, bool bForceOld=false)
 {
     CWalletDB walletdb(pwalletMain->strWalletFile);
 
@@ -137,7 +137,7 @@ CBitcoinAddress GetAccountAddress(string strAccount, bool bForceNew=false)
     }
 
     // Generate a new key
-    if (!account.vchPubKey.IsValid() || bForceNew || bKeyUsed)
+    if (!account.vchPubKey.IsValid() || bForceNew || (!bForceOld && bKeyUsed))
     {
         if (!pwalletMain->GetKeyFromPool(account.vchPubKey))
             throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
@@ -151,12 +151,13 @@ CBitcoinAddress GetAccountAddress(string strAccount, bool bForceNew=false)
 
 Value getaccountaddress(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 1)
+    if (fHelp || params.size() > 2)
         throw runtime_error(
             "getaccountaddress \"account\"\n"
             "\nReturns the current ziftrCOIN address for receiving payments to this account.\n"
             "\nArguments:\n"
             "1. \"account\"       (string, required) The account name for the address. It can also be set to the empty string \"\" to represent the default account. The account does not need to exist, it will be created and a new address created  if there is no account by the given name.\n"
+            "2. \"forceOld\"      (boolean, optional) Set this flag to not generate a new address in the case that an address for the given account already exists.\n"
             "\nResult:\n"
             "\"ziftrcoinaddress\"   (string) The account ziftrcoin address\n"
             "\nExamples:\n"
@@ -169,9 +170,13 @@ Value getaccountaddress(const Array& params, bool fHelp)
     // Parse the account first so we don't generate a key if there's an error
     string strAccount = AccountFromValue(params[0]);
 
+    bool fForceOld = false;
+    if (params.size() > 1)
+        fForceOld = params[1].get_bool();
+
     Value ret;
 
-    ret = GetAccountAddress(strAccount).ToString();
+    ret = GetAccountAddress(strAccount, false, fForceOld).ToString();
 
     return ret;
 }

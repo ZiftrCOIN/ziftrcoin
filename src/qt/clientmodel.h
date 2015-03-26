@@ -76,7 +76,7 @@ public:
     bool getDebug() const;
     void setDebug(bool debug);
 
-    int64_t getHashrate() const;
+    qint64 getHashrate() const;
     double GetDifficulty() const;
 
     void setMining(MiningType type, bool mining, int percent);
