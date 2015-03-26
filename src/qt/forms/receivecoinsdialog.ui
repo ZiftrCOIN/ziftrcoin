@@ -13,11 +13,11 @@
   <property name="styleSheet">
    <string notr="true">background: #144248;</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
    <item>
     <widget class="QFrame" name="frame2">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -269,19 +269,6 @@ background: #dbdbdb;</string>
     </widget>
    </item>
    <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item>
     <widget class="QFrame" name="frame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -327,7 +314,7 @@ background: #dbdbdb;</string>
              <enum>Qt::CustomContextMenu</enum>
             </property>
             <property name="styleSheet">
-             <string notr="true">background: #fff; border-radius: 10px;</string>
+             <string notr="true">background: #fff</string>
             </property>
             <property name="tabKeyNavigation">
              <bool>false</bool>
