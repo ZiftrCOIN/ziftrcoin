@@ -13,6 +13,7 @@
 #include <QMap>
 #include <QSettings>
 #include <QCheckBox>
+#include <QtGui>
 
 #include "clientmodel.h"
 #include "walletmodel.h"
@@ -26,6 +27,7 @@ class WalletModel;
 #define SHARE_FAIL 2
 #define ERROR 3
 #define NEW_ROUND 4
+#define GENERIC 5
 
 // GPU state machine
 enum GPU_STATE
@@ -33,6 +35,7 @@ enum GPU_STATE
     GPU_UNINITIALIZED,
     GPU_SETUP_LAUNCHED,
     GPU_SETUP_DETECTED_GPU_COUNT,
+    GPU_SETUP_AWAITING_FIRST_EXIT,
     GPU_READY
 };
 
@@ -56,6 +59,7 @@ public:
     QProcess *gpuMinerProcess;
 
     QMap<int, double> threadSpeed;
+    QMap<int, double> gpuSpeeds;
     double gpuSpeed;
 
     QTimer *readTimer;
@@ -65,13 +69,12 @@ public:
     int rejectedShares;
 
     int roundAcceptedShares;
-    int roundRejectedShares;
 
     int cpuInitThreads;
 
     GPU_STATE GPUState;
     int numGPUs;
-    QMap<int, bool> mapGpuCheckBoxStates;
+    QMap<int, bool> mapGpuCheckBoxesDisabled;
     bool useCuda;
 
     void setClientModel(ClientModel *model);
@@ -97,7 +100,6 @@ public slots:
 
     void readCPUMiningOutput();
     void readGPUMiningOutput();
-    void updateHashRates();
 
     QString getTime(QString);
     void EnableMiningControlsAppropriately();
@@ -123,7 +125,9 @@ private:
     void logShareCounts();
     void AddListItem(const QString& text);
     QStringList GetCheckedGPUs();
+    QHBoxLayout * GetGPULayout(int nId);
     QCheckBox * GetGPUCheckBox(int nId);
+    bool ProcessBasicLine(QString line);
 
     // void restartMining(bool fGenerate);
     // void timerEvent(QTimerEvent *event);

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>780</width>
-    <height>636</height>
+    <width>918</width>
+    <height>738</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -80,7 +80,7 @@
     </widget>
    </item>
    <item row="14" column="2">
-    <widget class="QLabel" name="mineSpeedLabel">
+    <widget class="QLabel" name="mineSpeedLabel_old">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>0</horstretch>
@@ -304,7 +304,7 @@
     </widget>
    </item>
    <item row="10" column="1">
-    <layout class="QVBoxLayout" name="verticalLayout">
+    <layout class="QVBoxLayout" name="verticalSideBar">
      <item>
       <widget class="QLabel" name="label_2">
        <property name="font">
@@ -319,17 +319,28 @@
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="cpuCheckBox">
-       <property name="text">
-        <string>CPU</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-       <property name="tristate">
-        <bool>false</bool>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="cpuHorizontalLayout">
+       <item>
+        <widget class="QCheckBox" name="cpuCheckBox">
+         <property name="text">
+          <string>CPU</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <property name="tristate">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="cpuHashRate">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
       <spacer name="verticalSpacer_2">
@@ -361,46 +372,142 @@
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="gpu1CheckBox">
-       <property name="text">
-        <string>GPU1</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="gpu1HorizontalLayout">
+       <item>
+        <widget class="QCheckBox" name="gpu1CheckBox">
+         <property name="text">
+          <string>GPU1</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="gpu1HashRate">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QCheckBox" name="gpu2CheckBox">
-       <property name="text">
-        <string>GPU2</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="gpu2HorizontalLayout">
+       <item>
+        <widget class="QCheckBox" name="gpu2CheckBox">
+         <property name="text">
+          <string>GPU2</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="gpu2HashRate">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QCheckBox" name="gpu3CheckBox">
-       <property name="text">
-        <string>GPU3</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="gpu3HorizontalLayout">
+       <item>
+        <widget class="QCheckBox" name="gpu3CheckBox">
+         <property name="text">
+          <string>GPU3</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="gpu3HashRate">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QCheckBox" name="gpu4CheckBox">
-       <property name="text">
-        <string>GPU4</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="gpu4HorizontalLayout">
+       <item>
+        <widget class="QCheckBox" name="gpu4CheckBox">
+         <property name="text">
+          <string>GPU4</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="gpu4HashRate">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QCheckBox" name="gpu5CheckBox">
-       <property name="text">
-        <string>GPU5</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="gpu5HorizontalLayout">
+       <item>
+        <widget class="QCheckBox" name="gpu5CheckBox">
+         <property name="text">
+          <string>GPU5</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="gpu5HashRate">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QCheckBox" name="gpu6CheckBox">
-       <property name="text">
-        <string>GPU6</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="gpu6HorizontalLayout">
+       <item>
+        <widget class="QCheckBox" name="gpu6CheckBox">
+         <property name="text">
+          <string>GPU6</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="gpu6HashRate">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_9">
+       <item>
+        <widget class="QLabel" name="label_5">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Total: </string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="mineSpeedLabel">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
       <spacer name="verticalSpacer">
