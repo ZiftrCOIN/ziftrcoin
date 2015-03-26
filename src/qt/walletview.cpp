@@ -38,11 +38,14 @@ WalletView::WalletView(QWidget *parent):
     overviewPage = new OverviewPage();
 
     transactionsPage = new QWidget(this);
+    transactionsPage->setStyleSheet("background: #144248");
     QVBoxLayout *vbox = new QVBoxLayout();
     QHBoxLayout *hbox_buttons = new QHBoxLayout();
     transactionView = new TransactionView(this);
+    transactionView->setStyleSheet("background: #fff");
     vbox->addWidget(transactionView);
     QPushButton *exportButton = new QPushButton(tr("&Export"), this);
+    exportButton->setStyleSheet("background-color: #419d9e; color: #fff; height: 30px; width: 100px; border-radius: 5px;");
     exportButton->setToolTip(tr("Export the data in the current tab to a file"));
 #ifndef Q_OS_MAC // Icons on push buttons are very uncommon on Mac
     exportButton->setIcon(QIcon(":/icons/export"));
