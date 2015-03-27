@@ -692,6 +692,7 @@ void MiningPage::minerStarted()
 void MiningPage::updateSpeed()
 {
     qint64 NetworkHashrate = (qint64)GetNetworkHashPS(120, -1).get_int64();
+    ui->networkHashRate->setStyleSheet("color: #fff");
     ui->networkHashRate->setText(QString("Network hash rate: %1").arg(formatHashrate(NetworkHashrate)));
     if (!minerActive)
     {

@@ -35,38 +35,6 @@ border-radius: 10px;</string>
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="7" column="0">
-         <widget class="QLabel" name="label_4">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="0" alignment="Qt::AlignLeft">
-         <widget class="QLabel" name="label_3">
-          <property name="font">
-           <font>
-            <family>Lato</family>
-            <pointsize>16</pointsize>
-           </font>
-          </property>
-          <property name="toolTip">
-           <string>An optional message to attach to the payment request, which will be displayed when the request is opened. Note: The message will not be sent with the payment over the ZiftrCOIN network.</string>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">color: #2f9ca1;</string>
-          </property>
-          <property name="text">
-           <string>&amp;Message:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-          <property name="buddy">
-           <cstring>reqMessage</cstring>
-          </property>
-         </widget>
-        </item>
         <item row="7" column="2">
          <widget class="QCheckBox" name="reuseAddress">
           <property name="font">
@@ -96,54 +64,17 @@ border-radius: 10px;</string>
           </property>
          </widget>
         </item>
-        <item row="6" column="2">
-         <widget class="QLineEdit" name="reqMessage">
-          <property name="toolTip">
-           <string>An optional message to attach to the payment request, which will be displayed when the request is opened. Note: The message will not be sent with the payment over the ZiftrCOIN network.</string>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">border: 1px solid #bcbcbc; border-radius: 0;</string>
+        <item row="8" column="0">
+         <widget class="QLabel" name="label_7">
+          <property name="text">
+           <string/>
           </property>
          </widget>
         </item>
-        <item row="2" column="2">
-         <widget class="QLabel" name="label_5">
-          <property name="font">
-           <font>
-            <family>Lato</family>
-            <pointsize>14</pointsize>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">color: #2f9ca1;</string>
-          </property>
+        <item row="7" column="0">
+         <widget class="QLabel" name="label_4">
           <property name="text">
-           <string>Use this form to request payments. All fields are optional.</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="0" alignment="Qt::AlignLeft">
-         <widget class="QLabel" name="label_2">
-          <property name="font">
-           <font>
-            <family>Lato</family>
-            <pointsize>16</pointsize>
-           </font>
-          </property>
-          <property name="toolTip">
-           <string>An optional label to associate with the new receiving address.</string>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">color: #2f9ca1;</string>
-          </property>
-          <property name="text">
-           <string>&amp;Label:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-          <property name="buddy">
-           <cstring>reqLabel</cstring>
+           <string/>
           </property>
          </widget>
         </item>
@@ -172,6 +103,22 @@ border-radius: 10px;</string>
           </property>
          </widget>
         </item>
+        <item row="2" column="2">
+         <widget class="QLabel" name="label_5">
+          <property name="font">
+           <font>
+            <family>Lato</family>
+            <pointsize>14</pointsize>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #2f9ca1;</string>
+          </property>
+          <property name="text">
+           <string>Use this form to request payments. All fields are optional.</string>
+          </property>
+         </widget>
+        </item>
         <item row="8" column="2">
          <layout class="QHBoxLayout" name="horizontalLayout">
           <item>
@@ -183,11 +130,17 @@ border-radius: 10px;</string>
              </size>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: #e37025;
+             <string notr="true">QPushButton {
+background-color: #af571e;
 color: #fff;
 height: 30px;
 width: 10px;
-border-radius: 5px;</string>
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #e37025;
+}</string>
             </property>
             <property name="text">
              <string>REQUEST PAYMENT</string>
@@ -206,11 +159,17 @@ border-radius: 5px;</string>
              <string>Clear all fields of the form.</string>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: #419d9e;
+             <string notr="true">QPushButton {
+background: #337c7d;
 color: #fff;
 height: 30px;
-width: 100px;
-border-radius: 5px;</string>
+width:100px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #419d9e;
+}</string>
             </property>
             <property name="text">
              <string>CLEAR</string>
@@ -238,6 +197,66 @@ border-radius: 5px;</string>
           </item>
          </layout>
         </item>
+        <item row="4" column="0" alignment="Qt::AlignLeft">
+         <widget class="QLabel" name="label_2">
+          <property name="font">
+           <font>
+            <family>Lato</family>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="toolTip">
+           <string>An optional label to associate with the new receiving address.</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #2f9ca1;</string>
+          </property>
+          <property name="text">
+           <string>&amp;Label:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buddy">
+           <cstring>reqLabel</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0" alignment="Qt::AlignLeft">
+         <widget class="QLabel" name="label_3">
+          <property name="font">
+           <font>
+            <family>Lato</family>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="toolTip">
+           <string>An optional message to attach to the payment request, which will be displayed when the request is opened. Note: The message will not be sent with the payment over the ZiftrCOIN network.</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #2f9ca1;</string>
+          </property>
+          <property name="text">
+           <string>&amp;Message:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buddy">
+           <cstring>reqMessage</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="2">
+         <widget class="QLineEdit" name="reqMessage">
+          <property name="toolTip">
+           <string>An optional message to attach to the payment request, which will be displayed when the request is opened. Note: The message will not be sent with the payment over the ZiftrCOIN network.</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">border: 1px solid #bcbcbc; border-radius: 0;</string>
+          </property>
+         </widget>
+        </item>
         <item row="5" column="2">
          <widget class="BitcoinAmountField" name="reqAmount">
           <property name="minimumSize">
@@ -250,16 +269,9 @@ border-radius: 5px;</string>
            <string>An optional amount to request. Leave this empty or zero to not request a specific amount.</string>
           </property>
           <property name="styleSheet">
-           <string notr="true">border: 1px solid #bcbcbc; border-radius: 0;
+           <string notr="true">color: #000;
 
 background: #dbdbdb;</string>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="0">
-         <widget class="QLabel" name="label_7">
-          <property name="text">
-           <string/>
           </property>
          </widget>
         </item>
@@ -337,11 +349,17 @@ background: #dbdbdb;</string>
              <string>Show the selected request (does the same as double clicking an entry)</string>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: #419d9e;
+             <string notr="true">QPushButton {
+background: #337c7d;
 color: #fff;
 height: 30px;
-width: 100px;
-border-radius: 5px;</string>
+width:100px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #419d9e;
+}</string>
             </property>
             <property name="text">
              <string>Show</string>
@@ -357,11 +375,17 @@ border-radius: 5px;</string>
              <string>Remove the selected entries from the list</string>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: #419d9e;
+             <string notr="true">QPushButton {
+background: #337c7d;
 color: #fff;
 height: 30px;
-width: 100px;
-border-radius: 5px;</string>
+width:100px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #419d9e;
+}</string>
             </property>
             <property name="text">
              <string>Remove</string>

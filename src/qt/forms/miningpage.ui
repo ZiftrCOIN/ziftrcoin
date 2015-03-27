@@ -708,7 +708,7 @@ border-radius: 10px;</string>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
+          <item alignment="Qt::AlignLeft">
            <widget class="QPushButton" name="startButton">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -720,11 +720,19 @@ border-radius: 10px;</string>
              <bool>false</bool>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: #e37025;
+             <string notr="true">QPushButton {
+background-color: #af571e;
+
 color: #fff;
 height: 30px;
-width: 110px;
-border-radius: 5px;</string>
+width: 250px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #e37025;
+}
+</string>
             </property>
             <property name="text">
              <string>Start Mining</string>
@@ -807,7 +815,7 @@ border-radius: 5px;</string>
             </property>
            </widget>
           </item>
-          <item>
+          <item alignment="Qt::AlignRight">
            <widget class="QPushButton" name="clearButton">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -816,11 +824,17 @@ border-radius: 5px;</string>
              </sizepolicy>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: #419d9e;
+             <string notr="true">QPushButton {
+background: #337c7d;
 color: #fff;
 height: 30px;
-width:50px;
-border-radius: 5px;</string>
+width:100px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #419d9e;
+}</string>
             </property>
             <property name="text">
              <string>Clear</string>

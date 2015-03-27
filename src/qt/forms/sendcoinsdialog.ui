@@ -86,11 +86,17 @@
         <item>
          <widget class="QPushButton" name="pushButtonCoinControl">
           <property name="styleSheet">
-           <string notr="true">background-color: #419d9e;
+           <string notr="true">QPushButton {
+background: #337c7d;
 color: #fff;
 height: 30px;
-width: 80px;
-border-radius: 5px;</string>
+width:100px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #419d9e;
+}</string>
           </property>
           <property name="text">
            <string>Inputs...</string>
@@ -767,11 +773,17 @@ border-radius: 5px;</string>
         <bool>false</bool>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: #e37025;
+        <string notr="true">QPushButton {
+background-color: #af571e;
 color: #fff;
 height: 30px;
 width: 10px;
-border-radius: 5px;</string>
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #e37025;
+}</string>
        </property>
        <property name="text">
         <string>SEND</string>
@@ -796,11 +808,17 @@ border-radius: 5px;</string>
         <string>Clear all fields of the form.</string>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: #419d9e;
+        <string notr="true">QPushButton {
+background: #337c7d;
 color: #fff;
 height: 30px;
-width: 100px;
-border-radius: 5px;</string>
+width:100px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #419d9e;
+}</string>
        </property>
        <property name="text">
         <string>CLEAR ALL</string>
@@ -819,11 +837,17 @@ border-radius: 5px;</string>
         <string>Send to multiple recipients at once</string>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: #419d9e;
+        <string notr="true">QPushButton {
+background: #337c7d;
 color: #fff;
 height: 30px;
-width: 150px;
-border-radius: 5px;</string>
+width:150px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #419d9e;
+}</string>
        </property>
        <property name="text">
         <string>ADD RECIPIENT</string>
