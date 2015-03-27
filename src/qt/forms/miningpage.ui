@@ -460,10 +460,16 @@ border-radius: 10px;</string>
                  <item alignment="Qt::AlignLeft">
                   <widget class="QCheckBox" name="gpu1CheckBox">
                    <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                    <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                      <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>160</width>
+                     <height>0</height>
+                    </size>
                    </property>
                    <property name="maximumSize">
                     <size>
@@ -474,25 +480,13 @@ border-radius: 10px;</string>
                    <property name="font">
                     <font>
                      <family>Lato</family>
+                     <pointsize>11</pointsize>
                     </font>
                    </property>
                    <property name="text">
                     <string>GPU1    </string>
                    </property>
                   </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_2">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                  <item>
                   <widget class="QLabel" name="gpu1HashRate">
@@ -523,13 +517,19 @@ border-radius: 10px;</string>
                </item>
                <item>
                 <layout class="QHBoxLayout" name="gpu2HorizontalLayout">
-                 <item>
+                 <item alignment="Qt::AlignLeft">
                   <widget class="QCheckBox" name="gpu2CheckBox">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                      <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>160</width>
+                     <height>0</height>
+                    </size>
                    </property>
                    <property name="maximumSize">
                     <size>
@@ -540,6 +540,7 @@ border-radius: 10px;</string>
                    <property name="font">
                     <font>
                      <family>Lato</family>
+                     <pointsize>11</pointsize>
                     </font>
                    </property>
                    <property name="styleSheet">
@@ -549,19 +550,6 @@ border-radius: 10px;</string>
                     <string>GPU2</string>
                    </property>
                   </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_4">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                  <item>
                   <widget class="QLabel" name="gpu2HashRate">
@@ -594,6 +582,12 @@ border-radius: 10px;</string>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>160</width>
+                     <height>0</height>
+                    </size>
+                   </property>
                    <property name="maximumSize">
                     <size>
                      <width>58</width>
@@ -603,25 +597,13 @@ border-radius: 10px;</string>
                    <property name="font">
                     <font>
                      <family>Lato</family>
+                     <pointsize>11</pointsize>
                     </font>
                    </property>
                    <property name="text">
                     <string>GPU3</string>
                    </property>
                   </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_5">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                  <item>
                   <widget class="QLabel" name="gpu3HashRate">
@@ -657,6 +639,12 @@ border-radius: 10px;</string>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>160</width>
+                     <height>0</height>
+                    </size>
+                   </property>
                    <property name="maximumSize">
                     <size>
                      <width>58</width>
@@ -666,25 +654,13 @@ border-radius: 10px;</string>
                    <property name="font">
                     <font>
                      <family>Lato</family>
+                     <pointsize>11</pointsize>
                     </font>
                    </property>
                    <property name="text">
                     <string>GPU4</string>
                    </property>
                   </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_6">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                  <item>
                   <widget class="QLabel" name="gpu4HashRate">
@@ -717,6 +693,12 @@ border-radius: 10px;</string>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>160</width>
+                     <height>0</height>
+                    </size>
+                   </property>
                    <property name="maximumSize">
                     <size>
                      <width>58</width>
@@ -726,25 +708,13 @@ border-radius: 10px;</string>
                    <property name="font">
                     <font>
                      <family>Lato</family>
+                     <pointsize>11</pointsize>
                     </font>
                    </property>
                    <property name="text">
                     <string>GPU5</string>
                    </property>
                   </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_7">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                  <item>
                   <widget class="QLabel" name="gpu5HashRate">
@@ -777,6 +747,12 @@ border-radius: 10px;</string>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>160</width>
+                     <height>0</height>
+                    </size>
+                   </property>
                    <property name="maximumSize">
                     <size>
                      <width>58</width>
@@ -786,25 +762,13 @@ border-radius: 10px;</string>
                    <property name="font">
                     <font>
                      <family>Lato</family>
+                     <pointsize>11</pointsize>
                     </font>
                    </property>
                    <property name="text">
                     <string>GPU6</string>
                    </property>
                   </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_8">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                  <item>
                   <widget class="QLabel" name="gpu6HashRate">
