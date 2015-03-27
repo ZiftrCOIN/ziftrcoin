@@ -10,6 +10,12 @@
     <height>150</height>
    </rect>
   </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
   <property name="focusPolicy">
    <enum>Qt::TabFocus</enum>
   </property>
@@ -36,6 +42,29 @@
     <property name="spacing">
      <number>12</number>
     </property>
+    <item row="2" column="1">
+     <widget class="BitcoinAmountField" name="payAmount">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>25</height>
+       </size>
+      </property>
+      <property name="baseSize">
+       <size>
+        <width>0</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="autoFillBackground">
+       <bool>false</bool>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: #000;
+background: #dbdbdb;</string>
+      </property>
+     </widget>
+    </item>
     <item row="2" column="0">
      <widget class="QLabel" name="amountLabel">
       <property name="styleSheet">
@@ -66,54 +95,6 @@ color: #2f9ca1;</string>
       </property>
      </widget>
     </item>
-    <item row="0" column="0">
-     <widget class="QLabel" name="payToLabel">
-      <property name="styleSheet">
-       <string notr="true">font: 16pt &quot;Lato&quot;;
-color: #2f9ca1;</string>
-      </property>
-      <property name="text">
-       <string>Pay &amp;To:</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-      </property>
-      <property name="buddy">
-       <cstring>payTo</cstring>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="labellLabel">
-      <property name="styleSheet">
-       <string notr="true">font: 16pt &quot;Lato&quot;;
-color: #2f9ca1;</string>
-      </property>
-      <property name="text">
-       <string>&amp;Label:</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-      </property>
-      <property name="buddy">
-       <cstring>addAsLabel</cstring>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="0">
-     <widget class="QLabel" name="messageLabel">
-      <property name="styleSheet">
-       <string notr="true">font: 16pt &quot;Lato&quot;;
-color: #2f9ca1;</string>
-      </property>
-      <property name="text">
-       <string>Message:</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-      </property>
-     </widget>
-    </item>
     <item row="1" column="1">
      <widget class="QLineEdit" name="addAsLabel">
       <property name="toolTip">
@@ -121,17 +102,6 @@ color: #2f9ca1;</string>
       </property>
       <property name="styleSheet">
        <string notr="true">border: 1px solid #bcbcbc; border-radius: 0;</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="BitcoinAmountField" name="payAmount">
-      <property name="autoFillBackground">
-       <bool>false</bool>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">border: 1px solid #bcbcbc; border-radius: 0;
-background: #dbdbdb;</string>
       </property>
      </widget>
     </item>
@@ -208,6 +178,54 @@ background: #dbdbdb;</string>
        </widget>
       </item>
      </layout>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="labellLabel">
+      <property name="styleSheet">
+       <string notr="true">font: 16pt &quot;Lato&quot;;
+color: #2f9ca1;</string>
+      </property>
+      <property name="text">
+       <string>&amp;Label:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+      <property name="buddy">
+       <cstring>addAsLabel</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <widget class="QLabel" name="payToLabel">
+      <property name="styleSheet">
+       <string notr="true">font: 16pt &quot;Lato&quot;;
+color: #2f9ca1;</string>
+      </property>
+      <property name="text">
+       <string>Pay &amp;To:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+      <property name="buddy">
+       <cstring>payTo</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="messageLabel">
+      <property name="styleSheet">
+       <string notr="true">font: 16pt &quot;Lato&quot;;
+color: #2f9ca1;</string>
+      </property>
+      <property name="text">
+       <string>Message:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -1261,14 +1279,14 @@ background: #dbdbdb;</string>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>BitcoinAmountField</class>
-   <extends>QLineEdit</extends>
-   <header>bitcoinamountfield.h</header>
-  </customwidget>
-  <customwidget>
    <class>QValidatedLineEdit</class>
    <extends>QLineEdit</extends>
    <header>qvalidatedlineedit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>BitcoinAmountField</class>
+   <extends>QLineEdit</extends>
+   <header>bitcoinamountfield.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

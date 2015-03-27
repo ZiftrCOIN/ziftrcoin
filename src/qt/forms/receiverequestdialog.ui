@@ -78,11 +78,17 @@
      <item>
       <widget class="QPushButton" name="btnCopyURI">
        <property name="styleSheet">
-        <string notr="true">background-color: #e37025;
+        <string notr="true">QPushButton {
+background-color: #af571e;
 color: #fff;
 height: 30px;
 width: 100px;
-border-radius: 5px;</string>
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #e37025;
+}</string>
        </property>
        <property name="text">
         <string>Copy &amp;URI</string>
@@ -92,11 +98,17 @@ border-radius: 5px;</string>
      <item>
       <widget class="QPushButton" name="btnCopyAddress">
        <property name="styleSheet">
-        <string notr="true">background-color: #e37025;
+        <string notr="true">QPushButton {
+background-color: #af571e;
 color: #fff;
 height: 30px;
 width: 100px;
-border-radius: 5px;</string>
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #e37025;
+}</string>
        </property>
        <property name="text">
         <string>Copy &amp;Address</string>
@@ -106,11 +118,17 @@ border-radius: 5px;</string>
      <item>
       <widget class="QPushButton" name="btnSaveAs">
        <property name="styleSheet">
-        <string notr="true">background-color: #e37025;
+        <string notr="true">QPushButton {
+background-color: #af571e;
 color: #fff;
 height: 30px;
 width: 100px;
-border-radius: 5px;</string>
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #e37025;
+}</string>
        </property>
        <property name="text">
         <string>&amp;Save Image...</string>
@@ -133,11 +151,17 @@ border-radius: 5px;</string>
      <item>
       <widget class="QDialogButtonBox" name="buttonBox">
        <property name="styleSheet">
-        <string notr="true">background-color: #419d9e;
+        <string notr="true">QPushButton {
+background: #337c7d;
 color: #fff;
 height: 30px;
-width: 100px;
-border-radius: 5px;</string>
+width:100px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #419d9e;
+}</string>
        </property>
        <property name="standardButtons">
         <set>QDialogButtonBox::Close</set>

@@ -23,7 +23,7 @@
    <item>
     <widget class="QFrame" name="frameCoinControl">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -86,11 +86,17 @@
         <item>
          <widget class="QPushButton" name="pushButtonCoinControl">
           <property name="styleSheet">
-           <string notr="true">background-color: #419d9e;
+           <string notr="true">QPushButton {
+background: #337c7d;
 color: #fff;
 height: 30px;
-width: 80px;
-border-radius: 5px;</string>
+width:100px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #419d9e;
+}</string>
           </property>
           <property name="text">
            <string>Inputs...</string>
@@ -643,7 +649,8 @@ border-radius: 5px;</string>
            <string>If this is activated, but the change address is empty or invalid, change will be sent to a newly generated address.</string>
           </property>
           <property name="styleSheet">
-           <string notr="true">color: #473f3c;</string>
+           <string notr="true">color: #473f3c;
+margin-right: 5px;</string>
           </property>
           <property name="text">
            <string>Custom change address</string>
@@ -707,7 +714,7 @@ border-radius: 5px;</string>
         <x>0</x>
         <y>0</y>
         <width>835</width>
-        <height>131</height>
+        <height>261</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0">
@@ -731,24 +738,24 @@ border-radius: 5px;</string>
          <property name="sizeConstraint">
           <enum>QLayout::SetDefaultConstraint</enum>
          </property>
+         <item>
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
         </layout>
        </item>
       </layout>
      </widget>
     </widget>
-   </item>
-   <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
@@ -767,11 +774,17 @@ border-radius: 5px;</string>
         <bool>false</bool>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: #e37025;
+        <string notr="true">QPushButton {
+background-color: #af571e;
 color: #fff;
 height: 30px;
 width: 10px;
-border-radius: 5px;</string>
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #e37025;
+}</string>
        </property>
        <property name="text">
         <string>SEND</string>
@@ -796,11 +809,17 @@ border-radius: 5px;</string>
         <string>Clear all fields of the form.</string>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: #419d9e;
+        <string notr="true">QPushButton {
+background: #337c7d;
 color: #fff;
 height: 30px;
-width: 100px;
-border-radius: 5px;</string>
+width:100px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #419d9e;
+}</string>
        </property>
        <property name="text">
         <string>CLEAR ALL</string>
@@ -819,11 +838,17 @@ border-radius: 5px;</string>
         <string>Send to multiple recipients at once</string>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: #419d9e;
+        <string notr="true">QPushButton {
+background: #337c7d;
 color: #fff;
 height: 30px;
-width: 150px;
-border-radius: 5px;</string>
+width:150px;
+border-radius: 5px;
+}
+
+QPushButton:!pressed {
+     background-color: #419d9e;
+}</string>
        </property>
        <property name="text">
         <string>ADD RECIPIENT</string>
@@ -917,7 +942,7 @@ border-radius: 5px;</string>
           <string/>
          </property>
          <property name="pixmap">
-          <pixmap resource="../bitcoin.qrc">:/images/wallet_bgcoin</pixmap>
+          <pixmap resource="../bitcoin.qrc">:/images/wallet_nocoin</pixmap>
          </property>
          <property name="scaledContents">
           <bool>false</bool>

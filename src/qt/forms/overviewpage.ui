@@ -36,7 +36,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QWidget" name="" native="true">
+    <widget class="QWidget" name="widget" native="true">
      <property name="styleSheet">
       <string notr="true">background: #144248;</string>
      </property>
@@ -64,7 +64,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QWidget" name="" native="true">
+       <widget class="QWidget" name="widget" native="true">
         <property name="styleSheet">
          <string notr="true">background: #144248;</string>
         </property>
@@ -357,8 +357,14 @@ background:  #c3c1bd;</string>
             </spacer>
            </item>
            <item>
-            <widget class="QWidget" name="" native="true">
+            <widget class="QWidget" name="widget" native="true">
              <layout class="QHBoxLayout" name="horizontalLayout">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
               <item>
                <widget class="QLabel" name="label_wallet_bgcoin">
                 <property name="text">
@@ -504,7 +510,6 @@ border-radius: 10px;</string>
     </widget>
    </item>
   </layout>
-  <zorder></zorder>
  </widget>
  <resources>
   <include location="../bitcoin.qrc"/>

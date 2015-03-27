@@ -11,7 +11,7 @@
 
 extern json_spirit::Value GetNetworkHashPS(int lookup, int height);
 
-static const string introText = 
+static const string introText =
     "Welcome to ziftrCOIN mining!\n"
     "If all you would like to do is to just mine to the ziftrCOIN pool, \n"
     "then just click 'Start Mining'!\n"
@@ -29,11 +29,11 @@ static const string introText =
 
 // The AMD chips that ZRC sgminer supports
 static const string AMD_SPECIFIC_STRINGS[] = {
-    "AMD",          "Radeon",       "Barts",        "BeaverCreek",      "Beaver Creek",     
-    "Bonaire",      "Caicos",       "CapeVerde",    "Cape Verde",       "Cayman",  
+    "AMD",          "Radeon",       "Barts",        "BeaverCreek",      "Beaver Creek",
+    "Bonaire",      "Caicos",       "CapeVerde",    "Cape Verde",       "Cayman",
     "Cedar",        "Cypress",      "Devastator",   "Hainan",           "Hawaii",
     "Iceland",      "Juniper",      "Kalindi",      "Loveland",         "Love Land",
-    "Mullins",      "Oland",        "Pitcairn",     "Redwood",          "Scrapper", 
+    "Mullins",      "Oland",        "Pitcairn",     "Redwood",          "Scrapper",
     "Spectre",      "Spooky",       "Tahiti",       "Tonga",            "Turks",
     "WinterPark",   "Winter Park",  "END"
 };
@@ -73,7 +73,7 @@ MiningPage::MiningPage(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    setFixedSize(400, 420);
+    //setFixedSize(400, 420);
 
     minerActive = false;
 
@@ -236,7 +236,7 @@ void MiningPage::LaunchGPUInitialCheck()
         args << "-n";
 
         QDir appDir = QDir(QCoreApplication::applicationDirPath());
-        
+
         QString program = appDir.filePath("sgminer");
         if (!QFile::exists(program))
             program = "sgminer";
@@ -338,7 +338,6 @@ void MiningPage::startPoolMining()
 
         readTimer->start(500);
     }
-
 }
 
 void MiningPage::startCPUPoolMining(QStringList args)
@@ -347,7 +346,7 @@ void MiningPage::startCPUPoolMining(QStringList args)
     nPercentHashPow = std::min(std::max(nPercentHashPow, (unsigned int)0), (unsigned int)100);
     unsigned int nBestThreads = boost::thread::hardware_concurrency();
     cpuInitThreads = nPercentHashPow == 0 ? 0 : std::max(nBestThreads * nPercentHashPow / 100, (unsigned int)1);
-    
+
     args << "-t" << QString("%1").arg(cpuInitThreads);
     args << "-a" << "zr5";
     args << "--retries" << "-1"; // Retry forever.
@@ -385,7 +384,7 @@ void MiningPage::startGPUPoolMining(QStringList args)
                 args << "-d" << this->GetGPUCheckBox(1+i)->text();
         }
     }
-    else 
+    else
     {
         args << "--algorithm" << "zr5";
         args << "-d" << GetCheckedGPUs().join(",");
@@ -573,6 +572,7 @@ void MiningPage::readGPUMiningOutput()
                     QStringList sublist = line.split("\t", QString::SkipEmptyParts);
                     
                     QString gpuName = ""; 
+
                     if (sublist.size() > 2)
                         gpuName = sublist.at(2);
 
@@ -809,15 +809,15 @@ void MiningPage::minerStarted()
 void MiningPage::updateSpeed()
 {
     qint64 NetworkHashrate = (qint64)GetNetworkHashPS(120, -1).get_int64();
+    ui->networkHashRate->setStyleSheet("color: #fff");
     ui->networkHashRate->setText(QString("Network hash rate: %1").arg(formatHashrate(NetworkHashrate)));
-
     if (!minerActive)
     {
         ui->mineSpeedLabel->setText(QString("0 H/s"));
     }
     else if (this->getMiningType() == ClientModel::SoloMining)
     {
-        qint64 Hashrate = GetBoolArg("-gen", false) && 
+        qint64 Hashrate = GetBoolArg("-gen", false) &&
                 GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER) != 0 ? clientmodel->getHashrate() : 0;
         ui->mineSpeedLabel->setText(QString("%1").arg(formatHashrate(Hashrate)));
 
@@ -849,7 +849,7 @@ void MiningPage::updateSpeed()
                 totalCpuSpeed += iter.value();
                 totalThreads++;
             }
-            
+
             if (totalThreads != 0)
             {
                 totalSpeed += (totalCpuSpeed * cpuInitThreads / totalThreads);
@@ -1014,12 +1014,12 @@ void MiningPage::changePercentMiningPower(int i)
 void MiningPage::resetMiningButton()
 {
     ui->startButton->setText(minerActive ? "Stop Mining" : "Start Mining");
-    QString style;
-    if (minerActive)
-        style = "QPushButton { color: #e46e1f; }";
-    else 
-        style = "QPushButton { color: #15444A; }";
-    ui->startButton->setStyleSheet(style);
+    // QString style;
+    // if (minerActive)
+    //     style = "QPushButton { color: #e46e1f; }";
+    // else
+    //     style = "QPushButton { color: #15444A; }";
+    // ui->startButton->setStyleSheet(style);
     EnableMiningControlsAppropriately();
 }
 

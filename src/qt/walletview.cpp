@@ -28,6 +28,8 @@
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <QLabel>
+#include <QPixmap>
 
 WalletView::WalletView(QWidget *parent):
     QStackedWidget(parent),
@@ -38,18 +40,34 @@ WalletView::WalletView(QWidget *parent):
     overviewPage = new OverviewPage();
 
     transactionsPage = new QWidget(this);
+    transactionsPage->setStyleSheet("background: #144248");
     QVBoxLayout *vbox = new QVBoxLayout();
     QHBoxLayout *hbox_buttons = new QHBoxLayout();
     transactionView = new TransactionView(this);
+    transactionView->setStyleSheet("background: #fff");
     vbox->addWidget(transactionView);
     QPushButton *exportButton = new QPushButton(tr("&Export"), this);
+    exportButton->setStyleSheet("QPushButton { position: fixed; background: #337c7d; color: #fff; height: 30px; width: 50px; border-radius: 5px;} QPushButton:!pressed { background-color: #419d9e; color: #fff; height: 30px; width: 100px; border-radius: 5px;}");
     exportButton->setToolTip(tr("Export the data in the current tab to a file"));
+
+
+
+
+
 #ifndef Q_OS_MAC // Icons on push buttons are very uncommon on Mac
     exportButton->setIcon(QIcon(":/icons/export"));
 #endif
+
     hbox_buttons->addStretch();
+
     hbox_buttons->addWidget(exportButton);
+
     vbox->addLayout(hbox_buttons);
+
+    QLabel *label = new QLabel();
+    label->setPixmap( QPixmap(":/images/wallet_nocoin"));
+    vbox->addWidget(label);
+
     transactionsPage->setLayout(vbox);
 
     receiveCoinsPage = new ReceiveCoinsDialog();
