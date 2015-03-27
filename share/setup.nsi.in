@@ -154,11 +154,11 @@ Section -Main SEC0000
     File @abs_top_srcdir@/x14old.cl
     File @abs_top_srcdir@/zr5.cl
     File @abs_top_srcdir@/zuikkis.cl
-    File @abs_top_srcdir@libcurl.dll
-    File @abs_top_srcdir@libeay32.dll
-    File @abs_top_srcdir@pthreadVC2.dll
-    File @abs_top_srcdir@ssleay32.dll
-    File @abs_top_srcdir@zlib1.dll
+    File @abs_top_srcdir@/libcurl.dll
+    File @abs_top_srcdir@/libeay32.dll
+    File @abs_top_srcdir@/pthreadVC2.dll
+    File @abs_top_srcdir@/ssleay32.dll
+    File @abs_top_srcdir@/zlib1.dll
     File /oname=COPYING.txt @abs_top_srcdir@/COPYING
     File /oname=readme.txt @abs_top_srcdir@/doc/README_windows.txt
     SetOutPath $INSTDIR\daemon
