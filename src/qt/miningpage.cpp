@@ -98,7 +98,7 @@ MiningPage::MiningPage(QWidget *parent) :
     cpuMinerProcess->setProcessChannelMode(QProcess::MergedChannels);// ForwardedChannels);//MergedChannels);
 
     gpuMinerProcess = new QProcess(this);
-    gpuMinerProcess->setProcessChannelMode(QProcess::SeparateChannels);
+    gpuMinerProcess->setProcessChannelMode(QProcess::MergedChannels);// SeparateChannels);
 
     readTimer = new QTimer(this);
     hashTimer = new QTimer(this);
@@ -280,7 +280,9 @@ void MiningPage::startPressed()
 
             bool fStartWalletMiner = (ui->pokCheckBox->isChecked() || !GetBoolArg("-server", false));
             if (!fStartWalletMiner || fStartGpuMining || getMiningType() == ClientModel::PoolMining)
+            {
                 startPoolMining();
+            }
         }
         else 
         {
@@ -389,6 +391,7 @@ void MiningPage::startGPUPoolMining(QStringList args)
         args << "--algorithm" << "zr5";
         args << "-d" << GetCheckedGPUs().join(",");
         args << "-T";
+        args << "-v";
     }
 
     gpuSpeeds.clear();
