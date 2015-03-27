@@ -402,6 +402,11 @@ void MiningPage::startGPUPoolMining(QStringList args)
     if (!QFile::exists(program))
         program = base.c_str();
 
+    if (ui->debugCheckBox->isChecked())
+    {
+        this->reportToList(QString("%1 %2").arg(program, args.join(" ")), GENERIC, NULL);
+    }
+
     gpuMinerProcess->start(program, args);
     gpuMinerProcess->waitForStarted(-1);
 }
@@ -760,7 +765,7 @@ void MiningPage::minerError(QProcess::ProcessError error)
 {
     if (error == QProcess::FailedToStart)
     {
-        reportToList("Miner failed to start. Make sure you have ZiftrCOIN-Qt.", ERROR, NULL);
+        reportToList("Miner failed to start. Turn debugging on for more info.", ERROR, NULL);
         if (minerActive)
             this->startPressed();
     }
