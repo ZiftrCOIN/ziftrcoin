@@ -684,8 +684,15 @@ border-radius: 10px;</string>
              <bool>false</bool>
             </property>
             <property name="styleSheet">
-             <string notr="true">background: #fff;
-border-radius: 10px;</string>
+             <string notr="true">QListWidget {
+background: #fff;
+border-radius: 10px;
+padding: 10px;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    background: none;
+}</string>
             </property>
             <property name="inputMethodHints">
              <set>Qt::ImhNone</set>

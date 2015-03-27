@@ -48,7 +48,6 @@ WalletView::WalletView(QWidget *parent):
     vbox->addWidget(transactionView);
     QPushButton *exportButton = new QPushButton(tr("&Export"), this);
     exportButton->setStyleSheet("QPushButton { position: fixed; background: #337c7d; color: #fff; height: 30px; width: 50px; border-radius: 5px;} QPushButton:!pressed { background-color: #419d9e; color: #fff; height: 30px; width: 100px; border-radius: 5px;}");
-    //exportButton->setStyleSheet("");
     exportButton->setToolTip(tr("Export the data in the current tab to a file"));
 
 
