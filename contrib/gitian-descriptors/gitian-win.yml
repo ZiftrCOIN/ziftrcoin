@@ -30,7 +30,7 @@ files:
 - "ziftrcoin-deps-win64-gitian-r15.zip"
 - "protobuf-win32-2.5.0-gitian-r4.zip"
 - "protobuf-win64-2.5.0-gitian-r4.zip"
-- "cpuminer-ziftr-win64-2.3.2-r2.zip"
+- "gpu-qtmining-ziftr-win64.zip"
 script: |
   # Defines
   export TZ=UTC
@@ -65,7 +65,7 @@ script: |
     unzip $INDIR/boost-win${BITS}-1.55.0-gitian-r6.zip
     unzip $INDIR/ziftrcoin-deps-win${BITS}-gitian-r15.zip
     unzip $INDIR/protobuf-win${BITS}-2.5.0-gitian-r4.zip
-    unzip $INDIR/cpuminer-ziftr-win${BITS}-2.3.2-r2.zip
+    unzip $INDIR/gpu-qtmining-ziftr-win${BITS}.zip
     if [ "$NEEDDIST" == "1" ]; then
       # Make source code archive which is architecture independent so it only needs to be done once
       cd $HOME/build/ziftrcoin
@@ -82,13 +82,10 @@ script: |
     #
     tar --strip-components=1 -xf $HOME/build/ziftrcoin/$DISTNAME
     #
-    # Copy the minerd.exe into the source directory so the installer will pick it up.
-    cp $STAGING/bin/minerd.exe $BUILDDIR/distsrc/
+    # Copy the miner bin files into the source directory so the installer will pick it up.
+    cp $STAGING/gpu-bin/ $BUILDDIR/distsrc/
     #
-    cp $STAGING/lib/libcurl.dll $BUILDDIR/distsrc/
-    cp $STAGING/lib/libeay32.dll $BUILDDIR/distsrc/
-    cp $STAGING/lib/ssleay32.dll $BUILDDIR/distsrc/
-    cp $STAGING/lib/zlib1.dll $BUILDDIR/distsrc/
+    cp $STAGING/gpu-lib/ $BUILDDIR/distsrc/
     #
     ./configure --enable-upnp-default --bindir=$BINDIR --prefix=$STAGING --host=$HOST --with-qt-plugindir=$STAGING/plugins  --with-qt-incdir=$STAGING/include --with-qt-bindir=$STAGING/host/bin --with-boost=$STAGING --disable-maintainer-mode --with-protoc-bindir=$STAGING/host/bin --disable-dependency-tracking CPPFLAGS="-I$STAGING/include ${OPTFLAGS}" LDFLAGS="-L$STAGING/lib ${OPTFLAGS}" CXXFLAGS="-frandom-seed=ziftrcoin ${OPTFLAGS}"
     export LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1
