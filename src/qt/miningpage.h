@@ -14,6 +14,7 @@
 #include <QSettings>
 #include <QCheckBox>
 #include <QtGui>
+#include <QHBoxLayout>
 
 #include "clientmodel.h"
 #include "walletmodel.h"

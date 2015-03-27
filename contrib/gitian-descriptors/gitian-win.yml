@@ -83,9 +83,17 @@ script: |
     tar --strip-components=1 -xf $HOME/build/ziftrcoin/$DISTNAME
     #
     # Copy the miner bin files into the source directory so the installer will pick it up.
-    cp $STAGING/gpu-bin/ $BUILDDIR/distsrc/
+    cp $STAGING/bin/minerd.exe $BUILDDIR/distsrc/
+    cp $STAGING/bin/ccminer.exe $BUILDDIR/distsrc/
+    cp $STAGING/bin/sgminer.exe $BUILDDIR/distsrc/
+    cp $STAGING/bin/*.cl $BUILDDIR/distsrc/
+    cp $STAGING/bin/*.bin $BUILDDIR/distsrc/
     #
-    cp $STAGING/gpu-lib/ $BUILDDIR/distsrc/
+    cp $STAGING/lib/libcurl.dll $BUILDDIR/distsrc/
+    cp $STAGING/lib/libeay32.dll $BUILDDIR/distsrc/
+    cp $STAGING/lib/pthreadVC2.dll $BUILDDIR/distsrc/
+    cp $STAGING/lib/ssleay32.dll $BUILDDIR/distsrc/
+    cp $STAGING/lib/zlib1.dll $BUILDDIR/distsrc/
     #
     ./configure --enable-upnp-default --bindir=$BINDIR --prefix=$STAGING --host=$HOST --with-qt-plugindir=$STAGING/plugins  --with-qt-incdir=$STAGING/include --with-qt-bindir=$STAGING/host/bin --with-boost=$STAGING --disable-maintainer-mode --with-protoc-bindir=$STAGING/host/bin --disable-dependency-tracking CPPFLAGS="-I$STAGING/include ${OPTFLAGS}" LDFLAGS="-L$STAGING/lib ${OPTFLAGS}" CXXFLAGS="-frandom-seed=ziftrcoin ${OPTFLAGS}"
     export LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1
