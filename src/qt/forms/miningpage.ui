@@ -418,6 +418,9 @@ border-radius: 10px;</string>
                  </item>
                  <item>
                   <widget class="QLabel" name="cpuHashRate">
+                   <property name="layoutDirection">
+                    <enum>Qt::RightToLeft</enum>
+                   </property>
                    <property name="text">
                     <string/>
                    </property>
@@ -460,20 +463,20 @@ border-radius: 10px;</string>
                  <item alignment="Qt::AlignLeft">
                   <widget class="QCheckBox" name="gpu1CheckBox">
                    <property name="sizePolicy">
-                    <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                      <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>160</width>
+                     <width>0</width>
                      <height>0</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>58</width>
+                     <width>16777215</width>
                      <height>16777215</height>
                     </size>
                    </property>
@@ -483,8 +486,11 @@ border-radius: 10px;</string>
                      <pointsize>11</pointsize>
                     </font>
                    </property>
+                   <property name="styleSheet">
+                    <string notr="true"/>
+                   </property>
                    <property name="text">
-                    <string>GPU1    </string>
+                    <string>1    </string>
                    </property>
                   </widget>
                  </item>
@@ -498,7 +504,7 @@ border-radius: 10px;</string>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>100</width>
+                     <width>0</width>
                      <height>16777215</height>
                     </size>
                    </property>
@@ -507,6 +513,9 @@ border-radius: 10px;</string>
                      <width>0</width>
                      <height>0</height>
                     </size>
+                   </property>
+                   <property name="layoutDirection">
+                    <enum>Qt::RightToLeft</enum>
                    </property>
                    <property name="text">
                     <string/>
@@ -527,13 +536,13 @@ border-radius: 10px;</string>
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>160</width>
+                     <width>0</width>
                      <height>0</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>58</width>
+                     <width>16777215</width>
                      <height>16777215</height>
                     </size>
                    </property>
@@ -544,10 +553,10 @@ border-radius: 10px;</string>
                     </font>
                    </property>
                    <property name="styleSheet">
-                    <string notr="true">width: 100px;</string>
+                    <string notr="true"/>
                    </property>
                    <property name="text">
-                    <string>GPU2</string>
+                    <string>2</string>
                    </property>
                   </widget>
                  </item>
@@ -561,9 +570,12 @@ border-radius: 10px;</string>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>100</width>
+                     <width>0</width>
                      <height>16777215</height>
                     </size>
+                   </property>
+                   <property name="layoutDirection">
+                    <enum>Qt::RightToLeft</enum>
                    </property>
                    <property name="text">
                     <string/>
@@ -574,7 +586,7 @@ border-radius: 10px;</string>
                </item>
                <item>
                 <layout class="QHBoxLayout" name="gpu3HorizontalLayout">
-                 <item>
+                 <item alignment="Qt::AlignLeft">
                   <widget class="QCheckBox" name="gpu3CheckBox">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -584,13 +596,13 @@ border-radius: 10px;</string>
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>160</width>
+                     <width>0</width>
                      <height>0</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>58</width>
+                     <width>16777215</width>
                      <height>16777215</height>
                     </size>
                    </property>
@@ -601,7 +613,7 @@ border-radius: 10px;</string>
                     </font>
                    </property>
                    <property name="text">
-                    <string>GPU3</string>
+                    <string>3</string>
                    </property>
                   </widget>
                  </item>
@@ -615,9 +627,12 @@ border-radius: 10px;</string>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>100</width>
+                     <width>0</width>
                      <height>16777215</height>
                     </size>
+                   </property>
+                   <property name="layoutDirection">
+                    <enum>Qt::RightToLeft</enum>
                    </property>
                    <property name="text">
                     <string/>
@@ -631,7 +646,7 @@ border-radius: 10px;</string>
                  <property name="rightMargin">
                   <number>0</number>
                  </property>
-                 <item>
+                 <item alignment="Qt::AlignLeft">
                   <widget class="QCheckBox" name="gpu4CheckBox">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -641,13 +656,13 @@ border-radius: 10px;</string>
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>160</width>
+                     <width>0</width>
                      <height>0</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>58</width>
+                     <width>16777215</width>
                      <height>16777215</height>
                     </size>
                    </property>
@@ -658,7 +673,7 @@ border-radius: 10px;</string>
                     </font>
                    </property>
                    <property name="text">
-                    <string>GPU4</string>
+                    <string>4</string>
                    </property>
                   </widget>
                  </item>
@@ -672,9 +687,12 @@ border-radius: 10px;</string>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>100</width>
+                     <width>0</width>
                      <height>16777215</height>
                     </size>
+                   </property>
+                   <property name="layoutDirection">
+                    <enum>Qt::RightToLeft</enum>
                    </property>
                    <property name="text">
                     <string/>
@@ -685,7 +703,7 @@ border-radius: 10px;</string>
                </item>
                <item>
                 <layout class="QHBoxLayout" name="gpu5HorizontalLayout">
-                 <item>
+                 <item alignment="Qt::AlignLeft">
                   <widget class="QCheckBox" name="gpu5CheckBox">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -695,13 +713,13 @@ border-radius: 10px;</string>
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>160</width>
+                     <width>0</width>
                      <height>0</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>58</width>
+                     <width>16777215</width>
                      <height>16777215</height>
                     </size>
                    </property>
@@ -712,7 +730,7 @@ border-radius: 10px;</string>
                     </font>
                    </property>
                    <property name="text">
-                    <string>GPU5</string>
+                    <string>5</string>
                    </property>
                   </widget>
                  </item>
@@ -726,9 +744,12 @@ border-radius: 10px;</string>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>100</width>
+                     <width>0</width>
                      <height>16777215</height>
                     </size>
+                   </property>
+                   <property name="layoutDirection">
+                    <enum>Qt::RightToLeft</enum>
                    </property>
                    <property name="text">
                     <string/>
@@ -739,7 +760,7 @@ border-radius: 10px;</string>
                </item>
                <item>
                 <layout class="QHBoxLayout" name="gpu6HorizontalLayout">
-                 <item>
+                 <item alignment="Qt::AlignLeft">
                   <widget class="QCheckBox" name="gpu6CheckBox">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -749,13 +770,13 @@ border-radius: 10px;</string>
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>160</width>
+                     <width>0</width>
                      <height>0</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>58</width>
+                     <width>16777215</width>
                      <height>16777215</height>
                     </size>
                    </property>
@@ -766,7 +787,7 @@ border-radius: 10px;</string>
                     </font>
                    </property>
                    <property name="text">
-                    <string>GPU6</string>
+                    <string>6</string>
                    </property>
                   </widget>
                  </item>
@@ -780,9 +801,12 @@ border-radius: 10px;</string>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>100</width>
+                     <width>0</width>
                      <height>16777215</height>
                     </size>
+                   </property>
+                   <property name="layoutDirection">
+                    <enum>Qt::RightToLeft</enum>
                    </property>
                    <property name="text">
                     <string/>
@@ -809,11 +833,20 @@ border-radius: 10px;</string>
                  </item>
                  <item>
                   <widget class="QLabel" name="mineSpeedLabel">
+                   <property name="maximumSize">
+                    <size>
+                     <width>0</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
                    <property name="font">
                     <font>
                      <weight>75</weight>
                      <bold>true</bold>
                     </font>
+                   </property>
+                   <property name="layoutDirection">
+                    <enum>Qt::RightToLeft</enum>
                    </property>
                    <property name="text">
                     <string/>
