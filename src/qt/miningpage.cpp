@@ -513,8 +513,14 @@ void MiningPage::readGPUMiningOutput()
 
             if (this->GPUState == GPU_SETUP_LAUNCHED)
             {
+                //in this state we've just launched, and are running sgminer miner -n
+                //we need to first parse the results to determine how many GPUs we have
+
                 if (line.contains("Platform devices:"))
                 {
+                    //if sgminer can read the GPUs it will start the response with
+                    //Platform devices: #
+                    //use this to get the number of devices and move on the the next state
                     this->GPUState = GPU_SETUP_DETECTED_GPU_COUNT;
 
                     int startNumGPUs = line.indexOf("Platform devices:")+18;
@@ -534,6 +540,17 @@ void MiningPage::readGPUMiningOutput()
                     }
                     continue;
                 }
+                else if (line.contains("Error -1: Getting Device"))
+                {
+                    //if this happens it means that sgminer can't read device info at all
+                    //this seems to happen with some Nvidia setups
+                    bool forceAMD = GetBoolArg("-useamd", false);
+                    useCuda = !forceAMD;
+
+                    this->DeleteGPUBoxesAbove(0);
+                    this->GetGPUCheckBox(0)->setText("Unknown GPU(s)");
+                    this->GPUState = GPU_SETUP_AWAITING_FIRST_EXIT;
+                }
             }
             else if (this->GPUState == GPU_SETUP_DETECTED_GPU_COUNT)
             {
@@ -541,8 +558,9 @@ void MiningPage::readGPUMiningOutput()
                 {
                     this->GPUState = GPU_SETUP_AWAITING_FIRST_EXIT;
                 }
-                else if (gpuCounter > numGPUs)
+                else if (gpuCounter >= numGPUs)
                 {
+                    gpuCounter++;
                     if (line.contains("assigned") && line.contains("name:"))
                     {
                         int gpuIndex = line.indexOf("GPU ") + 4;
@@ -555,23 +573,8 @@ void MiningPage::readGPUMiningOutput()
 
                         QString nameString = line.mid(nameIndex);
 
-                        this->GetGPUCheckBox(1+gpuId)->setText(nameString);
+                        this->GetGPUCheckBox(gpuId)->setText(nameString);
                     }
-                }
-                else if (gpuCounter == numGPUs)
-                {
-                    // Avoid coming in here again
-                    gpuCounter++;
-
-                    // Default to false
-                    useCuda = false;
-
-                    if (fFoundnVidia)
-                        useCuda = true;
-                    else if (fFoundAmd)
-                        useCuda = false;
-
-                    continue;
                 }
                 else if (gpuCounter < numGPUs)
                 {
@@ -592,7 +595,11 @@ void MiningPage::readGPUMiningOutput()
                         for (int i = 0; !fSingleFoundnVidia && NVIDIA_SPECIFIC_STRINGS[i] != "END"; i++)
                         {
                             if (AContainsB(gpuName, QString(NVIDIA_SPECIFIC_STRINGS[i].c_str())))
+                            {
                                 fSingleFoundnVidia = true;
+                                useCuda = true;
+                            }
+
                         }
 
                         bool fSingleFoundAmd = false;
@@ -880,7 +887,11 @@ void MiningPage::updateSpeed()
 
         // Everything is stored as a double of the number of kH/s, but formatted as whatever is
         // most appropriate
-        ui->mineSpeedLabel->setText(QString("%1").arg(formatHashrate(totalSpeed * 1000)));
+
+        //TODO -seems the mining label is broken, for now just dump it to the area title
+        //ui->mineSpeedLabel->setText(QString("%1").arg(formatHashrate(totalSpeed * 1000)));
+
+        ui->label_5->setText(QString("Total: %1").arg(formatHashrate(totalSpeed * 1000)));
     }
 
     // clientmodel->setMining(getMiningType(), minerActive, -1);
