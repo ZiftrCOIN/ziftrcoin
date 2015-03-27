@@ -760,7 +760,7 @@ void MiningPage::minerError(QProcess::ProcessError error)
 {
     if (error == QProcess::FailedToStart)
     {
-        reportToList("Miner failed to start. Make sure you have ZiftrCOIN-Qt.", ERROR, NULL);
+        reportToList("Miner failed to start. Turn debugging on for more info.", ERROR, NULL);
         if (minerActive)
             this->startPressed();
     }
