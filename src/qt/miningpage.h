@@ -53,6 +53,10 @@ public:
 
     void setWalletModel(WalletModel *model);
 
+    bool fHaveMinerd;
+    bool fHaveSgminer;
+    bool fHaveCcminer;
+
     bool minerActive;
 
     QProcess *cpuMinerProcess;
@@ -60,7 +64,6 @@ public:
 
     QMap<int, double> threadSpeed;
     QMap<int, double> gpuSpeeds;
-    double gpuSpeed;
 
     QTimer *readTimer;
     QTimer *hashTimer;
@@ -73,9 +76,12 @@ public:
     int cpuInitThreads;
 
     GPU_STATE GPUState;
-    int numGPUs;
     QMap<int, bool> mapGpuCheckBoxesDisabled;
+    int numGPUs;
     bool useCuda;
+
+    bool uiSetRpcUser;
+    bool uiSetRpcPassword;
 
     void setClientModel(ClientModel *model);
 
@@ -129,6 +135,8 @@ private:
     QCheckBox * GetGPUCheckBox(int nId);
     bool ProcessBasicLine(QString line);
     double ExtractHashRate(QString line);
+    void SetDefaultServerConfigs();
+    void DeleteGPUBoxesAbove(int n);
 
     // void restartMining(bool fGenerate);
     // void timerEvent(QTimerEvent *event);

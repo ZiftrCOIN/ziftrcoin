@@ -442,20 +442,39 @@ unsigned int static ScanHash(CBlock *pblock, unsigned int nTry, unsigned int nDo
     return nTry;
 }
 
-CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reserveKey)
+CBlockTemplate* CreateNewBlockWithKey(CReserveKey * pReserveKey, bool fUseRpcUserAsMiningKey)
 {
-    CPubKey pubKey;
-    if (!reserveKey.GetReservedKey(pubKey))
-        throw std::runtime_error("CreateNewBlockWithKey() : Could not get public key");
+    CScript scriptPubKey;
+    scriptPubKey.clear();
 
-    CScript scriptPubKey = CScript() << pubKey << OP_CHECKSIG;
+    if (fUseRpcUserAsMiningKey)
+    {
+        CBitcoinAddress address(GetArg("-rpcuser", "o0oO1iI")); // default to something that won't validate
+        if (address.IsValid())
+        {
+            scriptPubKey.SetDestination(address.Get());
+        }
+    }
+    
+    if (pReserveKey && scriptPubKey.empty())
+    {
+        CPubKey pubKey;
+        if (!pReserveKey->GetReservedKey(pubKey))
+            throw std::runtime_error("CreateNewBlockWithKey() : Could not get public key");
+
+        scriptPubKey = CScript() << pubKey << OP_CHECKSIG;
+    }
+    
+    if (scriptPubKey.empty())
+        throw std::runtime_error("CreateNewBlockWithKey() : Could not determe scriptPubKey");
+    
     return CreateNewBlock(scriptPubKey);
 }
 
 //extern bool fJustPrint;
 
 // If work is checked successfully, then keep the reserve key...
-bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
+bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey * pReserveKey)
 {
     try
     {
@@ -485,7 +504,8 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
             return error("ZiftrCOINMiner : generated block is stale");
 
         // Remove key from key pool
-        reserveKey.KeepKey();
+        if (pReserveKey)
+            pReserveKey->KeepKey();
 
         // Track how many getdata requests this block gets
         {
@@ -532,7 +552,7 @@ void static ZiftrCOINMiner(CWallet *pwallet)
             CBlockIndex* pindexPrev = chainActive.Tip();
 
             // Automatically delete old block template after each round
-            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reserveKey));
+            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(&reserveKey));
             if (!pblocktemplate.get()) {
                 LogPrintf("Error in ZiftrCOINMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
                 return;
@@ -578,7 +598,7 @@ void static ZiftrCOINMiner(CWallet *pwallet)
                 if (nNumFailedAttempts < nTries) {
                     // Not all tries were fails, so we found a solution
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    CheckWork(pblock, *pwallet, reserveKey);
+                    CheckWork(pblock, *pwallet, &reserveKey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
                     // In regression test mode, stop mining after a block is found. This

@@ -79,7 +79,7 @@ public:
     qint64 getHashrate() const;
     double GetDifficulty() const;
 
-    void setMining(MiningType type, bool mining, int percent);
+    void setMining(MiningType type, bool mining, int percent, bool fStartWalletMiner);
 
     // ----
 

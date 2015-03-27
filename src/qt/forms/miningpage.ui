@@ -108,7 +108,7 @@
       <bool>false</bool>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <item>
       <property name="text">
@@ -209,7 +209,7 @@
       <enum>Qt::LeftToRight</enum>
      </property>
      <property name="text">
-      <string>Pool Server URL</string>
+      <string>Debug</string>
      </property>
     </widget>
    </item>
@@ -309,7 +309,7 @@
    <item row="10" column="1">
     <layout class="QVBoxLayout" name="verticalSideBar">
      <item>
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="cpuHeaderLable">
        <property name="font">
         <font>
          <weight>75</weight>
@@ -362,7 +362,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QLabel" name="label_3">
+      <widget class="QLabel" name="gpuHeaderLabel">
        <property name="font">
         <font>
          <weight>75</weight>

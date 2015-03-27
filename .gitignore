@@ -93,6 +93,7 @@ times.txt
 Dockerfile
 miningpage_old.ui
 zr5_minerd
-minerd
+sgminer*
+minerd*
 ccminer
 **/*.creator.user

@@ -172,15 +172,19 @@ double ClientModel::GetDifficulty() const
     // return dDiff;
 }
 
-void ClientModel::setMining(MiningType type, bool mining, int percent)
+void ClientModel::setMining(MiningType type, bool mining, int percent, bool fStartWalletMiner)
 {
     if (type == SoloMining && mining != miningStarted)
     {
         if (percent != -1)
             mapArgs["-usepercenthashpower"] = QString("%1").arg(percent).toUtf8().data();
-        json_spirit::Array Args;
-        Args.push_back(mining);
-        setgenerate(Args, false);
+
+        if (fStartWalletMiner)
+        {
+            json_spirit::Array Args;
+            Args.push_back(mining);
+            setgenerate(Args, false);
+        }
     }
     miningType = type;
     miningStarted = mining;
