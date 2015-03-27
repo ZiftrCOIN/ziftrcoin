@@ -14,7 +14,7 @@
    <string>Transaction details</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">background: #144248;</string>
+   <string notr="true">background: #fff;</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
