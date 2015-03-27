@@ -30,6 +30,7 @@ files:
 - "ziftrcoin-deps-win64-gitian-r15.zip"
 - "protobuf-win32-2.5.0-gitian-r4.zip"
 - "protobuf-win64-2.5.0-gitian-r4.zip"
+- "gpu-qtmining-ziftr-win64.zip"
 script: |
   # Defines
   export TZ=UTC
@@ -45,7 +46,8 @@ script: |
   #  The thorough solution would be to use QMap instead of QHash, but this requires patching Qt.
   #  For now luckily there is a test mode that forces a fixed seed.
   export QT_RCC_TEST=1
-  for BITS in 32 64; do # for architectures
+  #for BITS in 32 64; do # for architectures
+    BITS=64
     #
     STAGING=$HOME/staging${BITS}
     BUILDDIR=$HOME/build${BITS}
@@ -63,6 +65,7 @@ script: |
     unzip $INDIR/boost-win${BITS}-1.55.0-gitian-r6.zip
     unzip $INDIR/ziftrcoin-deps-win${BITS}-gitian-r15.zip
     unzip $INDIR/protobuf-win${BITS}-2.5.0-gitian-r4.zip
+    unzip $INDIR/gpu-qtmining-ziftr-win${BITS}.zip
     if [ "$NEEDDIST" == "1" ]; then
       # Make source code archive which is architecture independent so it only needs to be done once
       cd $HOME/build/ziftrcoin
@@ -72,11 +75,18 @@ script: |
       DISTNAME=`echo ziftrcoin-*.tar.gz`
       NEEDDIST=0
     fi
+    #
     # Build platform-dependent executables from source archive
-    cd $BUILDDIR
-    mkdir -p distsrc
-    cd distsrc
+    mkdir -p $BUILDDIR/distsrc
+    cd $BUILDDIR/distsrc
+    #
     tar --strip-components=1 -xf $HOME/build/ziftrcoin/$DISTNAME
+    #
+    # Copy the miner bin files into the source directory so the installer will pick it up.
+    cp $STAGING/gpu-bin/ $BUILDDIR/distsrc/
+    #
+    cp $STAGING/gpu-lib/ $BUILDDIR/distsrc/
+    #
     ./configure --enable-upnp-default --bindir=$BINDIR --prefix=$STAGING --host=$HOST --with-qt-plugindir=$STAGING/plugins  --with-qt-incdir=$STAGING/include --with-qt-bindir=$STAGING/host/bin --with-boost=$STAGING --disable-maintainer-mode --with-protoc-bindir=$STAGING/host/bin --disable-dependency-tracking CPPFLAGS="-I$STAGING/include ${OPTFLAGS}" LDFLAGS="-L$STAGING/lib ${OPTFLAGS}" CXXFLAGS="-frandom-seed=ziftrcoin ${OPTFLAGS}"
     export LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1
     export FAKETIME=$REFERENCE_DATETIME
@@ -86,7 +96,8 @@ script: |
     cp -f ziftrcoin-*setup*.exe $BINDIR/
     unset LD_PRELOAD
     unset FAKETIME
-  done # for BITS in
+    #
+  #done # for BITS in
 
   # sort distribution tar file and normalize user/group/mtime information for deterministic output
   mkdir -p $OUTDIR/src

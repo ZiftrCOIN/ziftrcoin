@@ -74,6 +74,91 @@ Section -Main SEC0000
     SetOutPath $INSTDIR
     SetOverwrite on
     File @abs_top_srcdir@/release/ziftrcoin-qt.exe
+    File @abs_top_srcdir@/aes_helper.cl
+    File @abs_top_srcdir@/alexkarnew.cl
+    File @abs_top_srcdir@/alexkarold.cl
+    File @abs_top_srcdir@/animecoin.cl
+    File @abs_top_srcdir@/arebyp.cl
+    File @abs_top_srcdir@/bitblock.cl
+    File @abs_top_srcdir@/bitblockold.cl
+    File @abs_top_srcdir@/blake.cl
+    File @abs_top_srcdir@/bmw.cl
+    File @abs_top_srcdir@/bufius.cl
+    File @abs_top_srcdir@/ccminer.exe
+    File @abs_top_srcdir@/ckolivas.cl
+    File @abs_top_srcdir@/cubehash.cl
+    File @abs_top_srcdir@/darkcoin-mod.cl
+    File @abs_top_srcdir@/darkcoin.cl
+    File @abs_top_srcdir@/diamond.cl
+    File @abs_top_srcdir@/echo.cl
+    File @abs_top_srcdir@/fresh.cl
+    File @abs_top_srcdir@/fugue.cl
+    File @abs_top_srcdir@/fuguecoin.cl
+    File @abs_top_srcdir@/groestl.cl
+    File @abs_top_srcdir@/groestlcoin.cl
+    File @abs_top_srcdir@/hamsi_helper_big.cl
+    File @abs_top_srcdir@/hamsi_helper.cl
+    File @abs_top_srcdir@/hamsi.cl
+    File @abs_top_srcdir@/inkcoin.cl
+    File @abs_top_srcdir@/jh.cl
+    File @abs_top_srcdir@/keccak.cl
+    File @abs_top_srcdir@/luffa.cl
+    File @abs_top_srcdir@/marucoin-mod.cl
+    File @abs_top_srcdir@/marucoin-modold.cl
+    File @abs_top_srcdir@/marucoin.cl
+    File @abs_top_srcdir@/maxcoin.cl
+    File @abs_top_srcdir@/minerd.exe
+    File @abs_top_srcdir@/myriadcoin-groestl.cl
+    File @abs_top_srcdir@/neoscrypt.cl
+    File @abs_top_srcdir@/panama.cl
+    File @abs_top_srcdir@/psw.cl
+    File @abs_top_srcdir@/quarkcoin.cl
+    File @abs_top_srcdir@/qubitcoin.cl
+    File @abs_top_srcdir@/sgminer.exe
+    File @abs_top_srcdir@/shabal.cl
+    File @abs_top_srcdir@/shavite.cl
+    File @abs_top_srcdir@/sifcoin.cl
+    File @abs_top_srcdir@/simd.cl
+    File @abs_top_srcdir@/skein.cl
+    File @abs_top_srcdir@/talkcoin-mod.cl
+    File @abs_top_srcdir@/twecoin.cl
+    File @abs_top_srcdir@/whirlcoin.cl
+    File @abs_top_srcdir@/whirlpool.cl
+    File @abs_top_srcdir@/WolfZR5-Barts.bin
+    File @abs_top_srcdir@/WolfZR5-BeaverCreek.bin
+    File @abs_top_srcdir@/WolfZR5-Bonaire.bin
+    File @abs_top_srcdir@/WolfZR5-Caicos.bin
+    File @abs_top_srcdir@/WolfZR5-Capeverde.bin
+    File @abs_top_srcdir@/WolfZR5-Cayman.bin
+    File @abs_top_srcdir@/WolfZR5-Cedar.bin
+    File @abs_top_srcdir@/WolfZR5-Cypress.bin
+    File @abs_top_srcdir@/WolfZR5-Devastator.bin
+    File @abs_top_srcdir@/WolfZR5-Hainan.bin
+    File @abs_top_srcdir@/WolfZR5-Hawaii.bin
+    File @abs_top_srcdir@/WolfZR5-Iceland.bin
+    File @abs_top_srcdir@/WolfZR5-Juniper.bin
+    File @abs_top_srcdir@/WolfZR5-Kalindi.bin
+    File @abs_top_srcdir@/WolfZR5-Loveland.bin
+    File @abs_top_srcdir@/WolfZR5-Mullins.bin
+    File @abs_top_srcdir@/WolfZR5-Oland.bin
+    File @abs_top_srcdir@/WolfZR5-Pitcairn.bin
+    File @abs_top_srcdir@/WolfZR5-Redwood.bin
+    File @abs_top_srcdir@/WolfZR5-Scrapper.bin
+    File @abs_top_srcdir@/WolfZR5-Spectre.bin
+    File @abs_top_srcdir@/WolfZR5-Spooky.bin
+    File @abs_top_srcdir@/WolfZR5-Tahiti.bin
+    File @abs_top_srcdir@/WolfZR5-Tonga.bin
+    File @abs_top_srcdir@/WolfZR5-Turks.bin
+    File @abs_top_srcdir@/WolfZR5-WinterPark.bin
+    File @abs_top_srcdir@/x14.cl
+    File @abs_top_srcdir@/x14old.cl
+    File @abs_top_srcdir@/zr5.cl
+    File @abs_top_srcdir@/zuikkis.cl
+    File @abs_top_srcdir@libcurl.dll
+    File @abs_top_srcdir@libeay32.dll
+    File @abs_top_srcdir@pthreadVC2.dll
+    File @abs_top_srcdir@ssleay32.dll
+    File @abs_top_srcdir@zlib1.dll
     File /oname=COPYING.txt @abs_top_srcdir@/COPYING
     File /oname=readme.txt @abs_top_srcdir@/doc/README_windows.txt
     SetOutPath $INSTDIR\daemon
@@ -128,6 +213,91 @@ done${UNSECTION_ID}:
 # Uninstaller sections
 Section /o -un.Main UNSEC0000
     Delete /REBOOTOK $INSTDIR\ziftrcoin-qt.exe
+    Delete /REBOOTOK $INSTDIR\libcurl.dll
+    Delete /REBOOTOK $INSTDIR\libeay32.dll
+    Delete /REBOOTOK $INSTDIR\pthreadVC2.dll
+    Delete /REBOOTOK $INSTDIR\ssleay32.dll
+    Delete /REBOOTOK $INSTDIR\zlib1.dll
+    Delete /REBOOTOK $INSTDIR\aes_helper.cl
+    Delete /REBOOTOK $INSTDIR\alexkarnew.cl
+    Delete /REBOOTOK $INSTDIR\alexkarold.cl
+    Delete /REBOOTOK $INSTDIR\animecoin.cl
+    Delete /REBOOTOK $INSTDIR\arebyp.cl
+    Delete /REBOOTOK $INSTDIR\bitblock.cl
+    Delete /REBOOTOK $INSTDIR\bitblockold.cl
+    Delete /REBOOTOK $INSTDIR\blake.cl
+    Delete /REBOOTOK $INSTDIR\bmw.cl
+    Delete /REBOOTOK $INSTDIR\bufius.cl
+    Delete /REBOOTOK $INSTDIR\ccminer.exe
+    Delete /REBOOTOK $INSTDIR\ckolivas.cl
+    Delete /REBOOTOK $INSTDIR\cubehash.cl
+    Delete /REBOOTOK $INSTDIR\darkcoin-mod.cl
+    Delete /REBOOTOK $INSTDIR\darkcoin.cl
+    Delete /REBOOTOK $INSTDIR\diamond.cl
+    Delete /REBOOTOK $INSTDIR\echo.cl
+    Delete /REBOOTOK $INSTDIR\fresh.cl
+    Delete /REBOOTOK $INSTDIR\fugue.cl
+    Delete /REBOOTOK $INSTDIR\fuguecoin.cl
+    Delete /REBOOTOK $INSTDIR\groestl.cl
+    Delete /REBOOTOK $INSTDIR\groestlcoin.cl
+    Delete /REBOOTOK $INSTDIR\hamsi_helper_big.cl
+    Delete /REBOOTOK $INSTDIR\hamsi_helper.cl
+    Delete /REBOOTOK $INSTDIR\hamsi.cl
+    Delete /REBOOTOK $INSTDIR\inkcoin.cl
+    Delete /REBOOTOK $INSTDIR\jh.cl
+    Delete /REBOOTOK $INSTDIR\keccak.cl
+    Delete /REBOOTOK $INSTDIR\luffa.cl
+    Delete /REBOOTOK $INSTDIR\marucoin-mod.cl
+    Delete /REBOOTOK $INSTDIR\marucoin-modold.cl
+    Delete /REBOOTOK $INSTDIR\marucoin.cl
+    Delete /REBOOTOK $INSTDIR\maxcoin.cl
+    Delete /REBOOTOK $INSTDIR\minerd.exe
+    Delete /REBOOTOK $INSTDIR\myriadcoin-groestl.cl
+    Delete /REBOOTOK $INSTDIR\neoscrypt.cl
+    Delete /REBOOTOK $INSTDIR\panama.cl
+    Delete /REBOOTOK $INSTDIR\psw.cl
+    Delete /REBOOTOK $INSTDIR\quarkcoin.cl
+    Delete /REBOOTOK $INSTDIR\qubitcoin.cl
+    Delete /REBOOTOK $INSTDIR\sgminer.exe
+    Delete /REBOOTOK $INSTDIR\shabal.cl
+    Delete /REBOOTOK $INSTDIR\shavite.cl
+    Delete /REBOOTOK $INSTDIR\sifcoin.cl
+    Delete /REBOOTOK $INSTDIR\simd.cl
+    Delete /REBOOTOK $INSTDIR\skein.cl
+    Delete /REBOOTOK $INSTDIR\talkcoin-mod.cl
+    Delete /REBOOTOK $INSTDIR\twecoin.cl
+    Delete /REBOOTOK $INSTDIR\whirlcoin.cl
+    Delete /REBOOTOK $INSTDIR\whirlpool.cl
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Barts.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-BeaverCreek.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Bonaire.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Caicos.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Capeverde.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Cayman.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Cedar.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Cypress.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Devastator.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Hainan.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Hawaii.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Iceland.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Juniper.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Kalindi.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Loveland.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Mullins.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Oland.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Pitcairn.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Redwood.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Scrapper.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Spectre.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Spooky.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Tahiti.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Tonga.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-Turks.bin
+    Delete /REBOOTOK $INSTDIR\WolfZR5-WinterPark.bin
+    Delete /REBOOTOK $INSTDIR\x14.cl
+    Delete /REBOOTOK $INSTDIR\x14old.cl
+    Delete /REBOOTOK $INSTDIR\zr5.cl
+    Delete /REBOOTOK $INSTDIR\zuikkis.cl
     Delete /REBOOTOK $INSTDIR\COPYING.txt
     Delete /REBOOTOK $INSTDIR\readme.txt
     RMDir /r /REBOOTOK $INSTDIR\daemon
