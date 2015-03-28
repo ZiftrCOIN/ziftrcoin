@@ -35,13 +35,14 @@ static const string AMD_SPECIFIC_STRINGS[] = {
     "Iceland",      "Juniper",      "Kalindi",      "Loveland",         "Love Land",
     "Mullins",      "Oland",        "Pitcairn",     "Redwood",          "Scrapper",
     "Spectre",      "Spooky",       "Tahiti",       "Tonga",            "Turks",
-    "WinterPark",   "Winter Park",  "END"
+    "WinterPark",   "Winter Park"
 };
+static const int AMD_SPECIFIC_STRINGS_SIZE = 32;
 
 static const string NVIDIA_SPECIFIC_STRINGS[] = {
-    "Nvidia",     "GeForce",        "NV",           "Quadro",           "Tesla",
-    "END"
+    "Nvidia",     "GeForce",        "NV",           "Quadro",           "Tesla"
 };
+static const int NVIDIA_SPECIFIC_STRINGS_SIZE = 5;
 
 bool bCanReadGPUInfo = true;
 int gpuCounter = 0;
@@ -505,7 +506,7 @@ void MiningPage::DeleteGPUBoxesAbove(int n)
 
 void MiningPage::readGPUMiningOutput()
 {
-    gpuMinerProcess->reset();
+    //gpuMinerProcess->reset();
 
     QByteArray outputBytes;
     outputBytes = gpuMinerProcess->readAllStandardOutput();
@@ -540,6 +541,8 @@ void MiningPage::readGPUMiningOutput()
 
             if (this->GPUState == GPU_SETUP_LAUNCHED)
             {
+                this->AddListItem(line.trimmed());
+
                 //in this state we've just launched, and are running sgminer miner -n
                 //we need to first parse the results to determine how many GPUs we have
 
@@ -584,6 +587,8 @@ void MiningPage::readGPUMiningOutput()
             }
             else if (this->GPUState == GPU_SETUP_DETECTED_GPU_COUNT)
             {
+                this->AddListItem(line.trimmed());
+
                 if (line.contains("max detected"))
                 {
                     this->GPUState = GPU_SETUP_AWAITING_FIRST_EXIT;
@@ -591,6 +596,10 @@ void MiningPage::readGPUMiningOutput()
                 else if (gpuCounter >= numGPUs)
                 {
                     //gpuCounter++;
+                    this->GPUState = GPU_SETUP_AWAITING_FIRST_EXIT;
+                    if(true) {
+                        continue;
+                    }
 
                     if (line.contains("assigned") && line.contains("name:"))
                     {
@@ -631,24 +640,30 @@ void MiningPage::readGPUMiningOutput()
                     if (gpuId == gpuCounter && readGpuId)
                     {
                         gpuCounter++;
+
+                        /**
                         this->GetGPUCheckBox(gpuCounter)->setText(gpuName);
 
                         bool fSingleFoundnVidia = false;
-                        for (int i = 0; !fSingleFoundnVidia && NVIDIA_SPECIFIC_STRINGS[i] != "END"; i++)
+                        for (int i = 0; i < NVIDIA_SPECIFIC_STRINGS_SIZE; i++)
                         {
                             if (AContainsB(gpuName, QString(NVIDIA_SPECIFIC_STRINGS[i].c_str())))
                             {
                                 fSingleFoundnVidia = true;
                                 useCuda = true;
+                                break;
                             }
 
                         }
 
                         bool fSingleFoundAmd = false;
-                        for (int i = 0; !fSingleFoundAmd && AMD_SPECIFIC_STRINGS[i] != "END"; i++)
+                        for (int i = 0; i < AMD_SPECIFIC_STRINGS_SIZE; i++)
                         {
                             if (AContainsB(gpuName, QString(AMD_SPECIFIC_STRINGS[i].c_str())))
+                            {
                                 fSingleFoundAmd = true;
+                                break;
+                            }
                         }
 
                         if (fSingleFoundAmd == fSingleFoundnVidia)
@@ -657,6 +672,7 @@ void MiningPage::readGPUMiningOutput()
                             mapGpuCheckBoxesDisabled[gpuCounter] = true;
                             this->GetGPUCheckBox(gpuCounter)->setEnabled(false);
                         }
+                        **/
                     }
 
                 }
@@ -696,6 +712,8 @@ void MiningPage::readGPUMiningOutput()
                     {
                         // hash rate is reported like this
                         // (5s):8.279M (avg):7.198Mh/s | A:0  R:0  HW:0  WU:0.074/m
+
+                        /**
                         int hashrateIndex = line.indexOf("(avg):") + 6;
                         int hashrateEndIndex = line.indexOf("/s", hashrateIndex);
 
@@ -707,6 +725,7 @@ void MiningPage::readGPUMiningOutput()
                             hashrate *= 1000;
 
                         gpuSpeeds[-1] = hashrate;
+                        **/
                     }
                 }
             }
@@ -818,6 +837,8 @@ void MiningPage::minerError(QProcess::ProcessError error)
 
 void MiningPage::minerFinished()
 {
+
+
     // If one process dies they both should quit
     if (cpuMinerProcess->state() != QProcess::NotRunning)
         cpuMinerProcess->kill();
