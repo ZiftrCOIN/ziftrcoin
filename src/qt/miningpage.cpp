@@ -238,6 +238,7 @@ void MiningPage::SetDefaultServerConfigs()
 void MiningPage::LaunchGPUInitialCheck()
 {
     int gpuCounter = 0;
+    useCuda = false;
 
     if (this->GPUState == GPU_UNINITIALIZED)
     {
@@ -418,7 +419,7 @@ void MiningPage::startGPUPoolMining(QStringList args)
         //sgminer needs at least some stats to setup, these are some safe base levels
         args << "-I" << "16";
         args << "-w" << "64";
-        args << "g" << "1";
+        args << "-g" << "1";
     }
 
     gpuSpeeds.clear();
@@ -601,7 +602,7 @@ void MiningPage::readGPUMiningOutput()
                 else if (gpuCounter >= numGPUs)
                 {
                     //gpuCounter++;
-                    this->GPUState = GPU_SETUP_AWAITING_FIRST_EXIT;
+                    //this->GPUState = GPU_SETUP_AWAITING_FIRST_EXIT;
                     if(true) {
                         continue;
                     }
@@ -647,7 +648,6 @@ void MiningPage::readGPUMiningOutput()
 
                         this->GetGPUCheckBox(gpuCounter)->setText(gpuName);
 
-                        /**
                         bool fSingleFoundnVidia = false;
                         for (int i = 0; i < NVIDIA_SPECIFIC_STRINGS_SIZE; i++)
                         {
@@ -676,7 +676,7 @@ void MiningPage::readGPUMiningOutput()
                             mapGpuCheckBoxesDisabled[gpuCounter] = true;
                             this->GetGPUCheckBox(gpuCounter)->setEnabled(false);
                         }
-                        **/
+
                     }
 
                 }
@@ -686,7 +686,10 @@ void MiningPage::readGPUMiningOutput()
 
             // Don't parse miner output until have finished parsing "sgminer -n" output
             if (this->GPUState <= GPU_SETUP_AWAITING_FIRST_EXIT)
+            {
+                this->AddListItem(line.trimmed());
                 continue;
+            }
 
             // Now start parsing system specific outputs
             if (!this->ProcessBasicLine(line))
