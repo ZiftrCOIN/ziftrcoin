@@ -821,7 +821,6 @@ border-radius: 10px;</string>
                   <widget class="QLabel" name="label_5">
                    <property name="font">
                     <font>
-                     <family>Lato</family>
                      <weight>75</weight>
                      <bold>true</bold>
                     </font>
@@ -833,21 +832,6 @@ border-radius: 10px;</string>
                  </item>
                  <item>
                   <widget class="QLabel" name="mineSpeedLabel">
-                   <property name="maximumSize">
-                    <size>
-                     <width>0</width>
-                     <height>16777215</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <weight>75</weight>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="layoutDirection">
-                    <enum>Qt::RightToLeft</enum>
-                   </property>
                    <property name="text">
                     <string/>
                    </property>

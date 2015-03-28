@@ -506,6 +506,7 @@ void MiningPage::readGPUMiningOutput()
     QString outputString(outputBytes);
 
     //this->AddListItem(outputString);
+    // std::cout << outputString.toStdString() << std::endl;
 
     if (!outputString.isEmpty())
     {
@@ -603,52 +604,62 @@ void MiningPage::readGPUMiningOutput()
                 }
                 else if (gpuCounter < numGPUs)
                 {
-                    gpuCounter++;
+                    // [23:58:27] CL Platform version: OpenCL 1.2 (Dec 14 2014 22:29:47)                    
+                    // [23:58:27] Platform devices: 1                    
+                    // [23:58:27]   0   Iris                    
+                    // [23:58:27] 1 GPU devices max detected
 
                     QStringList sublist = line.split("\t", QString::SkipEmptyParts);
-                    
-                    QString gpuName = ""; 
 
+                    QString gpuName = ""; 
                     if (sublist.size() > 2)
                         gpuName = sublist.at(2);
 
-                    this->GetGPUCheckBox(gpuCounter)->setText(gpuName);
+                    int gpuId = -1;
+                    if (sublist.size() > 1)
+                        gpuId = sublist.at(1).toInt();
 
-                    if (!fFoundnVidia && !fFoundAmd)
+                    if (gpuId == gpuCounter)
                     {
-                        bool fSingleFoundnVidia = false;
-                        for (int i = 0; !fSingleFoundnVidia && NVIDIA_SPECIFIC_STRINGS[i] != "END"; i++)
+                        gpuCounter++;
+                        this->GetGPUCheckBox(gpuCounter)->setText(gpuName);
+
+                        if (!fFoundnVidia && !fFoundAmd)
                         {
-                            if (AContainsB(gpuName, QString(NVIDIA_SPECIFIC_STRINGS[i].c_str())))
+                            bool fSingleFoundnVidia = false;
+                            for (int i = 0; !fSingleFoundnVidia && NVIDIA_SPECIFIC_STRINGS[i] != "END"; i++)
                             {
-                                fSingleFoundnVidia = true;
-                                useCuda = true;
+                                if (AContainsB(gpuName, QString(NVIDIA_SPECIFIC_STRINGS[i].c_str())))
+                                {
+                                    fSingleFoundnVidia = true;
+                                    useCuda = true;
+                                }
+
+                            }
+
+                            bool fSingleFoundAmd = false;
+                            for (int i = 0; !fSingleFoundAmd && AMD_SPECIFIC_STRINGS[i] != "END"; i++)
+                            {
+                                if (AContainsB(gpuName, QString(AMD_SPECIFIC_STRINGS[i].c_str())))
+                                    fSingleFoundAmd = true;
+                            }
+
+                            if (fSingleFoundAmd == fSingleFoundnVidia)
+                            {
+                                // Shouldn't ever both be true, but if they were we'd want to disable this miner
+                                mapGpuCheckBoxesDisabled[gpuCounter] = true;
+                                this->GetGPUCheckBox(gpuCounter)->setEnabled(false);
+                            }
+                            else
+                            {
+                                // Use whichever one is found first
+                                if (fSingleFoundnVidia)
+                                    fFoundnVidia = true;
+                                if (fSingleFoundAmd)
+                                    fFoundAmd = true;
                             }
 
                         }
-
-                        bool fSingleFoundAmd = false;
-                        for (int i = 0; !fSingleFoundAmd && AMD_SPECIFIC_STRINGS[i] != "END"; i++)
-                        {
-                            if (AContainsB(gpuName, QString(AMD_SPECIFIC_STRINGS[i].c_str())))
-                                fSingleFoundAmd = true;
-                        }
-
-                        if (fSingleFoundAmd == fSingleFoundnVidia)
-                        {
-                            // Shouldn't ever both be true, but if they were we'd want to disable this miner
-                            mapGpuCheckBoxesDisabled[gpuCounter] = true;
-                            this->GetGPUCheckBox(gpuCounter)->setEnabled(false);
-                        }
-                        else
-                        {
-                            // Use whichever one is found first
-                            if (fSingleFoundnVidia)
-                                fFoundnVidia = true;
-                            if (fSingleFoundAmd)
-                                fFoundAmd = true;
-                        }
-
                     }
 
                 }
@@ -912,11 +923,10 @@ void MiningPage::updateSpeed()
 
         // Everything is stored as a double of the number of kH/s, but formatted as whatever is
         // most appropriate
+        ui->mineSpeedLabel->setText(QString("%1").arg(formatHashrate(totalSpeed * 1000)));
 
         //TODO -seems the mining label is broken, for now just dump it to the area title
-        //ui->mineSpeedLabel->setText(QString("%1").arg(formatHashrate(totalSpeed * 1000)));
-
-        ui->label_5->setText(QString("Total: %1").arg(formatHashrate(totalSpeed * 1000)));
+        // ui->label_5->setText(QString("Total: %1").arg(formatHashrate(totalSpeed * 1000)));
     }
 
     // clientmodel->setMining(getMiningType(), minerActive, -1);
