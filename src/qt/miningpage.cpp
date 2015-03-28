@@ -414,6 +414,11 @@ void MiningPage::startGPUPoolMining(QStringList args)
         }
         args << "-T";
         args << "-v";
+
+        //sgminer needs at least some stats to setup, these are some safe base levels
+        args << "-I" << "16";
+        args << "-w" << "64";
+        args << "g" << "1";
     }
 
     gpuSpeeds.clear();
@@ -509,8 +514,8 @@ void MiningPage::readGPUMiningOutput()
     //gpuMinerProcess->reset();
 
     QByteArray outputBytes;
-    outputBytes = gpuMinerProcess->readAllStandardOutput();
-    //outputBytes = gpuMinerProcess->readAll();
+    //outputBytes = gpuMinerProcess->readAllStandardOutput();
+    outputBytes = gpuMinerProcess->readAll();
 
     QString outputString(outputBytes);
 
@@ -633,17 +638,16 @@ void MiningPage::readGPUMiningOutput()
                     this->AddListItem(QString("Detected GPU: ").append(gpuName));
 
                     int gpuId = -1;
-                    bool readGpuId;
                     if (sublist.size() > 1)
-                        gpuId = sublist.at(1).toInt(&readGpuId);
+                        gpuId = sublist.at(1).toInt();
 
-                    if (gpuId == gpuCounter && readGpuId)
+                    if (gpuId == gpuCounter)
                     {
                         gpuCounter++;
 
-                        /**
                         this->GetGPUCheckBox(gpuCounter)->setText(gpuName);
 
+                        /**
                         bool fSingleFoundnVidia = false;
                         for (int i = 0; i < NVIDIA_SPECIFIC_STRINGS_SIZE; i++)
                         {
