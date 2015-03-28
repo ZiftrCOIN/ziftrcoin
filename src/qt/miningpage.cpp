@@ -138,7 +138,7 @@ MiningPage::MiningPage(QWidget *parent) :
     connect(gpuMinerProcess, SIGNAL(readyRead()), this, SLOT(readGPUMiningOutput()));
 
     GPUState = GPU_UNINITIALIZED;
-    this->LaunchGPUInitialCheck();
+    //this->LaunchGPUInitialCheck();
 
     uiSetRpcUser = false;
     uiSetRpcPassword = false;
@@ -163,6 +163,11 @@ void MiningPage::setClientModel(ClientModel *model)
 {
     this->clientmodel = model;
     loadSettings();
+
+    if(GPUState == GPU_UNINITIALIZED)
+    {
+        this->LaunchGPUInitialCheck();
+    }
 }
 
 void MiningPage::SetDefaultServerConfigs()
@@ -500,8 +505,8 @@ void MiningPage::readGPUMiningOutput()
     gpuMinerProcess->reset();
 
     QByteArray outputBytes;
-    //outputBytes = gpuMinerProcess->readAllStandardOutput();
-    outputBytes = gpuMinerProcess->readAll();
+    outputBytes = gpuMinerProcess->readAllStandardOutput();
+    //outputBytes = gpuMinerProcess->readAll();
 
     QString outputString(outputBytes);
 
