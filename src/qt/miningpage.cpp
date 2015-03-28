@@ -601,11 +601,6 @@ void MiningPage::readGPUMiningOutput()
                 }
                 else if (gpuCounter >= numGPUs)
                 {
-                    //gpuCounter++;
-                    //this->GPUState = GPU_SETUP_AWAITING_FIRST_EXIT;
-                    if(true) {
-                        continue;
-                    }
 
                     if (line.contains("assigned") && line.contains("name:"))
                     {
