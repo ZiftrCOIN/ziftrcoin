@@ -614,7 +614,7 @@ void MiningPage::readGPUMiningOutput()
 
                         QString nameString = line.mid(nameIndex);
 
-                        this->GetGPUCheckBox(gpuId)->setText(nameString);
+                        this->GetGPUCheckBox(gpuId+1)->setText(nameString);
                     }
 
                 }
