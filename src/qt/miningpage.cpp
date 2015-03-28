@@ -503,9 +503,9 @@ void MiningPage::readGPUMiningOutput()
     //outputBytes = gpuMinerProcess->readAllStandardOutput();
     outputBytes = gpuMinerProcess->readAll();
 
-    //QString outputString(outputBytes);
+    QString outputString(outputBytes);
 
-    this->AddListItem(outputString);
+    //this->AddListItem(outputString);
 
     if (!outputString.isEmpty())
     {
