@@ -43,6 +43,8 @@ static const string NVIDIA_SPECIFIC_STRINGS[] = {
     "END"
 };
 
+bool bCanReadGPUInfo = true;
+
 static inline bool AContainsB(const QString& a, const QString& b)
 {
     if (b.size() > a.size())
@@ -86,13 +88,13 @@ MiningPage::MiningPage(QWidget *parent) :
     QString program;
 
     program = appDir.filePath("minerd");
-    fHaveMinerd = QFile::exists(program);
+    //fHaveMinerd = QFile::exists(program);
     
     program = appDir.filePath("sgminer");
-    fHaveSgminer = QFile::exists(program);
+    //fHaveSgminer = QFile::exists(program);
 
     program = appDir.filePath("ccminer");
-    fHaveCcminer = QFile::exists(program);
+    //fHaveCcminer = QFile::exists(program);
 
     cpuMinerProcess = new QProcess(this);
     cpuMinerProcess->setProcessChannelMode(QProcess::MergedChannels);// ForwardedChannels);//MergedChannels);
@@ -228,12 +230,13 @@ void MiningPage::SetDefaultServerConfigs()
 }
 void MiningPage::LaunchGPUInitialCheck()
 {
-    if (this->GPUState == GPU_UNINITIALIZED && fHaveSgminer)
+    if (this->GPUState == GPU_UNINITIALIZED)
     {
         this->GPUState = GPU_SETUP_LAUNCHED;
 
         QStringList args;
         args << "-n";
+        args << "-v";
 
         QDir appDir = QDir(QCoreApplication::applicationDirPath());
 
@@ -243,11 +246,14 @@ void MiningPage::LaunchGPUInitialCheck()
 
         gpuMinerProcess->start(program, args);
     }
+
+    /**
     else if (!fHaveSgminer)
     {
         numGPUs = 0;
         this->DeleteGPUBoxesAbove(-1);
     }
+    **/
 }
 
 void MiningPage::startPressed()
@@ -380,16 +386,22 @@ void MiningPage::startGPUPoolMining(QStringList args)
     if (useCuda)
     {
         args << "-a" << "zr5";
-        for (int i = 0; i < numGPUs; i++)
+        if(bCanReadGPUInfo)
         {
-            if (!mapGpuCheckBoxesDisabled[1+i])
-                args << "-d" << this->GetGPUCheckBox(1+i)->text();
+            for (int i = 0; i < numGPUs; i++)
+            {
+                if (!mapGpuCheckBoxesDisabled[1+i])
+                    args << "-d" << this->GetGPUCheckBox(1+i)->text();
+            }
         }
     }
     else
     {
         args << "--algorithm" << "zr5";
-        args << "-d" << GetCheckedGPUs().join(",");
+        if(bCanReadGPUInfo)
+        {
+            args << "-d" << GetCheckedGPUs().join(",");
+        }
         args << "-T";
         args << "-v";
     }
@@ -526,6 +538,8 @@ void MiningPage::readGPUMiningOutput()
                     int startNumGPUs = line.indexOf("Platform devices:")+18;
                     QString numGPUsStr = line.mid(startNumGPUs);
 
+                    this->AddListItem(QString("Detected GPUs: ").append(numGPUsStr));
+
                     numGPUs = numGPUsStr.toInt();
 
                     this->DeleteGPUBoxesAbove(numGPUs-1);
@@ -544,11 +558,14 @@ void MiningPage::readGPUMiningOutput()
                 {
                     //if this happens it means that sgminer can't read device info at all
                     //this seems to happen with some Nvidia setups
+                    numGPUs = 1;
+                    bCanReadGPUInfo = false;
+
                     bool forceAMD = GetBoolArg("-useamd", false);
                     useCuda = !forceAMD;
 
                     this->DeleteGPUBoxesAbove(0);
-                    this->GetGPUCheckBox(0)->setText("Unknown GPU(s)");
+                    this->GetGPUCheckBox(1)->setText(QString("Unknown GPU(s)"));
                     this->GPUState = GPU_SETUP_AWAITING_FIRST_EXIT;
                 }
             }
@@ -561,6 +578,7 @@ void MiningPage::readGPUMiningOutput()
                 else if (gpuCounter >= numGPUs)
                 {
                     gpuCounter++;
+
                     if (line.contains("assigned") && line.contains("name:"))
                     {
                         int gpuIndex = line.indexOf("GPU ") + 4;
@@ -575,6 +593,7 @@ void MiningPage::readGPUMiningOutput()
 
                         this->GetGPUCheckBox(gpuId)->setText(nameString);
                     }
+
                 }
                 else if (gpuCounter < numGPUs)
                 {
@@ -630,7 +649,7 @@ void MiningPage::readGPUMiningOutput()
             }
 
             // Don't parse miner output until have finished parsing "sgminer -n" output
-            if (this->GPUState < GPU_SETUP_AWAITING_FIRST_EXIT)
+            if (this->GPUState <= GPU_SETUP_AWAITING_FIRST_EXIT)
                 continue;
 
             // Now start parsing system specific outputs
