@@ -44,6 +44,7 @@ static const string NVIDIA_SPECIFIC_STRINGS[] = {
 };
 
 bool bCanReadGPUInfo = true;
+int gpuCounter = 0;
 
 static inline bool AContainsB(const QString& a, const QString& b)
 {
@@ -235,6 +236,8 @@ void MiningPage::SetDefaultServerConfigs()
 }
 void MiningPage::LaunchGPUInitialCheck()
 {
+    int gpuCounter = 0;
+
     if (this->GPUState == GPU_UNINITIALIZED)
     {
         this->GPUState = GPU_SETUP_LAUNCHED;
@@ -531,9 +534,9 @@ void MiningPage::readGPUMiningOutput()
 
             // Directly below is what guides the GPU states through the setup process
 
-            static int gpuCounter = 0;
-            static bool fFoundAmd = false;
-            static bool fFoundnVidia = false;
+
+            //static bool fFoundAmd = false;
+            //static bool fFoundnVidia = false;
 
             if (this->GPUState == GPU_SETUP_LAUNCHED)
             {
@@ -557,13 +560,11 @@ void MiningPage::readGPUMiningOutput()
                     this->DeleteGPUBoxesAbove(numGPUs-1);
 
                     gpuCounter = 0;
-                    fFoundAmd = GetBoolArg("-useamd", false);
-                    fFoundnVidia = GetBoolArg("-usecuda", false);
-                    if (fFoundAmd && fFoundnVidia)
-                    {
-                        fFoundAmd = false;
-                        fFoundnVidia = false;
+                    bool forceCuda = GetBoolArg("-usecuda", false);
+                    if(forceCuda) {
+                        useCuda = true;
                     }
+
                     continue;
                 }
                 else if (line.contains("Error -1: Getting Device"))
@@ -589,7 +590,7 @@ void MiningPage::readGPUMiningOutput()
                 }
                 else if (gpuCounter >= numGPUs)
                 {
-                    gpuCounter++;
+                    //gpuCounter++;
 
                     if (line.contains("assigned") && line.contains("name:"))
                     {
@@ -616,58 +617,51 @@ void MiningPage::readGPUMiningOutput()
 
                     QStringList sublist = line.split("\t", QString::SkipEmptyParts);
 
-                    QString gpuName = ""; 
+                    QString gpuName("");
                     if (sublist.size() > 2)
                         gpuName = sublist.at(2);
 
-                    int gpuId = -1;
-                    if (sublist.size() > 1)
-                        gpuId = sublist.at(1).toInt();
+                    this->AddListItem(QString("Detected GPU: ").append(gpuName));
 
-                    if (gpuId == gpuCounter)
+                    int gpuId = -1;
+                    bool readGpuId;
+                    if (sublist.size() > 1)
+                        gpuId = sublist.at(1).toInt(&readGpuId);
+
+                    if (gpuId == gpuCounter && readGpuId)
                     {
                         gpuCounter++;
                         this->GetGPUCheckBox(gpuCounter)->setText(gpuName);
 
-                        if (!fFoundnVidia && !fFoundAmd)
+                        bool fSingleFoundnVidia = false;
+                        for (int i = 0; !fSingleFoundnVidia && NVIDIA_SPECIFIC_STRINGS[i] != "END"; i++)
                         {
-                            bool fSingleFoundnVidia = false;
-                            for (int i = 0; !fSingleFoundnVidia && NVIDIA_SPECIFIC_STRINGS[i] != "END"; i++)
+                            if (AContainsB(gpuName, QString(NVIDIA_SPECIFIC_STRINGS[i].c_str())))
                             {
-                                if (AContainsB(gpuName, QString(NVIDIA_SPECIFIC_STRINGS[i].c_str())))
-                                {
-                                    fSingleFoundnVidia = true;
-                                    useCuda = true;
-                                }
-
+                                fSingleFoundnVidia = true;
+                                useCuda = true;
                             }
 
-                            bool fSingleFoundAmd = false;
-                            for (int i = 0; !fSingleFoundAmd && AMD_SPECIFIC_STRINGS[i] != "END"; i++)
-                            {
-                                if (AContainsB(gpuName, QString(AMD_SPECIFIC_STRINGS[i].c_str())))
-                                    fSingleFoundAmd = true;
-                            }
+                        }
 
-                            if (fSingleFoundAmd == fSingleFoundnVidia)
-                            {
-                                // Shouldn't ever both be true, but if they were we'd want to disable this miner
-                                mapGpuCheckBoxesDisabled[gpuCounter] = true;
-                                this->GetGPUCheckBox(gpuCounter)->setEnabled(false);
-                            }
-                            else
-                            {
-                                // Use whichever one is found first
-                                if (fSingleFoundnVidia)
-                                    fFoundnVidia = true;
-                                if (fSingleFoundAmd)
-                                    fFoundAmd = true;
-                            }
+                        bool fSingleFoundAmd = false;
+                        for (int i = 0; !fSingleFoundAmd && AMD_SPECIFIC_STRINGS[i] != "END"; i++)
+                        {
+                            if (AContainsB(gpuName, QString(AMD_SPECIFIC_STRINGS[i].c_str())))
+                                fSingleFoundAmd = true;
+                        }
 
+                        if (fSingleFoundAmd == fSingleFoundnVidia)
+                        {
+                            // Shouldn't ever both be true, but if they were we'd want to disable this miner
+                            mapGpuCheckBoxesDisabled[gpuCounter] = true;
+                            this->GetGPUCheckBox(gpuCounter)->setEnabled(false);
                         }
                     }
 
                 }
+
+                continue;
             }
 
             // Don't parse miner output until have finished parsing "sgminer -n" output
