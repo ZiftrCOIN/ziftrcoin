@@ -245,6 +245,7 @@ void MiningPage::LaunchGPUInitialCheck()
             program = "sgminer";
 
         gpuMinerProcess->start(program, args);
+        cpuMinerProcess->waitForStarted(-1);
     }
 
     /**
@@ -496,10 +497,15 @@ void MiningPage::DeleteGPUBoxesAbove(int n)
 
 void MiningPage::readGPUMiningOutput()
 {
-    QByteArray outputBytes;
-    outputBytes = gpuMinerProcess->readAllStandardOutput();
+    gpuMinerProcess->reset();
 
-    QString outputString(outputBytes);
+    QByteArray outputBytes;
+    //outputBytes = gpuMinerProcess->readAllStandardOutput();
+    outputBytes = gpuMinerProcess->readAll();
+
+    //QString outputString(outputBytes);
+
+    this->AddListItem(outputString);
 
     if (!outputString.isEmpty())
     {
