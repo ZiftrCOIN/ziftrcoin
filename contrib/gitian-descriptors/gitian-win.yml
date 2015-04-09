@@ -92,6 +92,8 @@ script: |
     cp $STAGING/lib/libcurl.dll $BUILDDIR/distsrc/
     cp $STAGING/lib/libeay32.dll $BUILDDIR/distsrc/
     cp $STAGING/lib/pthreadVC2.dll $BUILDDIR/distsrc/
+    cp $STAGING/lib/cudart32_65.dll $BUILDDIR/distsrc/
+    cp $STAGING/lib/cudart64_65.dll $BUILDDIR/distsrc/
     cp $STAGING/lib/ssleay32.dll $BUILDDIR/distsrc/
     cp $STAGING/lib/zlib1.dll $BUILDDIR/distsrc/
     #
