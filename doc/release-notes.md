@@ -21,12 +21,12 @@ rpcuser={your secret password}
 ```
 
  - You can now specify the default pool to use while mining with the following ziftrcoin.conf parameters:
-
-    poolserver={the pool url}
-    poolport={the pool port}
-    poolusername={your pool username}
-    poolpassword={your pool password}
-
+```
+poolserver={the pool url}
+poolport={the pool port}
+poolusername={your pool username}
+poolpassword={your pool password}
+```
 
 Protocol and network code:
  - Older versions of the wallet would not forward blocks with the PoK data set incorrectly (applies to both PoK and non-PoK blocks). New version will update the PoK before checking validity, and will then forward the block with the PoK data set correctly. This does not expands the space of valid blocks, and is not a hard fork.
