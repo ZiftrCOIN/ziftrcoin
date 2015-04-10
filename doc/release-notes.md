@@ -6,7 +6,7 @@ Please report bugs using the issue tracker at github:
 
   https://github.com/ZiftrCOIN/ziftrcoin/issues
 
-0.9.3 Release notes
+0.9.31 Release notes
 =======================
 
 RPC:
