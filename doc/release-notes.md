@@ -14,9 +14,11 @@ RPC:
  - New rpc call: gettotalcoins {fExcludeGenesis}. Returns the number of coins currently created on the main chain. Call with true to get total coins NOT counting unspent genesis coins.
  - You can now specify the address to send all solo mined coins to by setting the your rpcuser to be a ziftrCOIN address. Configure your ziftrcoin.conf file with:
 
-    server=1
-    rpcuser={your ziftrcoin address}
-    rpcuser={your secret password}
+```
+server=1
+rpcuser={your ziftrcoin address}
+rpcuser={your secret password}
+```
 
  - You can now specify the default pool to use while mining with the following ziftrcoin.conf parameters:
 
