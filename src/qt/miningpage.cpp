@@ -1060,6 +1060,7 @@ void MiningPage::debugToggled(bool checked)
     clientmodel->setDebug(checked);
 }
 
+// These are useless, remove them
 void MiningPage::CPUCheckBoxToggled(bool checked)
 {
     EnableMiningControlsAppropriately();

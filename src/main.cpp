@@ -4114,6 +4114,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         LogPrint("net", "received block %s\n", block.GetHash().ToString());
         // block.print();
 
+        // TODO make sure that you can't fill up memory by broadcasting invs with different
+        // block hashes that are all for the same block but with different PoK data
+
         CInv inv(MSG_BLOCK, block.GetHash());
         pfrom->AddInventoryKnown(inv);
 

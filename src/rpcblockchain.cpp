@@ -490,12 +490,12 @@ Value gettotalcoins(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw runtime_error(
-            "gettotalcoins ( fIncludeGenesis )\n"
+            "gettotalcoins ( fExcludeGenesis )\n"
             "Returns the number of coins currently created on the main chain\n"
             "\nArguments:\n"
-            "1. fIncludeGenesis   (boolean, optional) Default true. Call with false to get total coins except for unspent genesis coins. \n"
+            "1. fExcludeGenesis   (boolean, optional) Default false. Call with true to get total coins NOT counting unspent genesis coins. \n"
             "\nResult:\n"
-            "  integer -- the total number of coins\n"
+            "  amount (numeric) -- the total number of coins\n"
             "\nExamples:\n"
             + HelpExampleCli("gettotalcoins", "")
             + HelpExampleCli("gettotalcoins", "true")
