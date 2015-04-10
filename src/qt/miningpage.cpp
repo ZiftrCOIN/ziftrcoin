@@ -385,22 +385,10 @@ void MiningPage::startGPUPoolMining(QStringList args)
     if (useCuda)
     {
         args << "-a" << "zr5";
-        if(bCanReadGPUInfo)
-        {
-            for (int i = 0; i < numGPUs; i++)
-            {
-                if (!mapGpuCheckBoxesDisabled[1+i])
-                    args << "-d" << this->GetGPUCheckBox(1+i)->text();
-            }
-        }
     }
     else
     {
         args << "--algorithm" << "zr5";
-        if(bCanReadGPUInfo)
-        {
-            args << "-d" << GetCheckedGPUs().join(",");
-        }
         args << "-T";
         args << "-v";
 
@@ -408,6 +396,11 @@ void MiningPage::startGPUPoolMining(QStringList args)
         args << "-I" << QString("%1").arg(ui->horizontalSlider->value()*20/100);
         args << "-w" << "64";
         args << "-g" << "1";
+    }
+
+    if(bCanReadGPUInfo)
+    {
+        args << "-d" << GetCheckedGPUs().join(",");
     }
 
     gpuSpeeds.clear();
@@ -680,11 +673,9 @@ void MiningPage::readGPUMiningOutput()
                         // hash rate is reported like this
                         // [2015-03-19 18:42:26] GPU #0: GeForce GT 650M, 211.28 khash/s
                         int gpuIndex = line.indexOf("GPU #") + 5;
-                        int gpuEndIndex = line.indexOf(":", gpuIndex);
-
-                        QString gpuNumberString = line.mid(gpuIndex, gpuEndIndex);
+                        QString gpuNumberString = line.mid(gpuIndex, 1);
+                        
                         int gpuId = gpuNumberString.toInt();
-
                         gpuSpeeds[gpuId] = this->ExtractHashRate(line);
                     }
                 }
