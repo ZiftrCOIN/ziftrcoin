@@ -85,7 +85,7 @@ qa/pull-tester/build-tests.sh
 !src/leveldb*/Makefile
 
 # My local files
-
+*.cl
 alertmail.txt
 onalertnotify.sh
 onblocknotify.sh
@@ -97,3 +97,5 @@ sgminer*
 minerd*
 ccminer
 **/*.creator.user
+*.dll
+*.bin

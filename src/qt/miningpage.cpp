@@ -83,8 +83,8 @@ MiningPage::MiningPage(QWidget *parent) :
 
     ui->horizontalSlider->setMinimum(0);
     ui->horizontalSlider->setMaximum(100);
-    ui->horizontalSlider->setValue(100);
-    ui->labelPercentHR->setText(QString("%1").arg(100));
+    ui->horizontalSlider->setValue(80);
+    ui->labelPercentHR->setText(QString("%1").arg(80));
 
     QDir appDir = QDir(QCoreApplication::applicationDirPath());
     QString program;
@@ -114,18 +114,13 @@ MiningPage::MiningPage(QWidget *parent) :
 
     numGPUs = 6;
 
-    QStringList list = QString(introText.c_str()).split("\n", QString::SkipEmptyParts);
-    for (int i = 0; i < list.size(); i++) {
-        this->AddListItem(list.at(i));
-    }
-
     connect(readTimer, SIGNAL(timeout()), this, SLOT(readProcessOutput()));
     connect(hashTimer, SIGNAL(timeout()), this, SLOT(updateSpeed()));
 
     connect(ui->startButton, SIGNAL(pressed()), this, SLOT(startPressed()));
     connect(ui->clearButton, SIGNAL(pressed()), this, SLOT(clearPressed()));
     connect(ui->horizontalSlider, SIGNAL(valueChanged(int)), this, SLOT(changePercentMiningPower(int)));
-    connect(ui->pokCheckBox, SIGNAL(toggled(bool)), this, SLOT(usePoKToggled(bool)));
+    // connect(ui->pokCheckBox, SIGNAL(toggled(bool)), this, SLOT(usePoKToggled(bool)));
     connect(ui->debugCheckBox, SIGNAL(toggled(bool)), this, SLOT(debugToggled(bool)));
     connect(ui->typeBox, SIGNAL(currentIndexChanged(int)), this, SLOT(typeChanged(int)));
 
@@ -147,6 +142,12 @@ MiningPage::MiningPage(QWidget *parent) :
     this->SetDefaultServerConfigs();
 
     hashTimer->start(1500);
+    
+    QStringList list = QString(introText.c_str()).split("\n", QString::SkipEmptyParts);
+    for (int i = 0; i < list.size(); i++) {
+        this->AddListItem(list.at(i));
+    }
+
 }
 
 MiningPage::~MiningPage()
@@ -237,7 +238,6 @@ void MiningPage::SetDefaultServerConfigs()
 }
 void MiningPage::LaunchGPUInitialCheck()
 {
-    int gpuCounter = 0;
     useCuda = false;
 
     if (this->GPUState == GPU_UNINITIALIZED)
@@ -282,22 +282,14 @@ void MiningPage::startPressed()
             // Start mining
             saveSettings();
 
-            if (getMiningType() == ClientModel::SoloMining)
+            if (getMiningType() == ClientModel::SoloMining && !GetBoolArg("-server", false))
             {
-                if (fStartGpuMining && !GetBoolArg("-server", false))
-                {
-                    this->reportToList("You must setup your ziftrcoin.conf configuration file to enable this option.\n", ERROR, NULL);
-                    return;
-                }
-                else if (!fStartGpuMining)
-                {
-                    minerStarted();
-                }
+                this->reportToList("You must setup your ziftrcoin.conf configuration file to enable solo mining directly to your wallet.\n", ERROR, NULL);
+                return;
             }
-
-            bool fStartWalletMiner = (ui->pokCheckBox->isChecked() || !GetBoolArg("-server", false));
-            if (!fStartWalletMiner || fStartGpuMining || getMiningType() == ClientModel::PoolMining)
+            else
             {
+                //minerStarted();
                 startPoolMining();
             }
         }
@@ -308,11 +300,7 @@ void MiningPage::startPressed()
     }
     else
     {
-        // Stop mining
-        if (getMiningType() == ClientModel::SoloMining)
-            minerFinished();
-        else
-            stopPoolMining();
+        stopPoolMining();
     }
 }
 
@@ -323,6 +311,9 @@ void MiningPage::clearPressed()
 
 void MiningPage::startPoolMining()
 {
+    acceptedShares = 0;
+    rejectedShares = 0;
+
     QStringList args;
     QString url = ui->serverLine->text();
     QString urlLine = QString("%1:%2").arg(url, ui->portLine->text());
@@ -373,9 +364,6 @@ void MiningPage::startCPUPoolMining(QStringList args)
 
     threadSpeed.clear();
 
-    acceptedShares = 0;
-    rejectedShares = 0;
-
     // If minerd is in current path, then use that. Otherwise, assume minerd is in the path somewhere.
     QDir appDir = QDir(QCoreApplication::applicationDirPath());
     QString program = appDir.filePath("minerd");
@@ -417,7 +405,7 @@ void MiningPage::startGPUPoolMining(QStringList args)
         args << "-v";
 
         //sgminer needs at least some stats to setup, these are some safe base levels
-        args << "-I" << "16";
+        args << "-I" << QString("%1").arg(ui->horizontalSlider->value()*20/100);
         args << "-w" << "64";
         args << "-g" << "1";
     }
@@ -515,12 +503,13 @@ void MiningPage::readGPUMiningOutput()
     //gpuMinerProcess->reset();
 
     QByteArray outputBytes;
-    //outputBytes = gpuMinerProcess->readAllStandardOutput();
-    outputBytes = gpuMinerProcess->readAll();
+    outputBytes = gpuMinerProcess->readAllStandardOutput();
+    // outputBytes = gpuMinerProcess->readAll();
 
     QString outputString(outputBytes);
 
-    //this->AddListItem(outputString);
+    // Debug
+    // this->AddListItem(outputString);
     // std::cout << outputString.toStdString() << std::endl;
 
     if (!outputString.isEmpty())
@@ -547,8 +536,6 @@ void MiningPage::readGPUMiningOutput()
 
             if (this->GPUState == GPU_SETUP_LAUNCHED)
             {
-                this->AddListItem(line.trimmed());
-
                 //in this state we've just launched, and are running sgminer miner -n
                 //we need to first parse the results to determine how many GPUs we have
 
@@ -570,7 +557,7 @@ void MiningPage::readGPUMiningOutput()
 
                     gpuCounter = 0;
                     bool forceCuda = GetBoolArg("-usecuda", false);
-                    if(forceCuda) {
+                    if (forceCuda) {
                         useCuda = true;
                     }
 
@@ -593,8 +580,6 @@ void MiningPage::readGPUMiningOutput()
             }
             else if (this->GPUState == GPU_SETUP_DETECTED_GPU_COUNT)
             {
-                this->AddListItem(line.trimmed());
-
                 if (line.contains("max detected"))
                 {
                     this->GPUState = GPU_SETUP_AWAITING_FIRST_EXIT;
@@ -630,8 +615,6 @@ void MiningPage::readGPUMiningOutput()
                     QString gpuName("");
                     if (sublist.size() > 2)
                         gpuName = sublist.at(2);
-
-                    this->AddListItem(QString("Detected GPU: ").append(gpuName));
 
                     int gpuId = -1;
                     if (sublist.size() > 1)
@@ -682,7 +665,6 @@ void MiningPage::readGPUMiningOutput()
             // Don't parse miner output until have finished parsing "sgminer -n" output
             if (this->GPUState <= GPU_SETUP_AWAITING_FIRST_EXIT)
             {
-                this->AddListItem(line.trimmed());
                 continue;
             }
 
@@ -715,19 +697,17 @@ void MiningPage::readGPUMiningOutput()
                         // hash rate is reported like this
                         // (5s):8.279M (avg):7.198Mh/s | A:0  R:0  HW:0  WU:0.074/m
 
-                        /**
                         int hashrateIndex = line.indexOf("(avg):") + 6;
                         int hashrateEndIndex = line.indexOf("/s", hashrateIndex);
 
-                        QString unit = line.mid(hashrateEndIndex-1, hashrateEndIndex);
-                        QString hashrateNumberString = line.mid(hashrateIndex, hashrateEndIndex-1);
+                        QString unit = line.mid(hashrateEndIndex-2, 1);
+                        QString hashrateNumberString = line.mid(hashrateIndex, (hashrateEndIndex - 2 - hashrateIndex));
 
                         double hashrate = hashrateNumberString.toDouble();
                         if (unit == "M")
                             hashrate *= 1000;
 
                         gpuSpeeds[-1] = hashrate;
-                        **/
                     }
                 }
             }
@@ -740,12 +720,12 @@ bool MiningPage::ProcessBasicLine(QString line)
 {
     if (line.contains("accepted", Qt::CaseInsensitive))
     {
-        reportToList("Share accepted", SHARE_SUCCESS, getTime(line));
+        reportToList("Share accepted", SHARE_SUCCESS, NULL);
         return true;
     }
     else if (line.contains("rejected"), Qt::CaseInsensitive)
     {
-        reportToList("Share rejected", SHARE_FAIL, getTime(line));
+        reportToList("Share rejected", SHARE_FAIL, NULL);
         return true;
     }
     else if (line.contains("stratum", Qt::CaseInsensitive) && line.contains("failed", Qt::CaseInsensitive))
@@ -857,15 +837,15 @@ void MiningPage::minerFinished()
     this->AddListItem("");
     minerActive = false;
     resetMiningButton();
-    clientmodel->setMining(getMiningType(), false, -1, true);
+    clientmodel->setMining(getMiningType(), false, -1, false);
 }
 
 void MiningPage::minerStarted()
 {
-    bool fStartWalletMiner = (ui->pokCheckBox->isChecked() || !GetBoolArg("-server", false));
+    // bool fStartWalletMiner = (ui->pokCheckBox->isChecked() || !GetBoolArg("-server", false));
     if (!minerActive)
     {
-        if (getMiningType() == ClientModel::SoloMining && fStartWalletMiner)
+        if (getMiningType() == ClientModel::SoloMining)
         {
             reportToList("Solo mining started.", ERROR, NULL);
         }
@@ -876,7 +856,7 @@ void MiningPage::minerStarted()
     }
     minerActive = true;
     resetMiningButton();
-    clientmodel->setMining(getMiningType(), true, -1, fStartWalletMiner);
+    clientmodel->setMining(getMiningType(), true, -1, false);
 }
 
 void MiningPage::updateSpeed()
@@ -888,24 +868,24 @@ void MiningPage::updateSpeed()
     {
         ui->mineSpeedLabel->setText(QString("0 H/s"));
     }
-    else if (this->getMiningType() == ClientModel::SoloMining)
-    {
-        qint64 Hashrate = GetBoolArg("-gen", false) &&
-                GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER) != 0 ? clientmodel->getHashrate() : 0;
-        ui->mineSpeedLabel->setText(QString("%1").arg(formatHashrate(Hashrate)));
+    // else if (this->getMiningType() == ClientModel::SoloMining)
+    // {
+    //     qint64 Hashrate = GetBoolArg("-gen", false) &&
+    //             GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER) != 0 ? clientmodel->getHashrate() : 0;
+    //     ui->mineSpeedLabel->setText(QString("%1").arg(formatHashrate(Hashrate)));
 
-        // QString NextBlockTime;
-        // if (Hashrate == 0 || GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER) == 0)
-        //     NextBlockTime = QChar(L'∞');
-        // else
-        // {
-        //     CBigNum Target;
-        //     Target.SetCompact(GetNextWorkRequired(chainActive.Tip(), GetTime()));
-        //     CBigNum ExpectedTime = (CBigNum(1) << 256)/(Target*Hashrate);
-        //     NextBlockTime = formatTimeInterval(ExpectedTime);
-        // }
-        // ui->labelNextBlock->setText(NextBlockTime);
-    }
+    //     // QString NextBlockTime;
+    //     // if (Hashrate == 0 || GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER) == 0)
+    //     //     NextBlockTime = QChar(L'∞');
+    //     // else
+    //     // {
+    //     //     CBigNum Target;
+    //     //     Target.SetCompact(GetNextWorkRequired(chainActive.Tip(), GetTime()));
+    //     //     CBigNum ExpectedTime = (CBigNum(1) << 256)/(Target*Hashrate);
+    //     //     NextBlockTime = formatTimeInterval(ExpectedTime);
+    //     // }
+    //     // ui->labelNextBlock->setText(NextBlockTime);
+    // }
     else
     {
         double totalSpeed = 0;
@@ -946,9 +926,6 @@ void MiningPage::updateSpeed()
         // Everything is stored as a double of the number of kH/s, but formatted as whatever is
         // most appropriate
         ui->mineSpeedLabel->setText(QString("%1").arg(formatHashrate(totalSpeed * 1000)));
-
-        //TODO -seems the mining label is broken, for now just dump it to the area title
-        // ui->label_5->setText(QString("Total: %1").arg(formatHashrate(totalSpeed * 1000)));
     }
 
     // clientmodel->setMining(getMiningType(), minerActive, -1);
@@ -994,6 +971,23 @@ void MiningPage::AddListItem(const QString& text)
     QListWidgetItem * item = new QListWidgetItem(text);
     item->setFlags(item->flags() | Qt::ItemIsSelectable | Qt::ItemIsEnabled);
     ui->list->addItem(item);
+
+    // If you don't keep the list at a reasonable size, it slows down the GUI
+    if (ui->list->count() > 100)
+    {
+        ui->list->setUpdatesEnabled(false);
+        bool fOldBlocked = ui->list->blockSignals(true); // optionally
+
+        while (ui->list->count() > 150)
+        {
+            delete ui->list->takeItem(0);
+        }
+
+        ui->list->blockSignals(fOldBlocked); // optionally
+        ui->list->setUpdatesEnabled(true);
+
+        ui->list->update(); // force update
+    }
 }
 
 // Function for fetching the time
@@ -1018,21 +1012,16 @@ void MiningPage::EnableMiningControlsAppropriately()
 
     ui->typeBox->setEnabled(!minerActive);
 
-    if (type == ClientModel::PoolMining)
-    {
-        ui->pokCheckBox->setChecked(false);
-    }
-    else
-    {
-        ui->pokCheckBox->setChecked(GetBoolArg("-usepok", DEFAULT_USE_POK));
-
-        for (int i = 0; i < numGPUs; i++)
-        {
-            this->GetGPUCheckBox(1+i)->setChecked(false);
-        }
-    }
+    // if (type == ClientModel::PoolMining)
+    // {
+    //     ui->pokCheckBox->setChecked(false);
+    // }
+    // else
+    // {
+    //     ui->pokCheckBox->setChecked(GetBoolArg("-usepok", DEFAULT_USE_POK));
+    // }
+    // ui->pokCheckBox->setEnabled(!minerActive && type == ClientModel::SoloMining);
     
-    ui->pokCheckBox->setEnabled(!minerActive && type == ClientModel::SoloMining);
     ui->horizontalSlider->setEnabled(!minerActive);
     ui->serverLine->setEnabled(!minerActive);
     ui->portLine->setEnabled(!minerActive);
@@ -1041,11 +1030,11 @@ void MiningPage::EnableMiningControlsAppropriately()
 
     ui->cpuCheckBox->setEnabled(!minerActive);
 
-    if (minerActive || this->GPUState >= GPU_READY)
+    if (this->GPUState >= GPU_READY)
     {
         for (int i = 0; i < numGPUs; i++)
         {
-            this->GetGPUCheckBox(1+i)->setEnabled(!minerActive && !mapGpuCheckBoxesDisabled[1+i] && type == ClientModel::PoolMining);
+            this->GetGPUCheckBox(1+i)->setEnabled(!minerActive && !mapGpuCheckBoxesDisabled[1+i]);
         }
     }
 }
@@ -1078,6 +1067,16 @@ void MiningPage::usePoKToggled(bool checked)
 void MiningPage::debugToggled(bool checked)
 {
     clientmodel->setDebug(checked);
+}
+
+void MiningPage::CPUCheckBoxToggled(bool checked)
+{
+    EnableMiningControlsAppropriately();
+}
+
+void MiningPage::GPUCheckBoxToggled(bool checked)
+{
+    EnableMiningControlsAppropriately();
 }
 
 void MiningPage::changePercentMiningPower(int i)

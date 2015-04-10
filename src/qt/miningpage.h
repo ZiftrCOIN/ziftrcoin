@@ -114,13 +114,14 @@ public slots:
     void typeChanged(int index);
     void usePoKToggled(bool checked);
     void debugToggled(bool checked);
+    void CPUCheckBoxToggled(bool checked);
+    void GPUCheckBoxToggled(bool checked);
 
     void changePercentMiningPower(int i);
     void startPressed();
     void clearPressed();
 
     void LaunchGPUInitialCheck();
-    // void LoadGPUCheckBoxes();
 
 private:
     Ui::MiningPage *ui;

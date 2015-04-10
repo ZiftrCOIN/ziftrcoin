@@ -129,17 +129,9 @@ background: #dbdbdb;</string>
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="pokCheckBox">
-             <property name="font">
-              <font>
-               <family>Lato</family>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: #419d9e;</string>
-             </property>
+            <widget class="QLabel" name="label_3">
              <property name="text">
-              <string>Use Proof of Knowledge</string>
+              <string/>
              </property>
             </widget>
            </item>
@@ -319,7 +311,7 @@ background: #dbdbdb;</string>
              <property name="font">
               <font>
                <family>Lato</family>
-               <pointsize>12</pointsize>
+               <pointsize>11</pointsize>
               </font>
              </property>
              <property name="layoutDirection">
