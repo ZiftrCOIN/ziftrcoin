@@ -414,6 +414,9 @@ bool SoftSetArg(const std::string& strArg, const std::string& strValue);
  */
 bool SoftSetBoolArg(const std::string& strArg, bool fValue);
 
+void ForceSetArg(const std::string& strArg, const std::string& strValue);
+void ForceSetBoolArg(const std::string& strArg, bool fValue);
+
 /**
  * MWC RNG of George Marsaglia
  * This is intended to be fast. It has a period of 2^59.3, though the

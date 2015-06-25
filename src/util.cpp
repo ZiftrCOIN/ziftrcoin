@@ -543,6 +543,18 @@ bool SoftSetBoolArg(const std::string& strArg, bool fValue)
         return SoftSetArg(strArg, std::string("0"));
 }
 
+void ForceSetArg(const std::string& strArg, const std::string& strValue)
+{
+    mapArgs[strArg] = strValue;
+}
+
+void ForceSetBoolArg(const std::string& strArg, bool fValue)
+{
+    if (fValue)
+        return ForceSetArg(strArg, std::string("1"));
+    else
+        return ForceSetArg(strArg, std::string("0"));
+}
 
 string EncodeBase64(const unsigned char* pch, size_t len)
 {
