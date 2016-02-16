@@ -683,6 +683,7 @@ void BitcoinGUI::setNumBlocks(int count)
     {
         // Represent time from last generated block in human readable text
         QString timeBehindText;
+
         const int HOUR_IN_SECONDS = 60*60;
         const int DAY_IN_SECONDS = 24*60*60;
         const int WEEK_IN_SECONDS = 7*24*60*60;
@@ -711,6 +712,7 @@ void BitcoinGUI::setNumBlocks(int count)
         progressBar->setMaximum(1000000000);
         progressBar->setValue(clientModel->getVerificationProgress() * 1000000000.0 + 0.5);
         progressBar->setVisible(true);
+        progressBar->setStyleSheet("QProgressBar::chunk {background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 0.3, stop: 1 #e98336, stop: 0 white); border-radius: 8px;} QProgressBar {color: #fff;}");
 
         tooltip = tr("Catching up...") + QString("<br>") + tooltip;
         if(count != prevBlocks)

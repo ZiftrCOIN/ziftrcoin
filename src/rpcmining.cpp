@@ -402,7 +402,7 @@ Value getwork(const Array& params, bool fHelp)
             // Create new block
             bool fPrevValuePoK = GetBoolArg("-usepok", DEFAULT_USE_POK);
             ForceSetBoolArg("-usepok", fGetPoKWork);
-            pblocktemplate = CreateNewBlockWithKey(*pMiningKey);
+            pblocktemplate = CreateNewBlockWithKey(pMiningKey);
             ForceSetBoolArg("-usepok", fPrevValuePoK);
             if (!pblocktemplate)
                 throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
@@ -496,7 +496,7 @@ Value getwork(const Array& params, bool fHelp)
         pblock->SetPoK(pblock->GetPoK());
 
         assert(pwalletMain != NULL);
-        return CheckWork(pblock, *pwalletMain, *pMiningKey);
+        return CheckWork(pblock, *pwalletMain, pMiningKey);
     }
 }
 #endif

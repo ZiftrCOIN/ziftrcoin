@@ -85,7 +85,7 @@ qa/pull-tester/build-tests.sh
 !src/leveldb*/Makefile
 
 # My local files
-
+*.cl
 alertmail.txt
 onalertnotify.sh
 onblocknotify.sh
@@ -93,4 +93,9 @@ times.txt
 Dockerfile
 miningpage_old.ui
 zr5_minerd
-minerd
+sgminer*
+minerd*
+ccminer
+**/*.creator.user
+*.dll
+*.bin
