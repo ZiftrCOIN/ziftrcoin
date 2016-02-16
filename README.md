@@ -169,7 +169,7 @@ The integration and regression tests (qa folder) have not been updated, so they 
 GUI
 ------------
 
-The GUI has been completely redone, and looks quite good. All of this work is merged into the `gpu-integration` branch, which has not yet been merged into master.
+The GUI has been completely redone, and looks quite good.
 
 
 
