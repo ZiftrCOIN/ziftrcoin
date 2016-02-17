@@ -171,5 +171,7 @@ GUI
 
 The GUI has been completely redone, and looks quite good.
 
+To edit the GUI, you should use QT Creator, available at http://www.qt.io/download-open-source/.
+
 
 
