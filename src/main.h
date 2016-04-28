@@ -77,9 +77,9 @@ static const int FORK_HEIGHT_DIFF_ALERT = 360;
 /** The max seconds in the future that a block will be accepted. */
 static const int MAX_BLOCK_TIME_OFFSET = 1 * 60 * 60;
 /** The minimum number of blocks for coins to be considered mature. */
-static const int TRANSACTION_MATURITY_DEPTH = 60*12; 
+static const int TRANSACTION_MATURITY_DEPTH = 60*12;
 /** The delay for which blocks with more mature coins spent may possibly override. */
-static const int64_t MATURE_COINS_TIEBREAKER_TIME_LIMIT = 13 * 1000; // (milliseconds) 
+static const int64_t MATURE_COINS_TIEBREAKER_TIME_LIMIT = 13 * 1000; // (milliseconds)
 /** The maximum coinbase scriptSig size. */
 static const unsigned int MAX_COINBASE_SCRIPTSIG_SIZE = 250;
 /** The minimum coinbase scriptSig size. */
@@ -147,7 +147,7 @@ void SyncWithWallets(const uint256 &hash, const CTransaction& tx, const CBlock* 
 void RegisterNodeSignals(CNodeSignals& nodeSignals);
 /** Unregister a network node */
 void UnregisterNodeSignals(CNodeSignals& nodeSignals);
-
+/** Push a message to get blocks from a node */
 void PushGetBlocks(CNode* pnode, CBlockIndex* pindexBegin, uint256 hashEnd);
 
 /** Process an incoming block */
@@ -186,11 +186,12 @@ std::string GetWarnings(std::string strFor);
 bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
 bool ActivateBestChain(CValidationState &state);
+/** Prove knowledge of the transaction data one is mining with, for a bonus */
 int64_t GetBlockValue(int nHeight, int64_t nFees, bool fUsesPoK);
+/** Get the next work target, adjusting difficulty as appropriate */
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const int64_t nBlockTime);
-
+/** Set the time field in the header */
 void UpdateTime(CBlockHeader& block, const CBlockIndex* pindexPrev);
-
 /** Create a new block index entry for a given block hash */
 CBlockIndex * InsertBlockIndex(uint256 hash);
 /** Verify a signature */
@@ -417,7 +418,7 @@ public:
 };
 
 
-/** 
+/**
  * Closure representing one script verification
  * Note that this stores a reference to the spending transaction.
  */
@@ -705,7 +706,7 @@ enum BlockStatus {
     BLOCK_FAILED_MASK        =   96
 };
 
-/** 
+/**
  * The block chain is a tree shaped structure starting with the
  * genesis block at the root, with each block potentially having multiple
  * candidates to be the next block. A blockindex may have multiple pprev pointing
@@ -849,7 +850,7 @@ public:
         return block;
     }
 
-    unsigned int GetVersion() const 
+    unsigned int GetVersion() const
     {
         return this->nVersion & VERSION_MASK;
     }
@@ -859,7 +860,7 @@ public:
         return this->nVersion & POK_BOOL_MASK;
     }
 
-    int GetDayNumber() const 
+    int GetDayNumber() const
     {
         return this->nHeight / (24 * 60);
     }
@@ -896,7 +897,7 @@ public:
         return (int64_t)GetMedianTimePassed_uint();
     }
 
-    unsigned int GetMedianTimePassed_uint() const 
+    unsigned int GetMedianTimePassed_uint() const
     {
         unsigned int pmedian[nMedianTimeSpan];
         unsigned int * pbegin = &pmedian[nMedianTimeSpan];
@@ -1131,7 +1132,7 @@ public:
     }
 
     unsigned int TipMaxBlockSize() {
-        // +1 because you always have to know what the block size is up to 1 more 
+        // +1 because you always have to know what the block size is up to 1 more
         // than the height of the current chain
         // Assumes max block size can only go up
         return this->MaxBlockSize(this->Height()+1);
