@@ -1,6 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2013 The Bitcoin developers
-// Copyright (c) 2015-2019 The ziftrCOIN developers
+// Copyright (c) 2015 The ziftrCOIN developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -22,18 +22,22 @@ double GetDifficulty(const CBlockIndex* blockindex)
 {
     // Floating point number that is a multiple of the minimum difficulty,
     // minimum difficulty = 1.0.
+    unsigned int nBits = 0;
     if (blockindex == NULL)
     {
         if (chainActive.Tip() == NULL)
-            return 1.0;
+            nBits = Params().GenesisBlock().nBits;
         else
-            blockindex = chainActive.Tip();
+            nBits = chainActive.Tip()->nBits;
+    }
+    else 
+    {
+        nBits = blockindex->nBits;
     }
 
-    int nShift = (blockindex->nBits >> 24) & 0xff;
+    int nShift = (nBits >> 24) & 0xff;
 
-    double dDiff =
-        (double)0x0000ffff / (double)(blockindex->nBits & 0x00ffffff);
+    double dDiff = (double)0x0000ffff / (double)(nBits & 0x00ffffff);
 
     while (nShift < 29)
     {
@@ -77,6 +81,8 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex)
     result.push_back(Pair("tx", txs));
     result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
     result.push_back(Pair("chainwork", blockindex->nChainWork.GetHex()));
+    result.push_back(Pair("ntx", (int64_t)blockindex->nTx));
+    result.push_back(Pair("nchaintx", (int64_t)blockindex->nChainTx));
     
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
@@ -351,7 +357,7 @@ Value gettxout(const Array& params, bool fHelp)
             "{\n"
             "  \"bestblock\" : \"hash\",    (string) the block hash\n"
             "  \"confirmations\" : n,       (numeric) The number of confirmations\n"
-            "  \"value\" : x.xxx,           (numeric) The transaction value in btc\n"
+            "  \"value\" : x.xxx,           (numeric) The transaction value in zrc\n"
             "  \"scriptPubKey\" : {         (json object)\n"
             "     \"asm\" : \"code\",       (string) \n"
             "     \"hex\" : \"hex\",        (string) \n"
@@ -474,5 +480,43 @@ Value getblockchaininfo(const Array& params, bool fHelp)
     obj.push_back(Pair("difficulty",    (double)GetDifficulty()));
     obj.push_back(Pair("verificationprogress", Checkpoints::GuessVerificationProgress(chainActive.Tip())));
     obj.push_back(Pair("chainwork",     chainActive.Tip()->nChainWork.GetHex()));
+    obj.push_back(Pair("nchaintx",      (int64_t)chainActive.Tip()->nChainTx));
+    obj.push_back(Pair("chainsize",     (int64_t)chainActive.Tip()->nChainSize));
+    
     return obj;
 }
+
+Value gettotalcoins(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 1)
+        throw runtime_error(
+            "gettotalcoins ( fExcludeGenesis )\n"
+            "Returns the number of coins currently created on the main chain\n"
+            "\nArguments:\n"
+            "1. fExcludeGenesis   (boolean, optional) Default false. Call with true to get total coins NOT counting unspent genesis coins. \n"
+            "\nResult:\n"
+            "  amount (numeric) -- the total number of coins\n"
+            "\nExamples:\n"
+            + HelpExampleCli("gettotalcoins", "")
+            + HelpExampleCli("gettotalcoins", "true")
+            + HelpExampleRpc("gettotalcoins", "true")
+        );
+
+    int64_t nTotalCoins = chainActive.GetTotalCoinsCreated();
+
+    if (params.size() == 0 || !params[0].get_bool())
+        return ValueFromAmount(nTotalCoins);
+
+    CCoinsViewCache view(*pcoinsTip, true);
+    const CTransaction& genesisTx = Params().GenesisBlock().vtx[0];
+
+    for (size_t i = 0; i < genesisTx.vout.size(); i++)
+    {
+        const CCoins& coins = view.GetCoins(genesisTx.GetHash());
+        if (coins.IsAvailable(i))
+            nTotalCoins -= genesisTx.vout[i].nValue;
+    }
+
+    return ValueFromAmount(nTotalCoins);
+}
+

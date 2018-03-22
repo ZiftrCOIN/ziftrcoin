@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-// Copyright (c) 2015-2019 The ziftrCOIN developers
+// Copyright (c) 2015 The ziftrCOIN developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -358,14 +358,14 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
         nLastBlockSize = nBlockSize;
         LogPrintf("CreateNewBlock(): total size %u\n", nBlockSize);
 
-        pblock->vtx[0].vout[0].nValue = GetBlockValue(pindexPrev->nHeight+1, nFees, GetBoolArg("-usepok", false));
+        pblock->vtx[0].vout[0].nValue = GetBlockValue(pindexPrev->nHeight+1, nFees, GetBoolArg("-usepok", DEFAULT_USE_POK));
         pblocktemplate->vTxFees[0] = -nFees;
 
         // Fill in header
-        pblock->SetPoKFlag(GetBoolArg("-usepok", false));
+        pblock->SetPoKFlag(GetBoolArg("-usepok", DEFAULT_USE_POK));
         pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
         UpdateTime(*pblock, pindexPrev);
-        pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock);
+        pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock->GetBlockTime());
         pblock->nNonce         = 0;
         pblock->vtx[0].vin[0].scriptSig = CScript() << OP_0 << OP_0;
         pblocktemplate->vTxSigOps[0] = GetSigOpCount(pblock->vtx[0]);
@@ -407,8 +407,9 @@ void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& 
 // Internal miner
 //
 
-double dHashesPerSec = 0.0;
+double dHashesPerSec   = 0.0;
 int64_t nHPSTimerStart = 0;
+int64_t nBaseCaseTime  = 0;
 
 
 // Returns the number of failed attempts. 
@@ -422,13 +423,17 @@ unsigned int static ScanHash(CBlock *pblock, unsigned int nTry, unsigned int nDo
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
     uint256 hashBlockHeader;
 
-    for (unsigned int i = 0; i < nTry; i++) 
+    // Sleep for some amount of the time according to the base case
+    MicroSleep(nBaseCaseTime * nDontTry / nTry);
+
+    // Use the rest of the time to actually mine
+    for (unsigned int i = nDontTry; i < nTry; i++) 
     {
         pblock->nNonce++;
         pblock->SetPoK(pblock->CalculatePoK(pmapTxSerialized));
         hashBlockHeader = pblock->GetHash();
 
-        if (hashBlockHeader <= hashTarget && i >= nDontTry)
+        if (hashBlockHeader <= hashTarget)
             return i;
     }
 
@@ -437,21 +442,46 @@ unsigned int static ScanHash(CBlock *pblock, unsigned int nTry, unsigned int nDo
     return nTry;
 }
 
-CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reserveKey)
+CBlockTemplate* CreateNewBlockWithKey(CReserveKey * pReserveKey, bool fUseRpcUserAsMiningKey)
 {
-    CPubKey pubKey;
-    if (!reserveKey.GetReservedKey(pubKey))
-        throw std::runtime_error("CreateNewBlockWithKey() : Could not get public key");
+    CScript scriptPubKey;
+    scriptPubKey.clear();
 
-    CScript scriptPubKey = CScript() << pubKey << OP_CHECKSIG;
+    if (fUseRpcUserAsMiningKey)
+    {
+        CBitcoinAddress address(GetArg("-rpcuser", "o0oO1iI")); // default to something that won't validate
+        if (address.IsValid())
+        {
+            scriptPubKey.SetDestination(address.Get());
+        }
+    }
+    
+    if (pReserveKey && scriptPubKey.empty())
+    {
+        CPubKey pubKey;
+        if (!pReserveKey->GetReservedKey(pubKey))
+            throw std::runtime_error("CreateNewBlockWithKey() : Could not get public key");
+
+        scriptPubKey = CScript() << pubKey << OP_CHECKSIG;
+    }
+    
+    if (scriptPubKey.empty())
+        throw std::runtime_error("CreateNewBlockWithKey() : Could not determe scriptPubKey");
+    
     return CreateNewBlock(scriptPubKey);
 }
 
 //extern bool fJustPrint;
 
 // If work is checked successfully, then keep the reserve key...
-bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
+bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey * pReserveKey)
 {
+    try
+    {
+        pblock->SetPoK(pblock->CalculatePoK());
+    }
+    catch (std::exception& e) {}
+
     uint256 hash = pblock->GetHash();
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
@@ -474,7 +504,8 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reserveKey)
             return error("ZiftrCOINMiner : generated block is stale");
 
         // Remove key from key pool
-        reserveKey.KeepKey();
+        if (pReserveKey)
+            pReserveKey->KeepKey();
 
         // Track how many getdata requests this block gets
         {
@@ -521,7 +552,7 @@ void static ZiftrCOINMiner(CWallet *pwallet)
             CBlockIndex* pindexPrev = chainActive.Tip();
 
             // Automatically delete old block template after each round
-            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reserveKey));
+            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(&reserveKey));
             if (!pblocktemplate.get()) {
                 LogPrintf("Error in ZiftrCOINMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
                 return;
@@ -535,6 +566,8 @@ void static ZiftrCOINMiner(CWallet *pwallet)
                    ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
             int64_t nStart = GetTime();
+            bool fDoBaseCaseTest = false;
+
             while (true)
             {
                 // Meter hashes/sec
@@ -546,16 +579,26 @@ void static ZiftrCOINMiner(CWallet *pwallet)
                     nHashCounter = 0;
                 }
 
-                unsigned int nTries = 1000; 
-                unsigned int nDontHash = 0; // nDontTry; // For simulating increases/decreases of network hash power
+                unsigned int nTries = 5000;
+                unsigned int nPercentHashPower = fDoBaseCaseTest ? 100 : GetArg("-usepercenthashpower", DEFAULT_USE_PERCENT_HASH_POWER);
+                nPercentHashPower = std::max(std::min(nPercentHashPower, (unsigned int)100), (unsigned int)0);
+                unsigned int nDontHash = (100 - nPercentHashPower) * nTries / 100;
+
+                int64_t nTimeStartBaseCase = fDoBaseCaseTest ? GetTimeMicros() : 0;
                 unsigned int nNumFailedAttempts = ScanHash(pblock, nTries, nDontHash, &mapTxSerialized);
+                if (fDoBaseCaseTest) {
+                    nBaseCaseTime = GetTimeMicros() - nTimeStartBaseCase;
+                    fDoBaseCaseTest = false;
+                }
+                
+
                 nHashCounter += (nNumFailedAttempts == nTries) ? nTries : nNumFailedAttempts + 1;
                 nHashCounter -= nDontHash;
 
                 if (nNumFailedAttempts < nTries) {
                     // Not all tries were fails, so we found a solution
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    CheckWork(pblock, *pwallet, reserveKey);
+                    CheckWork(pblock, *pwallet, &reserveKey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
                     // In regression test mode, stop mining after a block is found. This
@@ -570,6 +613,7 @@ void static ZiftrCOINMiner(CWallet *pwallet)
                     static CCriticalSection cs; 
                     {
                         LOCK(cs);
+                        fDoBaseCaseTest = true;
                         if (GetTimeMillis() - nHPSTimerStart > 4000) {
                             dHashesPerSec = 1000.0 * nHashCounter / (GetTimeMillis() - nHPSTimerStart);
                             nHPSTimerStart = GetTimeMillis();

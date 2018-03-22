@@ -10,7 +10,9 @@
 #include "chainparams.h"
 #include "checkpoints.h"
 #include "main.h"
+#include "miner.h"
 #include "net.h"
+#include "rpcserver.h"
 #include "ui_interface.h"
 
 #include <stdint.h>
@@ -18,6 +20,9 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QTimer>
+
+// using namespace json_spirit;
+// extern json_spirit::Value GetNetworkHashPS(int lookup, int height);
 
 static const int64_t nClientStartupTime = GetTime();
 
@@ -30,6 +35,10 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
     pollTimer = new QTimer(this);
     connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateTimer()));
     pollTimer->start(MODEL_UPDATE_DELAY);
+
+    miningType = SoloMining;
+    miningStarted = false;
+    fDebug = false;
 
     subscribeToCoreSignals();
 }
@@ -64,6 +73,125 @@ int ClientModel::getNumBlocksAtStartup()
     if (numBlocksAtStartup == -1) numBlocksAtStartup = getNumBlocks();
     return numBlocksAtStartup;
 }
+
+// ----
+
+ClientModel::MiningType ClientModel::getMiningType() const
+{
+    return miningType;
+}
+
+bool ClientModel::getMiningStarted() const
+{
+    return miningStarted;
+}
+
+QString ClientModel::getMiningServer() const
+{
+    return miningServer;
+}
+
+void ClientModel::setMiningServer(QString server)
+{
+    miningServer = server;
+//    WriteSetting("miningServer", miningServer.toStdString());
+}
+
+QString ClientModel::getMiningPort() const
+{
+    return miningPort;
+}
+
+void ClientModel::setMiningPort(QString port)
+{
+    miningPort = port;
+}
+
+QString ClientModel::getMiningUsername() const
+{
+    return miningUsername;
+}
+
+void ClientModel::setMiningUsername(QString username)
+{
+    miningUsername = username;
+}
+
+QString ClientModel::getMiningPassword() const
+{
+    return miningPassword;
+}
+
+void ClientModel::setMiningPassword(QString password)
+{
+    miningPassword = password;
+}
+
+bool ClientModel::getDebug() const
+{
+    return fDebug;
+}
+
+void ClientModel::setDebug(bool debug)
+{
+    this->fDebug = debug;
+}
+
+qint64 ClientModel::getHashrate() const
+{
+    return (qint64)dHashesPerSec;
+}
+
+double ClientModel::GetDifficulty() const
+{
+    // Floating point number that is a multiple of the minimum difficulty,
+    // minimum difficulty = 1.0.
+
+    return ::GetDifficulty();
+
+    // GetNextWorkRequired(chainActive.Tip(), GetTime())
+
+    // if (pindexBest == NULL)
+    //     return 1.0;
+    // int nShift = (pindexBest->nBits >> 24) & 0xff;
+
+    // double dDiff =
+    //     (double)0x0000ffff / (double)(pindexBest->nBits & 0x00ffffff);
+
+    // while (nShift < 29)
+    // {
+    //     dDiff *= 256.0;
+    //     nShift++;
+    // }
+    // while (nShift > 29)
+    // {
+    //     dDiff /= 256.0;
+    //     nShift--;
+    // }
+
+    // return dDiff;
+}
+
+void ClientModel::setMining(MiningType type, bool mining, int percent, bool fStartWalletMiner)
+{
+    if (type == SoloMining && mining != miningStarted)
+    {
+        if (percent != -1)
+            mapArgs["-usepercenthashpower"] = QString("%1").arg(percent).toUtf8().data();
+
+        if (fStartWalletMiner)
+        {
+            json_spirit::Array Args;
+            Args.push_back(mining);
+            setgenerate(Args, false);
+        }
+    }
+    miningType = type;
+    miningStarted = mining;
+    // emit miningChanged(mining, hashrate);
+}
+
+// ----
 
 quint64 ClientModel::getTotalBytesRecv() const
 {

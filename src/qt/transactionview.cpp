@@ -52,6 +52,7 @@ TransactionView::TransactionView(QWidget *parent) :
 #endif
 
     dateWidget = new QComboBox(this);
+    dateWidget->setStyleSheet("color: #000");
 #ifdef Q_OS_MAC
     dateWidget->setFixedWidth(121);
 #else
@@ -67,6 +68,7 @@ TransactionView::TransactionView(QWidget *parent) :
     hlayout->addWidget(dateWidget);
 
     typeWidget = new QComboBox(this);
+    typeWidget->setStyleSheet("color: #000");
 #ifdef Q_OS_MAC
     typeWidget->setFixedWidth(121);
 #else

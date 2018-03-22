@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-// Copyright (c) 2015-2019 The ziftrCOIN developers
+// Copyright (c) 2015 The ziftrCOIN developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -45,7 +45,7 @@ static const int64_t SATOSHI = 1; // just for easily searching for places where 
 // Actual max is 10002008537.46000, can't get to exactly 10 billion coins because of 
 // rounding erros. Choosing to go a little above this max because of the min block reward
 static const double  MAX_MONEY_COINS    = 12000000000.0;
-static const int64_t MAX_MONEY_SATOSHIS = 12000000000 * COIN; 
+static const int64_t MAX_MONEY_SATOSHIS = 12000000000ULL * COIN; 
 inline bool MoneyRangeCoins(double nValue) { return (nValue >= 0.0 && nValue <= MAX_MONEY_COINS); }
 inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY_SATOSHIS); }
 
@@ -89,13 +89,28 @@ T* alignup(T* p)
 
 inline void MilliSleep(int64_t n)
 {
-// Boost's sleep_for was uninterruptable when backed by nanosleep from 1.50
+// Boost's _for was uninterruptable when backed by nanosleep from 1.50
 // until fixed in 1.52. Use the deprecated sleep method for the broken case.
 // See: https://svn.boost.org/trac/boost/ticket/7238
 #if defined(HAVE_WORKING_BOOST_SLEEP_FOR)
     boost::this_thread::sleep_for(boost::chrono::milliseconds(n));
 #elif defined(HAVE_WORKING_BOOST_SLEEP)
     boost::this_thread::sleep(boost::posix_time::milliseconds(n));
+#else
+//should never get here
+#error missing boost sleep implementation
+#endif
+}
+
+inline void MicroSleep(int64_t n)
+{
+// Boost's _for was uninterruptable when backed by nanosleep from 1.50
+// until fixed in 1.52. Use the deprecated sleep method for the broken case.
+// See: https://svn.boost.org/trac/boost/ticket/7238
+#if defined(HAVE_WORKING_BOOST_SLEEP_FOR)
+    boost::this_thread::sleep_for(boost::chrono::microseconds(n));
+#elif defined(HAVE_WORKING_BOOST_SLEEP)
+    boost::this_thread::sleep(boost::posix_time::microseconds(n));
 #else
 //should never get here
 #error missing boost sleep implementation
@@ -398,6 +413,9 @@ bool SoftSetArg(const std::string& strArg, const std::string& strValue);
  * @return true if argument gets set, false if it already had a value
  */
 bool SoftSetBoolArg(const std::string& strArg, bool fValue);
+
+void ForceSetArg(const std::string& strArg, const std::string& strValue);
+void ForceSetBoolArg(const std::string& strArg, bool fValue);
 
 /**
  * MWC RNG of George Marsaglia

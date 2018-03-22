@@ -17,6 +17,7 @@
 #include "transactiontablemodel.h"
 #include "transactionview.h"
 #include "walletmodel.h"
+#include "miningpage.h"
 
 #include "ui_interface.h"
 
@@ -27,6 +28,8 @@
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <QLabel>
+#include <QPixmap>
 
 WalletView::WalletView(QWidget *parent):
     QStackedWidget(parent),
@@ -37,27 +40,45 @@ WalletView::WalletView(QWidget *parent):
     overviewPage = new OverviewPage();
 
     transactionsPage = new QWidget(this);
+    transactionsPage->setStyleSheet("background: #144248");
     QVBoxLayout *vbox = new QVBoxLayout();
     QHBoxLayout *hbox_buttons = new QHBoxLayout();
     transactionView = new TransactionView(this);
+    transactionView->setStyleSheet("background: #fff");
     vbox->addWidget(transactionView);
     QPushButton *exportButton = new QPushButton(tr("&Export"), this);
+    exportButton->setStyleSheet("QPushButton { position: fixed; background: #337c7d; color: #fff; height: 30px; width: 50px; border-radius: 5px;} QPushButton:!pressed { background-color: #419d9e; color: #fff; height: 30px; width: 100px; border-radius: 5px;}");
     exportButton->setToolTip(tr("Export the data in the current tab to a file"));
+
+
+
+
+
 #ifndef Q_OS_MAC // Icons on push buttons are very uncommon on Mac
     exportButton->setIcon(QIcon(":/icons/export"));
 #endif
+
     hbox_buttons->addStretch();
+
     hbox_buttons->addWidget(exportButton);
+
     vbox->addLayout(hbox_buttons);
+
+    QLabel *label = new QLabel();
+    label->setPixmap( QPixmap(":/images/wallet_nocoin"));
+    vbox->addWidget(label);
+
     transactionsPage->setLayout(vbox);
 
     receiveCoinsPage = new ReceiveCoinsDialog();
     sendCoinsPage = new SendCoinsDialog();
+    miningPage = new MiningPage();
 
     addWidget(overviewPage);
     addWidget(transactionsPage);
     addWidget(receiveCoinsPage);
     addWidget(sendCoinsPage);
+    addWidget(miningPage);
 
     // Clicking on a transaction on the overview pre-selects the transaction on the transaction history page
     connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), transactionView, SLOT(focusTransaction(QModelIndex)));
@@ -101,6 +122,7 @@ void WalletView::setClientModel(ClientModel *clientModel)
     this->clientModel = clientModel;
 
     overviewPage->setClientModel(clientModel);
+    miningPage->setClientModel(clientModel);
 }
 
 void WalletView::setWalletModel(WalletModel *walletModel)
@@ -112,6 +134,7 @@ void WalletView::setWalletModel(WalletModel *walletModel)
     overviewPage->setWalletModel(walletModel);
     receiveCoinsPage->setModel(walletModel);
     sendCoinsPage->setModel(walletModel);
+    miningPage->setWalletModel(walletModel);
 
     if (walletModel)
     {
@@ -171,6 +194,11 @@ void WalletView::gotoSendCoinsPage(QString addr)
 
     if (!addr.isEmpty())
         sendCoinsPage->setAddress(addr);
+}
+
+void WalletView::gotoMiningPage()
+{
+    setCurrentWidget(miningPage);
 }
 
 void WalletView::gotoSignMessageTab(QString addr)

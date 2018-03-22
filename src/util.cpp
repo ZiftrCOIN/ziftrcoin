@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-// Copyright (c) 2015-2019 The ziftrCOIN developers
+// Copyright (c) 2015 The ziftrCOIN developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -543,6 +543,18 @@ bool SoftSetBoolArg(const std::string& strArg, bool fValue)
         return SoftSetArg(strArg, std::string("0"));
 }
 
+void ForceSetArg(const std::string& strArg, const std::string& strValue)
+{
+    mapArgs[strArg] = strValue;
+}
+
+void ForceSetBoolArg(const std::string& strArg, bool fValue)
+{
+    if (fValue)
+        return ForceSetArg(strArg, std::string("1"));
+    else
+        return ForceSetArg(strArg, std::string("0"));
+}
 
 string EncodeBase64(const unsigned char* pch, size_t len)
 {

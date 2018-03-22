@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-// Copyright (c) 2015-2019 The ziftrCOIN developers
+// Copyright (c) 2015 The ziftrCOIN developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -263,7 +263,7 @@ bool CBlock::CheckProofOfWork() const
     try
     {
         return (this->GetPoK() == this->CalculatePoK());
-    } 
+    }
     catch (std::exception& e) {}
 
     return false;
@@ -285,10 +285,10 @@ unsigned int CBlock::CalculatePoK(MapTxSerialized * pmapTxSerialized) const
     }
 
     assert(vtx.size() > 0);
-    
+
     unsigned int nDeterRand2 = hashTxChooser.getinnerint(1);
     unsigned int nDeterRand3 = hashTxChooser.getinnerint(2);
-    
+
     unsigned int nTxIndex =  nDeterRand1 % vtx.size();
 
     const std::vector<unsigned char> * pvTxData = NULL;
@@ -300,7 +300,7 @@ unsigned int CBlock::CalculatePoK(MapTxSerialized * pmapTxSerialized) const
             pvTxData = &(it->second);
         }
     }
-    
+
     std::vector<unsigned char> vTxData2;
     if (pmapTxSerialized == NULL || pvTxData == NULL)
     {
@@ -316,9 +316,9 @@ unsigned int CBlock::CalculatePoK(MapTxSerialized * pmapTxSerialized) const
 
     if (pvTxData == NULL)
         pvTxData = &vTxData2;
-    
+
     assert((pvTxData->end() - pvTxData->begin()) >= 4);
-    
+
     unsigned int nDeterRandIndex = nDeterRand2 % (pvTxData->size() - 3);
     unsigned int nRandTxData = *((unsigned int *)(&(pvTxData->begin()[nDeterRandIndex])));
 

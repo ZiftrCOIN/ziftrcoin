@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-// Copyright (c) 2015-2019 The ziftrCOIN developers
+// Copyright (c) 2015 The ziftrCOIN developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -77,13 +77,17 @@ static const int FORK_HEIGHT_DIFF_ALERT = 360;
 /** The max seconds in the future that a block will be accepted. */
 static const int MAX_BLOCK_TIME_OFFSET = 1 * 60 * 60;
 /** The minimum number of blocks for coins to be considered mature. */
-static const int TRANSACTION_MATURITY_DEPTH = 60*12; 
+static const int TRANSACTION_MATURITY_DEPTH = 60*12;
 /** The delay for which blocks with more mature coins spent may possibly override. */
-static const int64_t MATURE_COINS_TIEBREAKER_TIME_LIMIT = 13 * 1000; // (milliseconds) 
+static const int64_t MATURE_COINS_TIEBREAKER_TIME_LIMIT = 13 * 1000; // (milliseconds)
 /** The maximum coinbase scriptSig size. */
 static const unsigned int MAX_COINBASE_SCRIPTSIG_SIZE = 250;
 /** The minimum coinbase scriptSig size. */
 static const unsigned int MIN_COINBASE_SCRIPTSIG_SIZE = 2;
+/** Default for -usepercenthashpower, for not mining on full power. **/
+static const unsigned int DEFAULT_USE_PERCENT_HASH_POWER = 80;
+/** Default for -usepok, for mining with proof of knowledge for 5% higher rewards. **/
+static const bool DEFAULT_USE_POK = true;
 
 #ifdef USE_UPNP
 static const int fHaveUPnP = true;
@@ -143,7 +147,7 @@ void SyncWithWallets(const uint256 &hash, const CTransaction& tx, const CBlock* 
 void RegisterNodeSignals(CNodeSignals& nodeSignals);
 /** Unregister a network node */
 void UnregisterNodeSignals(CNodeSignals& nodeSignals);
-
+/** Push a message to get blocks from a node */
 void PushGetBlocks(CNode* pnode, CBlockIndex* pindexBegin, uint256 hashEnd);
 
 /** Process an incoming block */
@@ -182,11 +186,12 @@ std::string GetWarnings(std::string strFor);
 bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
 bool ActivateBestChain(CValidationState &state);
+/** Prove knowledge of the transaction data one is mining with, for a bonus */
 int64_t GetBlockValue(int nHeight, int64_t nFees, bool fUsesPoK);
-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock);
-
+/** Get the next work target, adjusting difficulty as appropriate */
+unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const int64_t nBlockTime);
+/** Set the time field in the header */
 void UpdateTime(CBlockHeader& block, const CBlockIndex* pindexPrev);
-
 /** Create a new block index entry for a given block hash */
 CBlockIndex * InsertBlockIndex(uint256 hash);
 /** Verify a signature */
@@ -413,7 +418,7 @@ public:
 };
 
 
-/** 
+/**
  * Closure representing one script verification
  * Note that this stores a reference to the spending transaction.
  */
@@ -701,7 +706,7 @@ enum BlockStatus {
     BLOCK_FAILED_MASK        =   96
 };
 
-/** 
+/**
  * The block chain is a tree shaped structure starting with the
  * genesis block at the root, with each block potentially having multiple
  * candidates to be the next block. A blockindex may have multiple pprev pointing
@@ -845,9 +850,19 @@ public:
         return block;
     }
 
-    unsigned int GetVersion() const 
+    unsigned int GetVersion() const
     {
         return this->nVersion & VERSION_MASK;
+    }
+
+    bool IsPoKBlock() const
+    {
+        return this->nVersion & POK_BOOL_MASK;
+    }
+
+    int GetDayNumber() const
+    {
+        return this->nHeight / (24 * 60);
     }
 
     uint256 GetBlockHash() const
@@ -882,7 +897,7 @@ public:
         return (int64_t)GetMedianTimePassed_uint();
     }
 
-    unsigned int GetMedianTimePassed_uint() const 
+    unsigned int GetMedianTimePassed_uint() const
     {
         unsigned int pmedian[nMedianTimeSpan];
         unsigned int * pbegin = &pmedian[nMedianTimeSpan];
@@ -1051,11 +1066,13 @@ class CChain {
 private:
     std::vector<CBlockIndex*> vChain;
     std::map<int, unsigned int> mapBlockSizeLimits;
+    int64_t nTotalCoinsCreated;
 
 public:
 
     CChain() {
         mapBlockSizeLimits[0] = MIN_MAX_BLOCK_SIZE;
+        nTotalCoinsCreated = 0;
     }
 
     /** Returns the index entry for the genesis block of this chain, or NULL if none. */
@@ -1099,6 +1116,10 @@ public:
         return vChain.size() - 1;
     }
 
+    int64_t GetTotalCoinsCreated() const {
+        return nTotalCoinsCreated;
+    }
+
     unsigned int MaxBlockSize(int nHeight) {
         int nLastSizeRetarget = nHeight - (nHeight % MAX_BLOCK_SIZE_RECALC_PERIOD);
         std::map<int, unsigned int>::const_iterator it = mapBlockSizeLimits.find(nLastSizeRetarget);
@@ -1111,7 +1132,7 @@ public:
     }
 
     unsigned int TipMaxBlockSize() {
-        // +1 because you always have to know what the block size is up to 1 more 
+        // +1 because you always have to know what the block size is up to 1 more
         // than the height of the current chain
         // Assumes max block size can only go up
         return this->MaxBlockSize(this->Height()+1);

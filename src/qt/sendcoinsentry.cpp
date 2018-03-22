@@ -24,6 +24,7 @@ SendCoinsEntry::SendCoinsEntry(QWidget *parent) :
     setCurrentWidget(ui->SendCoins);
 
 #ifdef Q_OS_MAC
+
     ui->payToLayout->setSpacing(4);
 #endif
 #if QT_VERSION >= 0x040700

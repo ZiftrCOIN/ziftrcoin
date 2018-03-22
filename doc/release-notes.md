@@ -1,101 +1,61 @@
-Bitcoin Core version 0.9.3 is now available from:
+ZiftrCOIN Core version 0.9.31 is now available from:
 
-  https://bitcoin.org/bin/0.9.3/
-
-This is a new minor version release, bringing only bug fixes and updated
-translations. Upgrading to this release is recommended.
+  http://www.ziftrpool.io/downloads
 
 Please report bugs using the issue tracker at github:
 
-  https://github.com/bitcoin/bitcoin/issues
+  https://github.com/ZiftrCOIN/ziftrcoin/issues
 
-Upgrading and downgrading
-==========================
-
-How to Upgrade
---------------
-
-If you are running an older version, shut it down. Wait until it has completely
-shut down (which might take a few minutes for older versions), then run the
-installer (on Windows) or just copy over /Applications/Bitcoin-Qt (on Mac) or
-bitcoind/bitcoin-qt (on Linux).
-
-If you are upgrading from version 0.7.2 or earlier, the first time you run
-0.9.3 your blockchain files will be re-indexed, which will take anywhere from 
-30 minutes to several hours, depending on the speed of your machine.
-
-Downgrading warnings
---------------------
-
-The 'chainstate' for this release is not always compatible with previous
-releases, so if you run 0.9.x and then decide to switch back to a
-0.8.x release you might get a blockchain validation error when starting the
-old release (due to 'pruned outputs' being omitted from the index of
-unspent transaction outputs).
-
-Running the old release with the -reindex option will rebuild the chainstate
-data structures and correct the problem.
-
-Also, the first time you run a 0.8.x release on a 0.9 wallet it will rescan
-the blockchain for missing spent coins, which will take a long time (tens
-of minutes on a typical machine).
-
-0.9.3 Release notes
+0.9.31 Release notes
 =======================
 
 RPC:
-- Avoid a segfault on getblock if it can't read a block from disk
-- Add paranoid return value checks in base58
+ - New parameter for getaccountaddress: forceOld (bool). If true, this will return the same address. Note, for privacy reasons, you should not use this feature frequently. It is better to use a new address each time one is needed.
+ - New rpc call: gettotalcoins {fExcludeGenesis}. Returns the number of coins currently created on the main chain. Call with true to get total coins NOT counting unspent genesis coins.
+ - You can now specify the address to send all solo mined coins to by setting the your rpcuser to be a ziftrCOIN address. Configure your ziftrcoin.conf file with:
+
+```
+server=1
+rpcuser={your ziftrcoin address}
+rpcuser={your secret password}
+```
+
+ - You can now specify the default pool to use while mining with the following ziftrcoin.conf parameters:
+```
+poolserver={the pool url}
+poolport={the pool port}
+poolusername={your pool username}
+poolpassword={your pool password}
+```
 
 Protocol and network code:
-- Don't poll showmyip.com, it doesn't exist anymore
-- Add a way to limit deserialized string lengths and use it
-- Add a new checkpoint at block 295,000
-- Increase IsStandard() scriptSig length
-- Avoid querying DNS seeds, if we have open connections
-- Remove a useless millisleep in socket handler
-- Stricter memory limits on CNode
-- Better orphan transaction handling
-- Add `-maxorphantx=<n>` and `-maxorphanblocks=<n>` options for control over the maximum orphan transactions and blocks
+ - Older versions of the wallet would not forward blocks with the PoK data set incorrectly (applies to both PoK and non-PoK blocks). New version will update the PoK before checking validity, and will then forward the block with the PoK data set correctly. This does not expands the space of valid blocks, and is not a hard fork.
+
 
 Wallet:
-- Check redeemScript size does not exceed 520 byte limit
-- Ignore (and warn about) too-long redeemScripts while loading wallet
+ - 
+
 
 GUI:
-- fix 'opens in testnet mode when presented with a BIP-72 link with no fallback'
-- AvailableCoins: acquire cs_main mutex
-- Fix unicode character display on MacOSX
+ - The whole application has new and improved ziftrCOIN styling. 
+ - The mining page now updates and shows your hash rate when mining with GPUs (both Nvidia and AMD) -- assumes you have drivers properly installed. 
+ - The wallet no longer freezes after mining for a while, as the log windows is capped at 150 entries.
+ - Share counts now properly reset to zero every time mining is restarted. 
+ - The proof of knowledge check box has been removed, since none of the current miners support mining with Proof of Knowledge yet.
+ - The "Percentage max hash rate" slider now is defaulted to 80% (intensity 16 for AMD cards) and actually adjusts the intensity FOR AMD CARDS (ccminer doesn't have a way to adjust intesnsity yet). 100% corresponds to intensity 20. 
+
 
 Miscellaneous:
-- key.cpp: fail with a friendlier message on missing ssl EC support
-- Remove bignum dependency for scripts
-- Upgrade OpenSSL to 1.0.1i (see https://www.openssl.org/news/secadv_20140806.txt - just to be sure, no critical issues for Bitcoin Core)
-- Upgrade miniupnpc to 1.9.20140701
-- Fix boost detection in build system on some platforms
+ - 
 
-Credits
---------
 
-Thanks to everyone who contributed to this release:
+Known issues:
+ - The version number is still at 0.9.31. This will update when it goes out of the experimental builds section and into the official releases. 
+ - Some mining files may remain in the ZiftrCoin folder after running the uninstaller on Windows. These can safely be deleted manually, if you wish to uninstall.
+ - GPU miner configuration files are untested with the Qt Wallet. They may be ignored or overwritten.
+ - Average hash rate displayed for Nvidia GPUs is incredibly volatile and the average is not weighted properly. This is an issue in the stand alone miner and in the Wallet miner.
+ - Mining in Mac OSX with an AMD card doesn't work. It hasn't been thoroughly tested though, so feel free to try it anyway.
+ - Mining in Mac OSX with an Nvidia card does in fact require drivers.
+ - Occasionally when attempting to start mining in OSX, the OS will not let the miner access the proper GPU, causing many errors. Try closing some programs or possibly restarting. It seems to be quite random.
 
-- Andrew Poelstra
-- Cory Fields
-- Gavin Andresen
-- Jeff Garzik
-- Johnathan Corgan
-- Julian Haight
-- Michael Ford
-- Pavel Vasin
-- Peter Todd
-- phantomcircuit
-- Pieter Wuille
-- Rose Toomey
-- Ruben Dario Ponticelli
-- shshshsh
-- Trevin Hofmann
-- Warren Togami
-- Wladimir J. van der Laan
-- Zak Wilcox
 
-As well as everyone that helped translating on [Transifex](https://www.transifex.com/projects/p/bitcoin/).

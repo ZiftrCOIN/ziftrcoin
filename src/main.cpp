@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-// Copyright (c) 2015-2019 The ziftrCOIN developers
+// Copyright (c) 2015 The ziftrCOIN developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -399,6 +399,7 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
     if (pindex == NULL) {
         mapBlockSizeLimits.clear();
         mapBlockSizeLimits[0] = MIN_MAX_BLOCK_SIZE;
+        nTotalCoinsCreated = 0;
         vChain.clear();
         return NULL;
     }
@@ -406,6 +407,15 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
     vChain.resize(pindex->nHeight + 1);
     CBlockIndex* pIndexCopy = pindex;
     while (pIndexCopy && vChain[pIndexCopy->nHeight] != pIndexCopy) {
+        // Keep track of total coins. Not techincally accurate because you can claim less
+        // than the total amount, but will likely be right. An exact number isn't usally required
+        // for this kind of statistic anyway.
+        if (vChain[pIndexCopy->nHeight] != NULL) {
+            nTotalCoinsCreated -= GetBlockValue(pIndexCopy->nHeight, 0, vChain[pIndexCopy->nHeight]->IsPoKBlock());
+        }
+        nTotalCoinsCreated += GetBlockValue(pIndexCopy->nHeight, 0, pIndexCopy->IsPoKBlock());
+        
+        // Update the chain
         vChain[pIndexCopy->nHeight] = pIndexCopy;
         pIndexCopy = pIndexCopy->pprev;
     }
@@ -438,7 +448,7 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
                 // If currently averaging more than 2/3 of the block size limit
                 if (3 * nAverageSize > 2 * nPrevLimit)
                 {
-                    // Calculat the median size of the blocks in the last period
+                    // Calculate the median size of the blocks in the last period
                     unsigned int * arrBlockSizes = new unsigned int[MAX_BLOCK_SIZE_RECALC_PERIOD];
                     for (unsigned int i = 0; i < MAX_BLOCK_SIZE_RECALC_PERIOD; i++)
                     {
@@ -481,6 +491,7 @@ CBlockIndex* CChain::SetTip(CBlockIndex *pindex) {
         }
 
     }
+
     return pindex;
 }
 
@@ -1424,7 +1435,7 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 //
 // Fixed to prevent agains time warp attack
 //
-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
+unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const int64_t nBlockTime)
 {
     unsigned int nProofOfWorkLimit = Params().ProofOfWorkLimit().GetCompact();
 
@@ -1439,7 +1450,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
             // Special difficulty rule for testnet:
             // If the new block's timestamp is more than 2 * TARGET_SPACING in the future,
             // then allow mining of a min-difficulty block.
-            if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + TARGET_SPACING*2)
+            if (nBlockTime > pindexLast->GetBlockTime() + TARGET_SPACING*2)
             {
                 return nProofOfWorkLimit;
             }
@@ -1654,7 +1665,7 @@ void UpdateTime(CBlockHeader& block, const CBlockIndex* pindexPrev)
 
     // Updating time can change work required on testnet:
     if (TestNet())
-        block.nBits = GetNextWorkRequired(pindexPrev, &block);
+        block.nBits = GetNextWorkRequired(pindexPrev, block.GetBlockTime());
 }
 
 
@@ -1957,7 +1968,7 @@ bool CountMatureCoins(const CBlock& block, CBlockIndex* pindex)
         }
     }
 
-    LogPrintf("Block %s has %llu total mature coins spent. \n", block.GetHash().ToString(), (long long)pindex->nMatureCoinsSpent);
+    LogPrintf("Block %s has %llu total mature ziftrcoin-satoshis spent. \n", block.GetHash().ToString(), (long long)pindex->nMatureCoinsSpent);
     return true;
 }
 
@@ -2015,7 +2026,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     // Probably could get rid of the SCRIPT_VERIFY_P2SH flag entirely, since 
     // we will have P2SH from block 0, but will leave it in for now
     // Actually, it is useful for turning on and off verification?
-    unsigned int flags = SCRIPT_VERIFY_NOCACHE | SCRIPT_VERIFY_P2SH;
+    unsigned int flags = SCRIPT_VERIFY_NOCACHE | SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC;
 
     CBlockUndo blockundo;
 
@@ -2561,7 +2572,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, unsigned int nMaxB
                         REJECT_INVALID, "high-hash");
 
     // Check timestamp
-    if (block.GetBlockTime() > GetAdjustedTime() + MAX_BLOCK_TIME_OFFSET)
+    if (block.GetBlockTime() > GetAdjustedTime() + MAX_BLOCK_TIME_OFFSET && block.GetHash() != Params().HashGenesisBlock())
         return state.Invalid(error("CheckBlock() : block timestamp too far in the future"),
                              REJECT_INVALID, "time-too-new");
 
@@ -2630,7 +2641,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
         nHeight = pindexPrev->nHeight+1;
 
         // Check proof of work
-        if (block.nBits != GetNextWorkRequired(pindexPrev, &block))
+        if (block.nBits != GetNextWorkRequired(pindexPrev, block.GetBlockTime()))
             return state.DoS(100, error("AcceptBlock() : incorrect proof of work"),
                                 REJECT_INVALID, "bad-diffbits");
 
@@ -2762,6 +2773,15 @@ void PushGetBlocks(CNode* pnode, CBlockIndex* pindexBegin, uint256 hashEnd)
 bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBlockPos *dbp)
 {
     AssertLockHeld(cs_main);
+
+    try
+    {
+        pblock->SetPoK(pblock->CalculatePoK());
+    }
+    catch (std::exception& e) 
+    {
+        return false;
+    }
 
     // Check for duplicate
     uint256 hash = pblock->GetHash();
@@ -4093,6 +4113,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
         LogPrint("net", "received block %s\n", block.GetHash().ToString());
         // block.print();
+
+        // TODO make sure that you can't fill up memory by broadcasting invs with different
+        // block hashes that are all for the same block but with different PoK data
 
         CInv inv(MSG_BLOCK, block.GetHash());
         pfrom->AddInventoryKnown(inv);

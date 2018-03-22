@@ -1,6 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2013 The Bitcoin developers
-// Copyright (c) 2015-2019 The ziftrCOIN developers
+// Copyright (c) 2015 The ziftrCOIN developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -13,6 +13,7 @@
 #ifdef ENABLE_WALLET
 #include "db.h"
 #include "wallet.h"
+#include "util.h"
 #endif
 #include <stdint.h>
 
@@ -235,7 +236,7 @@ Value getusepok(const json_spirit::Array& params, bool fHelp)
             + HelpExampleCli("getusepok", "")
             + HelpExampleRpc("getusepok", "")
         );
-    return GetBoolArg("-usepok", false);
+    return GetBoolArg("-usepok", DEFAULT_USE_POK);
 }
 
 Value setusepok(const json_spirit::Array& params, bool fHelp)
@@ -322,7 +323,7 @@ Value getmininginfo(const Array& params, bool fHelp)
 #ifdef ENABLE_WALLET
     obj.push_back(Pair("generate",         getgenerate(params, false)));
     obj.push_back(Pair("hashespersec",     gethashespersec(params, false)));
-    obj.push_back(Pair("usepok",           GetBoolArg("-usepok", false)));
+    obj.push_back(Pair("usepok",           GetBoolArg("-usepok", DEFAULT_USE_POK)));
 #endif
     return obj;
 }
@@ -364,7 +365,7 @@ Value getwork(const Array& params, bool fHelp)
 
     if (params.size() == 0 || params[0].get_str().size() == 4 || params[0].get_str().size() == 5)
     {
-        bool fGetPoKWork = GetBoolArg("-usepok", false);
+        bool fGetPoKWork = GetBoolArg("-usepok", DEFAULT_USE_POK);
         if (params.size() != 0)
         {
             string strPoKBool = params[0].get_str();
@@ -399,7 +400,10 @@ Value getwork(const Array& params, bool fHelp)
             nStart = GetTime();
 
             // Create new block
-            pblocktemplate = CreateNewBlockWithKey(*pMiningKey);
+            bool fPrevValuePoK = GetBoolArg("-usepok", DEFAULT_USE_POK);
+            ForceSetBoolArg("-usepok", fGetPoKWork);
+            pblocktemplate = CreateNewBlockWithKey(pMiningKey);
+            ForceSetBoolArg("-usepok", fPrevValuePoK);
             if (!pblocktemplate)
                 throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
             vNewBlockTemplate.push_back(pblocktemplate);
@@ -482,15 +486,17 @@ Value getwork(const Array& params, bool fHelp)
 
         // Only need to copy over the things that might have
         // been changed while mining, everything else is saved
-        pblock->SetPoK(pdata->GetPoK());
         pblock->SetPoKFlag(pdata->IsPoKBlock());
         pblock->nNonce = pdata->nNonce;
         pblock->nTime = pdata->nTime;
         pblock->vtx[0].vin[0].scriptSig = mapNewBlock[pdata->hashMerkleRoot].second;
         pblock->hashMerkleRoot = pblock->BuildMerkleTree();
 
+        // Recalculate the pok
+        pblock->SetPoK(pblock->GetPoK());
+
         assert(pwalletMain != NULL);
-        return CheckWork(pblock, *pwalletMain, *pMiningKey);
+        return CheckWork(pblock, *pwalletMain, pMiningKey);
     }
 }
 #endif
@@ -678,7 +684,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     result.push_back(Pair("curtime", (int64_t)pblock->nTime));
     result.push_back(Pair("bits", HexBits(pblock->nBits)));
     result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
-    result.push_back(Pair("usepok", GetBoolArg("-usepok", false)));
+    result.push_back(Pair("usepok", GetBoolArg("-usepok", DEFAULT_USE_POK)));
 
     return result;
 }
@@ -706,16 +712,16 @@ Value submitblock(const Array& params, bool fHelp)
 
     vector<unsigned char> blockData(ParseHex(params[0].get_str()));
     CDataStream ssBlock(blockData, SER_NETWORK, PROTOCOL_VERSION);
-    CBlock pblock;
+    CBlock block;
     try {
-        ssBlock >> pblock;
+        ssBlock >> block;
     }
     catch (std::exception &e) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
     }
 
     CValidationState state;
-    bool fAccepted = ProcessBlock(state, NULL, &pblock);
+    bool fAccepted = ProcessBlock(state, NULL, &block);
     if (!fAccepted)
         return "rejected"; // TODO: report validation state
 
